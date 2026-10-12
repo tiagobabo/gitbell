@@ -28,7 +28,7 @@ struct OrgPage: View {
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
-                        .frame(width: 240)
+                        .fixedSize()
                     }
                     if entries.isEmpty {
                         placeholder
@@ -76,7 +76,7 @@ struct OrgPage: View {
 enum OrgMetric: String, CaseIterable, Identifiable {
     case commits, pulls
     var id: String { rawValue }
-    var title: String { self == .commits ? "Commits" : "Open pull requests" }
+    var title: String { self == .commits ? "Commits" : "Pull requests" }
     var caption: String {
         self == .commits ? "Commits to each repository's main branch in the last 30 days" : "Open pull requests in each repository"
     }

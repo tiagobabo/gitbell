@@ -392,7 +392,7 @@ struct RepoBrowser: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 360)
+            .fixedSize()
             .padding(.vertical, 12)
 
             if store.repos.all.isEmpty {
