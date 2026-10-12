@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Builds a DMG for a version, signs it for Sparkle, tags it and publishes it with an appcast.xml as a GitHub release.
 # Signing needs the EdDSA key that Sparkle's generate_keys saved in the login Keychain.
-# Usage: scripts/release.sh 0.4.0
+# The notes file says what changed for people using GitBell; install steps and a changelog link are added below it.
+# Keep the notes file outside the repo (e.g. /tmp/notes.md) so the working tree stays clean.
+# Usage: scripts/release.sh 0.4.0 /tmp/notes.md
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-version="${1:?usage: scripts/release.sh X.Y.Z}"
+version="${1:?usage: scripts/release.sh X.Y.Z NOTES.md}"
+notes_file="${2:?usage: scripts/release.sh X.Y.Z NOTES.md}"
 tag="v$version"
 repo_url="https://github.com/tiagobabo/gitbell"
 
+[[ -s "$notes_file" ]] || { echo "$notes_file is missing or empty. Write what changed first." >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first." >&2; exit 1; }
 ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null || { echo "$tag already exists." >&2; exit 1; }
 
@@ -57,11 +61,16 @@ echo "Wrote $appcast"
 git tag -a "$tag" -m "GitBell $version"
 git push origin "$tag"
 
-gh release create "$tag" "$dmg" "$appcast" --title "GitBell $version" --generate-notes --notes "$(cat <<'NOTES'
+previous="$(git describe --tags --abbrev=0 --match 'v*' "$tag^" 2>/dev/null || true)"
+notes="$(cat "$notes_file")
+
+## Install
+
 Open the DMG and drag GitBell to Applications.
 
-GitBell isn't notarised by Apple, so macOS blocks it the first time. Either open System Settings → Privacy & Security and click "Open Anyway", or run:
+GitBell isn't notarised by Apple, so macOS blocks it the first time. Either open System Settings → Privacy & Security and click \"Open Anyway\", or run:
 
-    xattr -dr com.apple.quarantine /Applications/GitBell.app
-NOTES
-)"
+    xattr -dr com.apple.quarantine /Applications/GitBell.app"
+[[ -n "$previous" ]] && notes+=$'\n\n'"**Full changelog:** $repo_url/compare/$previous...$tag"
+
+gh release create "$tag" "$dmg" "$appcast" --title "GitBell $version" --notes "$notes"
