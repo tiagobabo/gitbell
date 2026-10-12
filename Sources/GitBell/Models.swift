@@ -139,6 +139,24 @@ struct Viewer: Decodable {
     let avatarUrl: URL
 }
 
+// A GitHub login or org/team slug offered by, or picked in, the people filter.
+struct PersonSuggestion: Identifiable, Hashable {
+    let entry: String
+    let detail: String?
+    let avatar: URL?
+
+    var id: String { entry.lowercased() }
+    var isTeam: Bool { entry.contains("/") }
+
+    init(entry: String, detail: String? = nil, avatar: URL? = nil) {
+        self.entry = entry
+        self.detail = detail
+        // Teams have no avatar of their own; use the org's.
+        let owner = entry.split(separator: "/").first.map(String.init) ?? entry
+        self.avatar = avatar ?? URL(string: "https://avatars.githubusercontent.com/\(owner)")
+    }
+}
+
 struct RepoSection: Identifiable {
     var id: String { repo.fullName }
     let repo: GHNotification.Repository

@@ -24,18 +24,13 @@ struct SettingsView: View {
 
             Section {
                 Toggle("Only show activity from these people", isOn: $store.peopleFilterOn)
-                TextField("People", text: $store.peopleFilter, prompt: Text("my-org/my-team, octocat"))
-                    .onSubmit { Task { await store.resolvePeople() } }
+                PeoplePicker()
                     .disabled(!store.peopleFilterOn)
-                HStack {
-                    Text("GitHub usernames or org/team, separated by commas.")
-                    Spacer()
-                    if let status = store.peopleStatus { Text(status) }
-                    Button("Apply") { Task { await store.resolvePeople() } }
-                        .disabled(!store.peopleFilterOn)
+                if let status = store.peopleStatus {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             } header: {
                 Text("People")
             } footer: {

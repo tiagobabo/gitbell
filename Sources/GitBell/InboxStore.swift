@@ -34,6 +34,8 @@ final class InboxStore {
     // Resolved lowercased logins; nil means no filter.
     private(set) var people: Set<String>?
     private(set) var peopleStatus: String?
+    // The viewer's teams, fetched once for the people picker.
+    var myTeams: [PersonSuggestion]?
     var unfilteredPulls: [PullSection: [PullRequest]] = [:]
     var unfilteredTotals: [PullSection: Int] = [:]
     // The single PR section the window is showing; nil in the popover, which shows them all.
@@ -166,6 +168,7 @@ final class InboxStore {
         pullsLoaded = false
         client = nil
         viewer = nil
+        myTeams = nil
         notifications = []
         details = [:]
         lastUpdated = nil
@@ -552,11 +555,69 @@ extension InboxStore {
 // MARK: - People filter
 
 extension InboxStore {
-    func resolvePeople() async {
-        let tokens = peopleFilter
+    // The picked logins and org/team slugs, in the order they were added.
+    var peopleEntries: [String] {
+        peopleFilter
             .split(whereSeparator: { $0 == "," || $0.isWhitespace })
-            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "@")) }
             .filter { !$0.isEmpty }
+    }
+
+    func addPerson(_ entry: String) {
+        let entry = entry.trimmingCharacters(in: CharacterSet(charactersIn: "@").union(.whitespaces))
+        guard !entry.isEmpty, !peopleEntries.contains(where: { $0.caseInsensitiveCompare(entry) == .orderedSame }) else { return }
+        peopleFilter = (peopleEntries + [entry]).joined(separator: ", ")
+        Task { await resolvePeople() }
+    }
+
+    func removePerson(_ entry: String) {
+        peopleFilter = peopleEntries.filter { $0 != entry }.joined(separator: ", ")
+        Task { await resolvePeople() }
+    }
+
+    // Autocomplete for the people picker: people already in your inbox and your teams first, then GitHub's user search.
+    func personSuggestions(for query: String) async -> [PersonSuggestion] {
+        let query = query.trimmingCharacters(in: CharacterSet(charactersIn: "@").union(.whitespaces))
+        guard !query.isEmpty else { return [] }
+        let picked = Set(peopleEntries.map { $0.lowercased() })
+        var seen = picked
+        var results: [PersonSuggestion] = []
+        func add(_ suggestions: [PersonSuggestion]) {
+            for s in suggestions where s.entry.localizedCaseInsensitiveContains(query)
+                || (s.isTeam && s.detail?.localizedCaseInsensitiveContains(query) == true) {
+                if seen.insert(s.id).inserted { results.append(s) }
+            }
+        }
+
+        add(knownPeople)
+        if myTeams == nil, let client { myTeams = (try? await client.viewerTeams()) ?? [] }
+        add(myTeams ?? [])
+        if results.count < 6, let client, let found = try? await client.searchUsers(query) {
+            add(found)
+        }
+        return Array(results.prefix(8))
+    }
+
+    // Everyone who shows up in the inbox or the pull request lists, by most recent first.
+    private var knownPeople: [PersonSuggestion] {
+        var avatars: [String: URL?] = [:]
+        var order: [String] = []
+        func note(_ login: String?, _ avatar: URL?) {
+            guard let login, login != viewer?.login, login != "ghost" else { return }
+            if avatars[login] == nil { order.append(login) }
+            if avatars[login] == nil || avatars[login]! == nil { avatars[login] = avatar }
+        }
+        for n in notifications {
+            let detail = details[n.detailKey]
+            note(detail?.activity?.actor, detail?.activity?.avatar)
+            note(detail?.author, nil)
+        }
+        for pr in unfilteredPulls.values.joined() { note(pr.author, pr.authorAvatar) }
+        return order.map { PersonSuggestion(entry: $0, detail: "In your inbox", avatar: avatars[$0] ?? nil) }
+    }
+
+    func resolvePeople() async {
+        let tokens = peopleEntries.map { $0.lowercased() }
         guard peopleFilterOn, !tokens.isEmpty, let client else {
             people = nil
             peopleStatus = nil
@@ -572,7 +633,7 @@ extension InboxStore {
                 do { logins.formUnion(try await client.teamMembers(org: parts[0], team: parts[1])) }
                 catch { failed.append(token) }
             } else {
-                logins.insert(token.trimmingCharacters(in: CharacterSet(charactersIn: "@")))
+                logins.insert(token)
             }
         }
         people = logins

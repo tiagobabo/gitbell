@@ -81,6 +81,33 @@ actor GitHubClient {
         return logins
     }
 
+    // Users whose login starts with or contains `query`, for the people picker.
+    func searchUsers(_ query: String) async throws -> [PersonSuggestion] {
+        struct Page: Decodable { let items: [User] }
+        struct User: Decodable { let login: String; let avatarUrl: URL? }
+        let url = base.appending(path: "search/users").appending(queryItems: [
+            URLQueryItem(name: "q", value: "\(query) in:login"),
+            URLQueryItem(name: "per_page", value: "8"),
+        ])
+        let page: Page = try await get(url)
+        return page.items.map { PersonSuggestion(entry: $0.login, detail: nil, avatar: $0.avatarUrl) }
+    }
+
+    // Teams the viewer belongs to, as org/team entries. Needs the read:org scope.
+    func viewerTeams() async throws -> [PersonSuggestion] {
+        struct Team: Decodable {
+            struct Org: Decodable { let login: String; let avatarUrl: URL? }
+            let slug: String
+            let name: String
+            let organization: Org
+        }
+        let teams: [Team] = try await get(base.appending(path: "user/teams")
+            .appending(queryItems: [URLQueryItem(name: "per_page", value: "100")]))
+        return teams.map {
+            PersonSuggestion(entry: "\($0.organization.login)/\($0.slug)", detail: $0.name, avatar: $0.organization.avatarUrl)
+        }
+    }
+
     func markRead(_ id: String) async throws {
         _ = try await send(makeRequest(thread(id), method: "PATCH"))
     }
