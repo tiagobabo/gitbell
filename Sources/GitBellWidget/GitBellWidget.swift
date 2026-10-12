@@ -352,19 +352,7 @@ struct WidgetPullRow: View {
 
 extension WidgetSnapshot {
     static var sample: WidgetSnapshot {
-        func pr(_ number: Int, _ title: String, draft: Bool = false, review: String? = "REVIEW_REQUIRED") -> PullRequest {
-            PullRequest(id: "sample-\(number)", number: number, title: title, url: URL(string: "https://github.com/pulls/inbox")!,
-                        isDraft: draft, updatedAt: .now, repository: "octo/app", author: "octocat", authorAvatar: nil,
-                        reviewDecision: review, mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED", isInMergeQueue: false,
-                        checks: PullRequest.Checks(state: "SUCCESS", passed: 12, failed: 0, total: 12))
-        }
-        return WidgetSnapshot(
-            updatedAt: .now, unreadNotifications: 3,
-            sections: [.needsReview: [pr(42, "Add dark mode to settings")],
-                       .drafts: [pr(41, "Try a new onboarding flow", draft: true)],
-                       .waiting: [pr(40, "Speed up the search index")]],
-            totals: [.needsReview: 1, .teamReview: 4, .drafts: 1, .waiting: 1, .needsAction: 0, .readyToMerge: 0]
-        )
+        WidgetSnapshot(updatedAt: .now, unreadNotifications: 7, sections: Demo.pulls, totals: Demo.totals)
     }
 }
 

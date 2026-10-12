@@ -24,7 +24,7 @@ struct SettingsView: View {
 
             Section {
                 Toggle("Only show activity from these people", isOn: $store.peopleFilterOn)
-                TextField("People", text: $store.peopleFilter, prompt: Text("carwow/banjo, octocat"))
+                TextField("People", text: $store.peopleFilter, prompt: Text("my-org/my-team, octocat"))
                     .onSubmit { Task { await store.resolvePeople() } }
                     .disabled(!store.peopleFilterOn)
                 HStack {

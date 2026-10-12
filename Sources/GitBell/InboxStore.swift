@@ -21,7 +21,7 @@ final class InboxStore {
     var selection: String?
     var searchText = ""
 
-    // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "carwow/banjo, octocat".
+    // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "my-org/my-team, octocat".
     var peopleFilter = UserDefaults.standard.string(forKey: "peopleFilter") ?? "" {
         didSet { UserDefaults.standard.set(peopleFilter, forKey: "peopleFilter") }
     }
@@ -34,8 +34,8 @@ final class InboxStore {
     // Resolved lowercased logins; nil means no filter.
     private(set) var people: Set<String>?
     private(set) var peopleStatus: String?
-    private(set) var unfilteredPulls: [PullSection: [PullRequest]] = [:]
-    private var unfilteredTotals: [PullSection: Int] = [:]
+    var unfilteredPulls: [PullSection: [PullRequest]] = [:]
+    var unfilteredTotals: [PullSection: Int] = [:]
     // The single PR section the window is showing; nil in the popover, which shows them all.
     var pullsFocus: PullSection?
 
@@ -175,6 +175,7 @@ final class InboxStore {
     }
 
     private func bootstrap() async {
+        if Demo.isOn { return loadDemo() }
         guard let token = await TokenStore.load() else {
             phase = .signedOut
             return
@@ -469,7 +470,7 @@ extension InboxStore {
     }
 
     func writeSnapshot() {
-        guard pullsLoaded else { return }
+        guard pullsLoaded, !Demo.isOn else { return }
         var snapshot = WidgetSnapshot(updatedAt: .distantPast, unreadNotifications: unreadCount,
                                       sections: pulls.mapValues { Array($0.prefix(8)) }, totals: pullTotals)
         guard let fingerprint = snapshot.encoded(), fingerprint != lastSnapshot else { return }

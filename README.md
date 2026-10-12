@@ -2,16 +2,37 @@
 
 A native macOS app for your GitHub notifications and pull requests. It lives in the Dock and, optionally, the menu bar, and comes with a desktop widget.
 
+<p align="center">
+  <img src="docs/screenshots/popover-inbox.png" width="380" alt="Inbox: notifications grouped by repository, each saying who did what">
+  <img src="docs/screenshots/popover-pulls.png" width="380" alt="Pull requests: review requests and your own pull requests by status">
+</p>
+<p align="center">
+  <img src="docs/screenshots/widget-large.png" width="380" alt="Large desktop widget">
+  <img src="docs/screenshots/widget-medium.png" width="380" alt="Medium desktop widget with section tabs">
+</p>
+
 - **Inbox:** your unread GitHub notifications, grouped by repository. Each row says what happened (who commented, approved, pushed or merged), and clicking it opens that comment or review on GitHub.
 - **Pull requests:** an overview like github.com/pulls/inbox. Review requests for you and your team, plus your own PRs split into needs fixing, ready to merge, in review and drafts, with status and checks.
 - **Actions:** mark as read, mark as done, unsubscribe, or mark a whole repository or everything as read.
 - **Window or menu bar:** a full window with a sidebar and search, and an optional menu bar icon that opens either the window or a compact popover.
 - **Banners:** a macOS notification when someone requests your review.
-- **People filter:** only show activity from certain people or teams, for example `carwow/banjo`.
+- **People filter:** only show activity from certain people or teams, for example `my-org/my-team`.
 - **Desktop widget:** small, medium and large sizes. Pick the sections it shows in Edit Widget, switch tabs and fold sections right in the widget.
 - **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe.
 
-## Requirements
+## Install
+
+Download the latest `GitBell-x.y.z.dmg` from [Releases](https://github.com/tiagobabo/gitbell/releases), open it and drag GitBell to Applications.
+
+GitBell isn't notarised by Apple, so macOS blocks it the first time you open it. Either open System Settings → Privacy & Security and click "Open Anyway", or run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/GitBell.app
+```
+
+To build it yourself instead, read on.
+
+## Requirements to build
 
 - macOS 14 or later
 - Xcode, installed from the App Store and opened once (or run `sudo xcodebuild -runFirstLaunch`)
@@ -73,11 +94,26 @@ The widget reads what the app last fetched, so GitBell needs to be running for i
 - **"Review requests" shows a PR you've already reviewed:** that list follows GitHub's search for PRs still waiting on you, which updates within a couple of minutes.
 - **Nothing loads:** check the dot at the bottom of the sidebar. If your token expired, GitBell signs you out and asks again.
 
+## Demo mode
+
+`GITBELL_DEMO=1 build/GitBell.app/Contents/MacOS/GitBell` starts GitBell with made-up repositories, people and pull requests, without touching GitHub or your widget. Handy for screenshots.
+
+## Releasing
+
+Versions come from git tags. `./build.sh` stamps the latest `vX.Y.Z` tag into the app, or whatever `VERSION` is set to, and uses the commit count as the build number.
+
+```sh
+scripts/release.sh 0.4.0
+```
+
+This builds the app, packages `build/GitBell-0.4.0.dmg`, tags `v0.4.0`, pushes the tag and publishes a GitHub release with the DMG attached and notes generated from the commits. It needs a clean working tree and a logged-in `gh`.
+
 ## Project layout
 
 ```
 project.yml              XcodeGen project: app, widget extension and a shared framework
 build.sh                 Build, and with --install copy to ~/Applications and launch
+scripts/release.sh       Build a DMG, tag the version and publish a GitHub release
 Sources/GitBell          The app: window, popover, settings, GitHub client, store
 Sources/GitBellShared    Code used by both app and widget: models, palette, Octicons
 Sources/GitBellWidget    The WidgetKit extension and its App Intents
@@ -86,3 +122,11 @@ scripts/make-icon.swift  Regenerates Resources/AppIcon.icns
 ```
 
 Icons are from GitHub's [Octicons](https://github.com/primer/octicons) (MIT).
+
+## Contributing
+
+Issues and pull requests are welcome. Build with `./build.sh --install`, and use demo mode for screenshots in pull requests.
+
+## License
+
+[MIT](LICENSE)
