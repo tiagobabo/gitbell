@@ -155,9 +155,12 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.setContentSize(NSSize(width: 980, height: 660))
+        // Most of the screen, up to a comfortable size. A new autosave name gives everyone this size once;
+        // after that GitBell remembers how you left it.
+        let screen = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
+        window.setContentSize(NSSize(width: min(1320, screen.width * 0.85), height: min(900, screen.height * 0.85)))
         window.center()
-        window.setFrameAutosaveName("GitBellMain")
+        window.setFrameAutosaveName("GitBellWindow")
         return window
     }
 

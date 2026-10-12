@@ -16,7 +16,6 @@ struct SettingsView: View {
                 ForEach(Appearance.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
-            .fixedSize()
             .onChange(of: appearance) { _, appearance in Appearance.apply(appearance) }
 
             Toggle("Show menu bar icon", isOn: $showMenuBarIcon)
@@ -57,17 +56,13 @@ struct SettingsView: View {
                 Toggle("Your pull requests fail checks or are ready to merge", isOn: $store.pullBanners)
                 Toggle("Show the count on the Dock icon", isOn: $store.dockBadge)
                 if store.dockBadge && !badgesAllowed {
-                    HStack {
-                        Text("macOS has badges turned off for GitBell.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Open Notification Settings") {
+                    LabeledContent("Badges are off for GitBell in macOS") {
+                        Button("Turn On…") {
                             let id = Bundle.main.bundleIdentifier ?? ""
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!)
                         }
-                        .controlSize(.small)
                     }
+                    .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Notifications")
