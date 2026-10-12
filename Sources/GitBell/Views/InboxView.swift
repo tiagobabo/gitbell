@@ -1,4 +1,3 @@
-import GitBellShared
 import SwiftUI
 
 struct InboxView: View {

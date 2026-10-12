@@ -1,7 +1,7 @@
 import Foundation
 
-public enum RelativeTime {
-    public static func short(_ date: Date, now: Date = .now) -> String {
+enum RelativeTime {
+    static func short(_ date: Date, now: Date = .now) -> String {
         let seconds = Int(now.timeIntervalSince(date))
         return switch seconds {
         case ..<60: "now"

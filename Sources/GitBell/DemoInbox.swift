@@ -1,5 +1,4 @@
 import Foundation
-import GitBellShared
 
 // The inbox side of demo mode (see Demo): notifications with their latest activity.
 extension InboxStore {

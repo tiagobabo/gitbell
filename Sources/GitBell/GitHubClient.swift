@@ -1,5 +1,4 @@
 import Foundation
-import GitBellShared
 
 struct APIError: LocalizedError {
     let status: Int

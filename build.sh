@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds GitBell.app (with its desktop widget) into ./build via Xcode.
-# Pass --install to copy it to ~/Applications and launch it; the widget only shows up once installed.
+# Builds GitBell.app into ./build via Xcode.
+# Pass --install to copy it to ~/Applications and launch it.
 set -euo pipefail
 cd "$(dirname "$0")"
 

@@ -1,4 +1,3 @@
-import GitBellShared
 import SwiftUI
 
 enum SidebarItem: Hashable {
@@ -309,7 +308,7 @@ struct PullSectionList: View {
     }
 }
 
-// The window's own wording; the popover and widget keep GitHub's section names.
+// The window's own wording; the popover keeps GitHub's section names.
 extension InboxFilter {
     var windowTitle: String {
         switch self {

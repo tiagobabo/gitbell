@@ -20,15 +20,6 @@ settings:
     MARKETING_VERSION: "0.3.0"
     CURRENT_PROJECT_VERSION: "3"
 targets:
-  GitBellShared:
-    type: framework
-    platform: macOS
-    sources: [Sources/GitBellShared]
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.tiagobabo.GitBellShared
-        APPLICATION_EXTENSION_API_ONLY: YES
-        GENERATE_INFOPLIST_FILE: YES
   GitBell:
     type: application
     platform: macOS
@@ -41,18 +32,4 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.tiagobabo.GitBell
         INFOPLIST_FILE: Resources/Info.plist
     dependencies:
-      - target: GitBellShared
-      - target: GitBellWidget
       - package: Sparkle
-  GitBellWidget:
-    type: app-extension
-    platform: macOS
-    sources: [Sources/GitBellWidget]
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.tiagobabo.GitBell.Widget
-        INFOPLIST_FILE: Resources/Widget-Info.plist
-        CODE_SIGN_ENTITLEMENTS: Resources/Widget.entitlements
-    dependencies:
-      - target: GitBellShared
-        embed: false

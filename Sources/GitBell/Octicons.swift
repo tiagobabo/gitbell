@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 // GitHub Octicons (MIT), 16px.
-public enum Octicon: String, Sendable {
+enum Octicon: String, Sendable {
     case gitPullRequest = "git-pull-request"
     case gitPullRequestDraft = "git-pull-request-draft"
     case gitPullRequestClosed = "git-pull-request-closed"
@@ -53,7 +53,7 @@ public enum Octicon: String, Sendable {
         }
     }
 
-    public func image(size: CGFloat = 16) -> NSImage {
+    func image(size: CGFloat = 16) -> NSImage {
         let source = NSImage(data: Data(svg.utf8)) ?? NSImage()
         let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             source.draw(in: rect)
@@ -64,16 +64,16 @@ public enum Octicon: String, Sendable {
     }
 }
 
-public struct OcticonView: View {
+struct OcticonView: View {
     let icon: Octicon
     let size: CGFloat
 
-    public init(_ icon: Octicon, size: CGFloat = 16) {
+    init(_ icon: Octicon, size: CGFloat = 16) {
         self.icon = icon
         self.size = size
     }
 
-    public var body: some View {
+    var body: some View {
         Image(nsImage: icon.image(size: size))
             .renderingMode(.template)
             .resizable()

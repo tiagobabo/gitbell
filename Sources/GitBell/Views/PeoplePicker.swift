@@ -1,4 +1,3 @@
-import GitBellShared
 import SwiftUI
 
 // Search box with autocomplete for logins and org/team slugs, and the picked ones below it, each with a remove button.

@@ -1,9 +1,7 @@
 import AppKit
-import GitBellShared
 import Observation
 import ServiceManagement
 import SwiftUI
-import WidgetKit
 
 @MainActor @Observable
 final class InboxStore {
@@ -77,7 +75,6 @@ final class InboxStore {
     private var client: GitHubClient?
     private var pollTask: Task<Void, Never>?
     private var pullTask: Task<Void, Never>?
-    private var lastSnapshot: Data?
     private var toastTask: Task<Void, Never>?
     // Thread id -> updatedAt when we cleared it, so an in-flight poll can't bring it back.
     private var dismissed: [String: Date] = [:]
@@ -248,7 +245,6 @@ final class InboxStore {
                 details = details.filter { keys.contains($0.key) }
                 withAnimation(.snappy) { notifications = next }
                 loadDetails(for: next)
-                writeSnapshot()
             }
             lastUpdated = .now
             statusError = nil
@@ -359,7 +355,6 @@ final class InboxStore {
         for n in items { dismissed[n.id] = n.updatedAt }
         if let selection, ids.contains(selection) { self.selection = neighbour(of: selection, skipping: ids) }
         withAnimation(.snappy) { notifications.removeAll { ids.contains($0.id) } }
-        writeSnapshot()
 
         do {
             try await action(client)
@@ -428,7 +423,6 @@ extension InboxStore {
             applyPeopleToPulls()
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
             pullsLoaded = true
-            writeSnapshot()
         } catch let error as APIError where error.isUnauthorized {
             show("Your GitHub session expired.")
             signOut()
@@ -470,18 +464,6 @@ extension InboxStore {
             }
         }
         defaults.set((direct + team).map(\.id), forKey: key)
-    }
-
-    func writeSnapshot() {
-        guard pullsLoaded, !Demo.isOn else { return }
-        var snapshot = WidgetSnapshot(updatedAt: .distantPast, unreadNotifications: unreadCount,
-                                      sections: pulls.mapValues { Array($0.prefix(8)) }, totals: pullTotals)
-        guard let fingerprint = snapshot.encoded(), fingerprint != lastSnapshot else { return }
-        lastSnapshot = fingerprint
-        snapshot.updatedAt = .now
-        guard let data = snapshot.encoded() else { return }
-        try? WidgetSnapshot.write(data)
-        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 
@@ -536,19 +518,6 @@ extension InboxStore {
         let ids = navigableIDs
         guard let index = ids.firstIndex(of: id) else { return nil }
         return ids[index...].first { !removed.contains($0) } ?? ids[..<index].last { !removed.contains($0) }
-    }
-}
-
-// MARK: - Widget links
-
-extension InboxStore {
-    func handle(_ link: WidgetLink) {
-        switch link {
-        case .refresh:
-            // Forget the last write so the widget gets a fresh timestamp even if nothing changed.
-            lastSnapshot = nil
-            Task { await refreshAll() }
-        }
     }
 }
 
@@ -641,7 +610,6 @@ extension InboxStore {
             ? "\(logins.count) \(logins.count == 1 ? "person" : "people")"
             : "Couldn't load \(failed.joined(separator: ", "))"
         applyPeopleToPulls()
-        writeSnapshot()
     }
 
     // Review requests only from these people; your own pull requests always show.

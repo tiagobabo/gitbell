@@ -1,5 +1,4 @@
 import AppKit
-import GitBellShared
 import UserNotifications
 
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {

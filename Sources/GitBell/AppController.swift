@@ -1,5 +1,4 @@
 import AppKit
-import GitBellShared
 import Observation
 import Sparkle
 import SwiftUI

@@ -1,16 +1,16 @@
 import Foundation
 
-// Made-up data for screenshots and the widget gallery: run the app with GITBELL_DEMO=1.
-public enum Demo {
-    public static let isOn = ProcessInfo.processInfo.environment["GITBELL_DEMO"] != nil
+// Made-up data for screenshots: run the app with GITBELL_DEMO=1.
+enum Demo {
+    static let isOn = ProcessInfo.processInfo.environment["GITBELL_DEMO"] != nil
 
-    public static let viewer = "monalisa"
+    static let viewer = "monalisa"
 
-    public static func avatar(_ login: String) -> URL {
+    static func avatar(_ login: String) -> URL {
         URL(string: "https://github.com/identicons/\(login).png")!
     }
 
-    public static func minutesAgo(_ minutes: Double) -> Date {
+    static func minutesAgo(_ minutes: Double) -> Date {
         .now.addingTimeInterval(-minutes * 60)
     }
 
@@ -25,7 +25,7 @@ public enum Demo {
                     checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3))
     }
 
-    public static let pulls: [PullSection: [PullRequest]] = [
+    static let pulls: [PullSection: [PullRequest]] = [
         .needsReview: [
             pr(482, "web", "Add dark mode to the settings page", by: "alice", minutes: 4),
             pr(1198, "api", "Upgrade to Postgres 17", by: "dave", minutes: 38, checks: ("PENDING", 9, 0, 12)),
@@ -50,7 +50,7 @@ public enum Demo {
         ],
     ]
 
-    public static let totals: [PullSection: Int] = [
+    static let totals: [PullSection: Int] = [
         .needsReview: 2, .teamReview: 4, .needsAction: 1, .readyToMerge: 1, .waiting: 2, .drafts: 1,
     ]
 }

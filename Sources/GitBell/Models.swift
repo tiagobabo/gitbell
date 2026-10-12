@@ -1,4 +1,3 @@
-import GitBellShared
 import SwiftUI
 
 struct GHNotification: Decodable, Identifiable, Hashable {

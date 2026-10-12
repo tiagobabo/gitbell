@@ -1,28 +1,28 @@
 import Foundation
 
-public struct PullRequest: Codable, Identifiable, Hashable, Sendable {
-    public let id: String
-    public let number: Int
-    public let title: String
-    public let url: URL
-    public let isDraft: Bool
-    public let updatedAt: Date
-    public let repository: String
-    public let author: String
-    public let authorAvatar: URL?
-    public let reviewDecision: String?
-    public let mergeable: String?
-    public let mergeStateStatus: String?
-    public let isInMergeQueue: Bool
-    public let checks: Checks?
+struct PullRequest: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let number: Int
+    let title: String
+    let url: URL
+    let isDraft: Bool
+    let updatedAt: Date
+    let repository: String
+    let author: String
+    let authorAvatar: URL?
+    let reviewDecision: String?
+    let mergeable: String?
+    let mergeStateStatus: String?
+    let isInMergeQueue: Bool
+    let checks: Checks?
 
-    public struct Checks: Codable, Hashable, Sendable {
-        public let state: String
-        public let passed: Int
-        public let failed: Int
-        public let total: Int
+    struct Checks: Codable, Hashable, Sendable {
+        let state: String
+        let passed: Int
+        let failed: Int
+        let total: Int
 
-        public init(state: String, passed: Int, failed: Int, total: Int) {
+        init(state: String, passed: Int, failed: Int, total: Int) {
             self.state = state
             self.passed = passed
             self.failed = failed
@@ -30,7 +30,7 @@ public struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         }
     }
 
-    public init(id: String, number: Int, title: String, url: URL, isDraft: Bool, updatedAt: Date,
+    init(id: String, number: Int, title: String, url: URL, isDraft: Bool, updatedAt: Date,
                 repository: String, author: String, authorAvatar: URL?, reviewDecision: String?,
                 mergeable: String?, mergeStateStatus: String?, isInMergeQueue: Bool, checks: Checks?) {
         self.id = id
@@ -49,11 +49,11 @@ public struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         self.checks = checks
     }
 
-    public var repositoryName: String {
+    var repositoryName: String {
         repository.split(separator: "/").last.map(String.init) ?? repository
     }
 
-    public var status: PullStatus {
+    var status: PullStatus {
         if isDraft { return .notReady }
         if isInMergeQueue { return .inMergeQueue }
         if mergeable == "CONFLICTING" || mergeStateStatus == "DIRTY" { return .mergeConflicts }
@@ -66,13 +66,13 @@ public struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
-public enum PullStatus: Sendable {
+enum PullStatus: Sendable {
     case notReady, inMergeQueue, mergeConflicts, checksFailing, changesRequested,
          awaitingCI, awaitingApproval, needsUpdate, readyToMerge
 
-    public enum Tone: Sendable { case neutral, pending, danger, success, merged }
+    enum Tone: Sendable { case neutral, pending, danger, success, merged }
 
-    public var label: String {
+    var label: String {
         switch self {
         case .notReady: "Not ready"
         case .inMergeQueue: "In merge queue"
@@ -86,7 +86,7 @@ public enum PullStatus: Sendable {
         }
     }
 
-    public var tone: Tone {
+    var tone: Tone {
         switch self {
         case .notReady: .neutral
         case .awaitingCI, .awaitingApproval: .pending
@@ -97,12 +97,12 @@ public enum PullStatus: Sendable {
     }
 }
 
-public enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
+enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
     case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge
 
-    public var id: String { rawValue }
+    var id: String { rawValue }
 
-    public var title: String {
+    var title: String {
         switch self {
         case .needsReview: "Needs your review"
         case .teamReview: "Needs your teams' review"
@@ -113,7 +113,7 @@ public enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    public var shortTitle: String {
+    var shortTitle: String {
         switch self {
         case .needsReview: "To review"
         case .teamReview: "Team"
@@ -124,10 +124,10 @@ public enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    public var isReviewRequest: Bool { self == .needsReview || self == .teamReview }
+    var isReviewRequest: Bool { self == .needsReview || self == .teamReview }
 
     // Where one of your own open PRs belongs.
-    public static func classify(_ pr: PullRequest) -> PullSection {
+    static func classify(_ pr: PullRequest) -> PullSection {
         if pr.isDraft { return .drafts }
         switch pr.status {
         case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate: return .needsAction

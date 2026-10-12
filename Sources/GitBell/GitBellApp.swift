@@ -1,4 +1,3 @@
-import GitBellShared
 import SwiftUI
 
 @main
@@ -46,11 +45,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { controller.showWindow() }
         return true
-    }
-
-    func application(_ application: NSApplication, open urls: [URL]) {
-        for link in urls.compactMap(WidgetLink.init) {
-            controller.store.handle(link)
-        }
     }
 }
