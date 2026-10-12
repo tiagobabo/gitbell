@@ -96,8 +96,9 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { badgesAllowed = await Notifier.shared.badgesAllowed() }
         }
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
+        // A readable column in the middle of the window's detail pane.
+        .frame(maxWidth: 600)
+        .frame(maxWidth: .infinity)
     }
 
     private static var version: String {

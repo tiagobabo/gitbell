@@ -57,7 +57,6 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private var window: NSWindow?
-    private var settingsWindow: NSWindow?
     // Set by the explicit Quit items; Dock Quit and ⌘Q only send GitBell back to the menu bar.
     private(set) var quitting = false
 
@@ -145,7 +144,7 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let hosting = NSHostingController(rootView: MainWindowView().environment(store))
+        let hosting = NSHostingController(rootView: MainWindowView().environment(store).environment(updater))
         hosting.sceneBridgingOptions = [.toolbars, .title]
         let window = NSWindow()
         // Before the content, so MainWindowView can find its window by identifier.
@@ -190,7 +189,6 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     func retreatToMenuBar() {
         popover.performClose(nil)
         window?.orderOut(nil)
-        settingsWindow?.orderOut(nil)
         NSApp.setActivationPolicy(.accessory)
     }
 
@@ -198,24 +196,9 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     @objc private func openPopoverItem() { togglePopover() }
     @objc private func refreshItem() { Task { await store.refreshAll() } }
 
-    // Our own window: macOS no longer lets code outside SwiftUI views open the Settings scene.
+    // Settings is a page in the main window rather than a window of its own.
     @objc func settingsItem() {
-        popover.performClose(nil)
-        let window = settingsWindow ?? makeSettingsWindow()
-        settingsWindow = window
-        NSApp.setActivationPolicy(.regular)
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
-    }
-
-    private func makeSettingsWindow() -> NSWindow {
-        let settings = SettingsView().environment(store).environment(updater)
-        let window = NSWindow(contentViewController: NSHostingController(rootView: settings))
-        window.title = "GitBell Settings"
-        window.styleMask = [.titled, .closable]
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        window.center()
-        return window
+        store.windowRequest = .settings
+        showWindow()
     }
 }

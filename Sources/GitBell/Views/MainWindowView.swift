@@ -7,6 +7,7 @@ enum SidebarItem: Hashable {
     case repo(String)
     case repos
     case org(String)
+    case settings
 }
 
 // The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
@@ -47,8 +48,14 @@ struct MainWindowView: View {
         }
         .frame(minWidth: 760, minHeight: 480)
         .onAppear {
-            selection = Self.decode(savedSelection) ?? .todo
+            selection = store.windowRequest ?? Self.decode(savedSelection) ?? .todo
+            store.windowRequest = nil
             apply(selection)
+        }
+        .onChange(of: store.windowRequest) { _, request in
+            guard let request else { return }
+            selection = request
+            store.windowRequest = nil
         }
         .onChange(of: selection) { _, item in
             apply(item)
@@ -81,12 +88,15 @@ struct MainWindowView: View {
                 store.repos.visited(repo.fullName)
                 selection = .repo(repo.fullName)
             }
+        case .settings:
+            SettingsView()
         }
     }
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            if selection != .settings {
             if selection == .todo || selection == nil {
                 @Bindable var store = store
                 Toggle(isOn: $store.showHiddenTodos.animation(.snappy)) {
@@ -125,6 +135,7 @@ struct MainWindowView: View {
                 Label("Open on GitHub", systemImage: "arrow.up.right.square")
             }
             .help("Open on GitHub")
+            }
         }
     }
 
@@ -135,6 +146,7 @@ struct MainWindowView: View {
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
         case .org(let owner): owner
+        case .settings: "Settings"
         case .todo, nil: TodoItem.title
         }
     }
@@ -156,6 +168,8 @@ struct MainWindowView: View {
             return "\(store.repos.all.count) in your organizations"
         case .org(let owner):
             return "\(store.repos.repos(of: owner).count) repositories"
+        case .settings:
+            return store.viewer.map { "Signed in as \($0.login)" } ?? ""
         }
     }
 
@@ -178,7 +192,7 @@ struct MainWindowView: View {
             store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
-        case .repo, .repos, .org, nil:
+        case .repo, .repos, .org, .settings, nil:
             break
         }
     }
@@ -186,6 +200,7 @@ struct MainWindowView: View {
     private static func encode(_ item: SidebarItem) -> String {
         switch item {
         case .todo: "todo"
+        case .settings: "settings"
         case .inbox(let filter): "inbox.\(filter.rawValue)"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
@@ -196,6 +211,7 @@ struct MainWindowView: View {
 
     private static func decode(_ raw: String) -> SidebarItem? {
         if raw == "todo" { return .todo }
+        if raw == "settings" { return .settings }
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
@@ -269,7 +285,7 @@ private struct Sidebar: View {
             VStack(alignment: .leading, spacing: 0) {
             if store.people != nil {
                 Button {
-                    AppController.shared?.settingsItem()
+                    selection = .settings
                 } label: {
                     Label(store.peopleFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
                         .font(.system(size: 11, weight: .medium))
@@ -288,6 +304,17 @@ private struct Sidebar: View {
                     .lineLimit(1)
                 Spacer()
                 FooterStatus()
+                Button {
+                    selection = .settings
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13))
+                        .foregroundStyle(selection == .settings ? Palette.accent : Color.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Settings (⌘,)")
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = AppController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // GitBell has one window, so View → Show Tab Bar and friends would only confuse.
+        NSWindow.allowsAutomaticWindowTabbing = false
         Appearance.apply()
         controller.showWindow()
     }

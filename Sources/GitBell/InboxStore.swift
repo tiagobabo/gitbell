@@ -19,6 +19,8 @@ final class InboxStore {
     var selection: String?
     var searchText = ""
     var quickOpenShown = false
+    // A sidebar page the window should switch to, e.g. Settings from ⌘, or the popover's menu.
+    var windowRequest: SidebarItem?
 
     // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "my-org/my-team, octocat".
     var peopleFilter = UserDefaults.standard.string(forKey: "peopleFilter") ?? "" {
