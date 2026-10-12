@@ -15,6 +15,27 @@ enum Presentation: String, CaseIterable, Identifiable {
     }
 }
 
+enum Appearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+
+    static let key = "appearance"
+    static var current: Appearance {
+        UserDefaults.standard.string(forKey: key).flatMap(Appearance.init) ?? .system
+    }
+
+    // NSApp's appearance reaches every window and the popover; nil follows the system.
+    static func apply(_ appearance: Appearance = current) {
+        switch appearance {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
 enum MenuBarIcon {
     static let key = "showMenuBarIcon"
     static var isShown: Bool {
@@ -71,12 +92,13 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         statusItem.isVisible = shown
     }
 
-    // Re-runs whenever the unread count changes: the menu bar dot and the Dock badge.
+    // Re-runs whenever your to do count changes: the menu bar dot and the Dock badge.
     private func trackBadge() {
         withObservationTracking {
-            let count = store.unreadCount
+            let count = store.todoCount
             statusItem.button?.image = count > 0 ? Self.badgedIcon : Self.icon
-            NSApp.dockTile.badgeLabel = count > 0 ? (count > 99 ? "99+" : "\(count)") : nil
+            let label = count > 99 ? "99+" : "\(count)"
+            NSApp.dockTile.badgeLabel = count > 0 && store.dockBadge ? label : nil
         } onChange: {
             Task { @MainActor [weak self] in self?.trackBadge() }
         }

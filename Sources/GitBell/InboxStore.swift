@@ -40,8 +40,8 @@ final class InboxStore {
     // The single PR section the window is showing; nil in the popover, which shows them all.
     var pullsFocus: PullSection?
 
-    enum Tab: String { case notifications, pulls }
-    var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .notifications {
+    enum Tab: String { case todo, notifications, pulls }
+    var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .todo {
         didSet {
             guard tab != oldValue else { return }
             UserDefaults.standard.set(tab.rawValue, forKey: "tab")
@@ -54,6 +54,10 @@ final class InboxStore {
     private var popoverView: (tab: Tab, filter: InboxFilter)?
     private var popoverOpen = false
 
+    var hiddenTodos = HiddenTodos()
+    var showHiddenTodos = false
+    var waitingExpanded = false
+
     var pulls: [PullSection: [PullRequest]] = [:]
     var pullTotals: [PullSection: Int] = [:]
     var pullsLoaded = false
@@ -61,6 +65,12 @@ final class InboxStore {
     // Everything starts folded on launch; what you open stays open until you quit.
     var collapsed = Set(PullSection.allCases)
 
+    var dockBadge = UserDefaults.standard.object(forKey: "dockBadge") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(dockBadge, forKey: "dockBadge") }
+    }
+    var pullBanners = UserDefaults.standard.object(forKey: "pullBanners") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(pullBanners, forKey: "pullBanners") }
+    }
     var reviewBanners = UserDefaults.standard.object(forKey: "reviewBanners") as? Bool ?? true {
         didSet { UserDefaults.standard.set(reviewBanners, forKey: "reviewBanners") }
     }
@@ -89,6 +99,13 @@ final class InboxStore {
     private var loadingDetails: Set<String> = []
 
     init() {
+        // "Your turn" became the home view; move everyone there once.
+        if !UserDefaults.standard.bool(forKey: "todoIntroduced") {
+            UserDefaults.standard.set(true, forKey: "todoIntroduced")
+            UserDefaults.standard.set("todo", forKey: "windowSelection")
+            UserDefaults.standard.set(Tab.todo.rawValue, forKey: "tab")
+            tab = .todo
+        }
         Notifier.shared.setUp()
         Task { await bootstrap() }
     }
@@ -433,6 +450,8 @@ extension InboxStore {
             unfilteredTotals = inbox.totals
             applyPeopleToPulls()
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
+            announceYourPulls(failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
+                              ready: pulls[.readyToMerge]?.filter { $0.status == .readyToMerge } ?? [])
             pullsLoaded = true
         } catch let error as APIError where error.isUnauthorized {
             show("Your GitHub session expired.")
@@ -475,6 +494,19 @@ extension InboxStore {
             }
         }
         defaults.set((direct + team).map(\.id), forKey: key)
+    }
+
+    // Banners when checks start failing on one of your pull requests, or it becomes ready to merge.
+    // Keyed by head state, so a fix that fails again announces again.
+    private func announceYourPulls(failing: [PullRequest], ready: [PullRequest]) {
+        let key = "seenYourPulls"
+        let defaults = UserDefaults.standard
+        let current = failing.map { "fail:\($0.id)" } + ready.map { "ready:\($0.id)" }
+        if pullBanners, let seen = defaults.stringArray(forKey: key).map(Set.init) {
+            for pr in failing where !seen.contains("fail:\(pr.id)") { Notifier.shared.checksFailed(pr) }
+            for pr in ready where !seen.contains("ready:\(pr.id)") { Notifier.shared.readyToMerge(pr) }
+        }
+        defaults.set(current, forKey: key)
     }
 }
 
@@ -519,6 +551,8 @@ extension InboxStore {
 extension InboxStore {
     var navigableIDs: [String] {
         switch tab {
+        case .todo:
+            todo.filter { $0.kind != .waiting || waitingExpanded }.map(\.id)
         case .notifications:
             sections.flatMap { $0.items.map(\.id) }
         case .pulls:
@@ -559,6 +593,7 @@ extension InboxStore {
     func openSelection() {
         if let n = selectedNotification { open(n) }
         if let pr = selectedPull { open(pr) }
+        if let item = selectedTodo { open(item) }
     }
 
     func neighbour(of id: String, skipping removed: Set<String>) -> String? {

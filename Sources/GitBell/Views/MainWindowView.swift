@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum SidebarItem: Hashable {
+    case todo
     case inbox(InboxFilter)
     case pulls(PullSection)
     case repo(String)
@@ -11,8 +12,8 @@ enum SidebarItem: Hashable {
 // The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
 struct MainWindowView: View {
     @Environment(InboxStore.self) private var store
-    @AppStorage("windowSelection") private var savedSelection = "inbox.all"
-    @State private var selection: SidebarItem? = .inbox(.all)
+    @AppStorage("windowSelection") private var savedSelection = "todo"
+    @State private var selection: SidebarItem? = .todo
 
     var body: some View {
         @Bindable var store = store
@@ -46,7 +47,7 @@ struct MainWindowView: View {
         }
         .frame(minWidth: 760, minHeight: 480)
         .onAppear {
-            selection = Self.decode(savedSelection) ?? .inbox(.all)
+            selection = Self.decode(savedSelection) ?? .todo
             apply(selection)
         }
         .onChange(of: selection) { _, item in
@@ -62,7 +63,9 @@ struct MainWindowView: View {
     @ViewBuilder
     private var detail: some View {
         switch selection {
-        case .inbox, nil:
+        case .todo, nil:
+            TodoView()
+        case .inbox:
             NotificationList()
         case .pulls(let section):
             PullSectionList(section: section)
@@ -84,6 +87,14 @@ struct MainWindowView: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            if selection == .todo || selection == nil {
+                @Bindable var store = store
+                Toggle(isOn: $store.showHiddenTodos.animation(.snappy)) {
+                    Label("Show Hidden", systemImage: store.showHiddenTodos ? "eye" : "eye.slash")
+                }
+                .help(store.showHiddenTodos ? "Showing hidden items" : "Show items you hid")
+                .disabled(store.hiddenTodoCount == 0 && !store.showHiddenTodos)
+            }
             if case .inbox(let filter) = selection {
                 Button {
                     Task { await store.markVisibleRead() }
@@ -124,13 +135,16 @@ struct MainWindowView: View {
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
         case .org(let owner): owner
-        case nil: "GitBell"
+        case .todo, nil: TodoItem.title
         }
     }
 
     private var subtitle: String {
         switch selection {
-        case .inbox, nil:
+        case .todo, nil:
+            let count = store.todoCount
+            return count == 0 ? "All caught up" : count == 1 ? "1 waiting on you" : "\(count) waiting on you"
+        case .inbox:
             let count = store.visible.count
             return count == 0 ? "All caught up" : count == 1 ? "1 unread" : "\(count) unread"
         case .pulls(let section):
@@ -147,6 +161,7 @@ struct MainWindowView: View {
 
     private var webURL: URL {
         switch selection {
+        case .todo, nil: URL(string: "https://github.com/pulls/inbox")!
         case .pulls(let section): store.webURL(for: section)
         case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
         case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
@@ -157,6 +172,8 @@ struct MainWindowView: View {
 
     private func apply(_ item: SidebarItem?) {
         switch item {
+        case .todo:
+            store.showInWindow(.todo, pullsFocus: nil)
         case .inbox(let filter):
             store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
@@ -168,6 +185,7 @@ struct MainWindowView: View {
 
     private static func encode(_ item: SidebarItem) -> String {
         switch item {
+        case .todo: "todo"
         case .inbox(let filter): "inbox.\(filter.rawValue)"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
@@ -177,6 +195,7 @@ struct MainWindowView: View {
     }
 
     private static func decode(_ raw: String) -> SidebarItem? {
+        if raw == "todo" { return .todo }
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
@@ -196,9 +215,15 @@ private struct Sidebar: View {
 
     var body: some View {
         List(selection: $selection) {
+            Section {
+                SidebarRow(title: TodoItem.title, symbol: TodoItem.symbol, tint: Palette.accent, count: store.todoCount,
+                           selected: selection == .todo)
+                    .tag(SidebarItem.todo)
+            }
             Section("Inbox") {
                 ForEach(InboxFilter.allCases) { filter in
-                    row(filter.windowTitle, symbol: filter.symbol, tint: Palette.accent, count: store.count(for: filter))
+                    SidebarRow(title: filter.windowTitle, symbol: filter.symbol, tint: Palette.accent,
+                               count: store.count(for: filter), selected: selection == .inbox(filter))
                         .tag(SidebarItem.inbox(filter))
                 }
             }
@@ -275,23 +300,20 @@ private struct Sidebar: View {
 
     private func pullRow(_ section: PullSection) -> some View {
         SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: section.tint,
-                   count: store.pullTotals[section] ?? 0)
+                   count: store.pullTotals[section] ?? 0, selected: selection == .pulls(section))
             .tag(SidebarItem.pulls(section))
-    }
-
-    private func row(_ title: String, symbol: String, tint: Color, count: Int) -> some View {
-        SidebarRow(title: title, symbol: symbol, tint: tint, count: count)
     }
 }
 
 // Fixed-width icons keep the titles lined up. On a selected row the coloured icon would vanish
 // into the accent highlight, so it switches to the row's text colour there, as Finder does.
+// The row is told it's selected: backgroundProminence doesn't reach every row reliably.
 private struct SidebarRow: View {
     let title: String
     let symbol: String
     let tint: Color
     let count: Int
-    @Environment(\.backgroundProminence) private var prominence
+    let selected: Bool
 
     var body: some View {
         Label {
@@ -299,7 +321,7 @@ private struct SidebarRow: View {
         } icon: {
             Image(systemName: symbol)
                 .symbolRenderingMode(.monochrome)
-                .foregroundStyle(prominence == .increased ? AnyShapeStyle(.primary) : AnyShapeStyle(tint))
+                .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(tint))
                 .frame(width: 18, alignment: .center)
         }
         .badge(count)

@@ -16,13 +16,16 @@ enum Demo {
 
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
-                   checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12)) -> PullRequest {
-        PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
+                   checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = []) -> PullRequest {
+        let failing = failing.map {
+            PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"))
+        }
+        return PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
                     url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
                     isDraft: draft, updatedAt: minutesAgo(minutes), repository: "acme/\(repo)",
                     author: author, authorAvatar: avatar(author), reviewDecision: review,
                     mergeable: "MERGEABLE", mergeStateStatus: mergeState, isInMergeQueue: false,
-                    checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3))
+                    checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3, failing: failing))
     }
 
     static let pulls: [PullSection: [PullRequest]] = [
@@ -36,6 +39,8 @@ enum Demo {
         ],
         .needsAction: [
             pr(479, "web", "Cache search results for an hour", by: viewer, minutes: 12, review: "CHANGES_REQUESTED"),
+            pr(484, "web", "Upgrade to Rails 8.1", by: viewer, minutes: 31, checks: ("FAILURE", 10, 2, 12),
+               failing: ["rspec (3/8)", "rubocop"]),
         ],
         .readyToMerge: [
             pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
@@ -46,12 +51,13 @@ enum Demo {
             pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
         ],
         .drafts: [
-            pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12)),
+            pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12),
+               failing: ["cypress", "lighthouse"]),
         ],
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 1, .readyToMerge: 1, .waiting: 2, .drafts: 1,
+        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 1, .waiting: 2, .drafts: 1,
     ]
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,

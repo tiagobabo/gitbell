@@ -39,6 +39,8 @@ extension InboxStore {
                  minutes: 64, author: Demo.viewer, .merged, by: "erin", state: "merged", merged: true),
             item("6", "design-system", "Issue", 85, "Icons look blurry on non-retina screens", reason: "assign",
                  minutes: 95, author: "frank", .commented, by: "frank", "Happens with the 16px set only, screenshots attached."),
+            item("8", "api", "WorkflowRun", nil, "CI workflow run failed for main branch", reason: "ci_activity",
+                 minutes: 48, author: "dave", nil),
             item("7", "infra", "PullRequest", 302, "Move staging to the new cluster", reason: "review_requested",
                  minutes: 75, author: "grace", .approved, by: "heidi"),
         ]

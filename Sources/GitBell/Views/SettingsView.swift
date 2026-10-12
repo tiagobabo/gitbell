@@ -4,12 +4,21 @@ struct SettingsView: View {
     @Environment(InboxStore.self) private var store
     @Environment(Updater.self) private var updater
     @AppStorage(Presentation.key) private var presentation = Presentation.window
+    @AppStorage(Appearance.key) private var appearance = Appearance.system
     @State private var showMenuBarIcon = MenuBarIcon.isShown
+    @State private var badgesAllowed = true
 
     var body: some View {
         @Bindable var store = store
         @Bindable var updater = updater
         Form {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+            .onChange(of: appearance) { _, appearance in Appearance.apply(appearance) }
+
             Toggle("Show menu bar icon", isOn: $showMenuBarIcon)
                 .onChange(of: showMenuBarIcon) { _, shown in AppController.shared?.setMenuBarIconShown(shown) }
             Picker("Menu bar icon opens", selection: $presentation) {
@@ -42,9 +51,30 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Banners") {
+            Section {
                 Toggle("Review requests", isOn: $store.reviewBanners)
                 Toggle("Team review requests", isOn: $store.teamReviewBanners)
+                Toggle("Your pull requests fail checks or are ready to merge", isOn: $store.pullBanners)
+                Toggle("Show the count on the Dock icon", isOn: $store.dockBadge)
+                if store.dockBadge && !badgesAllowed {
+                    HStack {
+                        Text("macOS has badges turned off for GitBell.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Open Notification Settings") {
+                            let id = Bundle.main.bundleIdentifier ?? ""
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!)
+                        }
+                        .controlSize(.small)
+                    }
+                }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("The Dock icon counts everything waiting on you in \(TodoItem.title).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if let login = store.viewer?.login {
@@ -66,6 +96,11 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        // Checked each time Settings opens, since you might have just changed it in System Settings.
+        .task { badgesAllowed = await Notifier.shared.badgesAllowed() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { badgesAllowed = await Notifier.shared.badgesAllowed() }
+        }
         .frame(width: 420)
         .fixedSize(horizontal: false, vertical: true)
     }

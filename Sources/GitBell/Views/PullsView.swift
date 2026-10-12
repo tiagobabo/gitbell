@@ -147,8 +147,6 @@ struct PullRow: View {
     @State private var hovering = false
 
     var body: some View {
-        let status = pr.status
-
         HStack(alignment: .top, spacing: 10) {
             OcticonView(icon, size: 14)
                 .foregroundStyle(iconColor)
@@ -174,18 +172,7 @@ struct PullRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-                HStack(spacing: 12) {
-                    HStack(spacing: 5) {
-                        Circle().fill(Palette.color(for: status.tone)).frame(width: 6, height: 6)
-                        Text(status.label)
-                    }
-                    if let checks = pr.checks, checks.total > 0 {
-                        ChecksBadge(checks: checks)
-                    }
-                }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-                .padding(.top, 1)
+                PullStatusLine(pr: pr)
             }
 
             Spacer(minLength: 4)

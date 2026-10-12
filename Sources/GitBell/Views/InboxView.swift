@@ -21,6 +21,7 @@ struct InboxView: View {
                 Divider().opacity(0.5)
                 // Both lists stay alive so each keeps its scroll position across tab switches.
                 ZStack {
+                    TodoView(compact: true).tabVisible(store.tab == .todo)
                     NotificationList().tabVisible(store.tab == .notifications)
                     PullsView().tabVisible(store.tab == .pulls)
                 }
@@ -38,8 +39,7 @@ struct HeaderView: View {
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        HStack(spacing: 10) {
-            Avatar(url: store.viewer?.avatarUrl, size: 28)
+        HStack(spacing: 8) {
             TabSwitcher()
             Spacer(minLength: 0)
             if store.tab == .notifications {
@@ -73,8 +73,9 @@ struct TabSwitcher: View {
 
     var body: some View {
         HStack(spacing: 2) {
+            tab(.todo, title: TodoItem.title, count: store.todoCount)
             tab(.notifications, title: "Inbox", count: store.unreadCount)
-            tab(.pulls, title: "Pull requests", count: store.actionablePulls)
+            tab(.pulls, title: "PRs", count: store.actionablePulls)
         }
         .padding(2)
         .background(Color.primary.opacity(0.06), in: Capsule())
@@ -183,9 +184,10 @@ struct SettingsMenu: View {
             }
             Toggle("Launch at Login", isOn: $store.launchAtLogin)
             Divider()
-            Section("Banners") {
+            Section("Notify Me About") {
                 Toggle("Review Requests", isOn: $store.reviewBanners)
                 Toggle("Team Review Requests", isOn: $store.teamReviewBanners)
+                Toggle("Your Pull Requests", isOn: $store.pullBanners)
             }
             Section("Keyboard") {
                 Text("↑ ↓ or J K  Move")
@@ -234,7 +236,7 @@ struct FooterView: View {
             }
             Spacer()
             Button {
-                let url = store.tab == .pulls ? "https://github.com/pulls/inbox" : "https://github.com/notifications"
+                let url = store.tab == .notifications ? "https://github.com/notifications" : "https://github.com/pulls/inbox"
                 NSWorkspace.shared.open(URL(string: url)!)
             } label: {
                 HStack(spacing: 3) {
@@ -278,7 +280,8 @@ struct InboxKeyboard: ViewModifier {
             .onKeyPress(.return) { store.openSelection(); return .handled }
             .onKeyPress(.tab) {
                 guard inPopover else { return .ignored }
-                store.tab = store.tab == .notifications ? .pulls : .notifications
+                let order: [InboxStore.Tab] = [.todo, .notifications, .pulls]
+                store.tab = order[((order.firstIndex(of: store.tab) ?? 0) + 1) % order.count]
                 return .handled
             }
             .onKeyPress(.leftArrow) { cycleFilter(-1) }
@@ -301,16 +304,18 @@ struct InboxKeyboard: ViewModifier {
         case "k": store.moveSelection(-1)
         case "o": store.openSelection()
         case "e":
+            if let item = store.selectedTodo { Task { await store.markDone(item) }; return .handled }
             guard let n = store.selectedNotification else { return .ignored }
             Task { await store.markDone(n) }
         case "m":
-            guard let n = store.selectedNotification else { return .ignored }
+            guard let n = store.selectedNotification ?? store.selectedTodo?.notification else { return .ignored }
             Task { await store.markRead(n) }
         case "u":
             guard let n = store.selectedNotification else { return .ignored }
             Task { await store.unsubscribe(n) }
         case "c":
-            if let n = store.selectedNotification { store.copyLink(n) }
+            if let item = store.selectedTodo { store.copyLink(item) }
+            else if let n = store.selectedNotification { store.copyLink(n) }
             else if let pr = store.selectedPull { store.copyLink(pr) }
             else { return .ignored }
         default:

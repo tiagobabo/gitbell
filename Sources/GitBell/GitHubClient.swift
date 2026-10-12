@@ -346,10 +346,15 @@ actor GitHubClient {
       id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue
       author { login avatarUrl }
       repository { nameWithOwner }
-      commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 0) {
+      commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 50) {
         totalCount
         checkRunCountsByState { state count }
         statusContextCountsByState { state count }
+        nodes {
+          __typename
+          ... on CheckRun { name status conclusion detailsUrl }
+          ... on StatusContext { context state targetUrl }
+        }
       } } } } }
     }
     """
@@ -398,8 +403,33 @@ actor GitHubClient {
                 let totalCount: Int
                 let checkRunCountsByState: [StateCount]
                 let statusContextCountsByState: [StateCount]
+                let nodes: [Context?]?
             }
             struct StateCount: Decodable { let state: String; let count: Int }
+            // A check run (GitHub Actions, CircleCI's app) or a commit status (older integrations).
+            struct Context: Decodable {
+                let name: String?
+                let status: String?
+                let conclusion: String?
+                let detailsUrl: URL?
+                let context: String?
+                let state: String?
+                let targetUrl: URL?
+
+                var check: PullRequest.Check? {
+                    guard let name = name ?? context else { return nil }
+                    // CircleCI names every status "ci/circleci: job"; the job is the useful part.
+                    let short = name.hasPrefix("ci/circleci: ") ? String(name.dropFirst(13)) : name
+                    return PullRequest.Check(name: short, url: detailsUrl ?? targetUrl)
+                }
+                var isFailing: Bool { Node.failedStates.contains(conclusion ?? state ?? "") }
+                var isRunning: Bool {
+                    if let status { return status != "COMPLETED" }
+                    return ["PENDING", "EXPECTED"].contains(state ?? "")
+                }
+            }
+
+            static let failedStates: Set<String> = ["FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"]
 
             var pullRequest: PullRequest? {
                 guard let id, let number, let title, let url, let updatedAt, let repository else { return nil }
@@ -417,11 +447,14 @@ actor GitHubClient {
                 func sum(_ states: Set<String>) -> Int {
                     counts.filter { states.contains($0.state) }.reduce(0) { $0 + $1.count }
                 }
+                let contexts = (rollup.contexts.nodes ?? []).compactMap { $0 }
                 return PullRequest.Checks(
                     state: rollup.state,
                     passed: sum(["SUCCESS", "NEUTRAL", "SKIPPED"]),
-                    failed: sum(["FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"]),
-                    total: rollup.contexts.totalCount
+                    failed: sum(Self.failedStates),
+                    total: rollup.contexts.totalCount,
+                    failing: contexts.filter(\.isFailing).compactMap(\.check),
+                    running: contexts.filter(\.isRunning).compactMap(\.check)
                 )
             }
         }

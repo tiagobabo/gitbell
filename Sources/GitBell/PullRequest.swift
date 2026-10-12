@@ -21,13 +21,25 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         let passed: Int
         let failed: Int
         let total: Int
+        // The failing and still-running checks by name, so you can see which spec broke without opening GitHub.
+        var failing: [Check] = []
+        var running: [Check] = []
 
-        init(state: String, passed: Int, failed: Int, total: Int) {
+        init(state: String, passed: Int, failed: Int, total: Int, failing: [Check] = [], running: [Check] = []) {
             self.state = state
             self.passed = passed
             self.failed = failed
             self.total = total
+            self.failing = failing
+            self.running = running
         }
+
+        var isRunning: Bool { failed == 0 && passed < total }
+    }
+
+    struct Check: Codable, Hashable, Sendable {
+        let name: String
+        let url: URL?
     }
 
     init(id: String, number: Int, title: String, url: URL, isDraft: Bool, updatedAt: Date,

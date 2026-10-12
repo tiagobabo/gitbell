@@ -11,7 +11,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func setUp() {
         center?.delegate = self
-        center?.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // Badge permission is what lets macOS show the count on the Dock icon.
+        center?.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
 
     func reviewRequested(_ pr: PullRequest, team: Bool) {
@@ -22,6 +23,33 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.sound = .default
         content.userInfo = ["url": pr.url.absoluteString]
         center?.add(UNNotificationRequest(identifier: pr.id, content: content, trigger: nil))
+    }
+
+    // False when badges are turned off for GitBell in System Settings → Notifications, which hides the Dock count.
+    func badgesAllowed() async -> Bool {
+        guard let center else { return true }
+        return await center.notificationSettings().badgeSetting != .disabled
+    }
+
+    func checksFailed(_ pr: PullRequest) {
+        let names = pr.checks?.failing.prefix(3).map(\.name).joined(separator: ", ")
+        post(id: "fail:\(pr.id)", title: "Checks failing", subtitle: "\(pr.repository)#\(pr.number)",
+             body: [pr.title, names.map { "Failing: \($0)" }].compactMap { $0 }.joined(separator: "\n"),
+             url: pr.checks?.failing.first?.url ?? pr.url)
+    }
+
+    func readyToMerge(_ pr: PullRequest) {
+        post(id: "ready:\(pr.id)", title: "Ready to merge", subtitle: "\(pr.repository)#\(pr.number)", body: pr.title, url: pr.url)
+    }
+
+    private func post(id: String, title: String, subtitle: String, body: String, url: URL) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.subtitle = subtitle
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["url": url.absoluteString]
+        center?.add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
     }
 
     func reviewRequestsSummary(count: Int) {
