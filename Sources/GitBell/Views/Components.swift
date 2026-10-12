@@ -99,7 +99,7 @@ struct SignInView: View {
                     Button("Connect", action: connectWithToken)
                         .disabled(token.isEmpty)
                 }
-                Link(destination: URL(string: "https://github.com/settings/tokens/new?scopes=notifications,repo&description=GitBell")!) {
+                Link(destination: URL(string: "https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&description=GitBell")!) {
                     Text("Create a classic token with notifications + repo scopes")
                         .font(.system(size: 11))
                 }

@@ -1,5 +1,4 @@
 import Foundation
-import GitBellShared
 import Observation
 import Sparkle
 

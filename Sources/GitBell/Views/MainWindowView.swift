@@ -43,6 +43,10 @@ struct MainWindowView: View {
             apply(item)
             if let item { savedSelection = Self.encode(item) }
         }
+        // The hosting window doesn't always pick up navigationTitle and shows "Untitled", so set it directly.
+        .onChange(of: title, initial: true) { _, title in
+            NSApp.windows.first { $0.identifier == AppController.windowID }?.title = title
+        }
         // The popover shares the store; take the window's view back whenever it comes to the front.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
             if (note.object as? NSWindow)?.identifier == AppController.windowID { apply(selection) }
@@ -263,13 +267,18 @@ struct PullSectionList: View {
             ProgressView().controlSize(.small)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if items.isEmpty {
-            VStack(spacing: 8) {
-                Image(systemName: section.symbol)
-                    .font(.system(size: 34))
-                    .foregroundStyle(.tertiary)
-                Text(store.searchText.isEmpty ? "Nothing here" : "No matches")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            VStack(spacing: 10) {
+                Image(systemName: store.searchText.isEmpty ? section.symbol : "magnifyingglass")
+                    .font(.system(size: 40))
+                    .foregroundStyle(section.tint.opacity(0.7))
+                    .symbolEffect(.bounce, value: section)
+                VStack(spacing: 3) {
+                    Text(store.searchText.isEmpty ? section.emptyTitle : "No matches")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(store.searchText.isEmpty ? section.emptySubtitle : "Nothing matches “\(store.searchText)”.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -349,6 +358,27 @@ extension PullSection {
         case .readyToMerge: "checkmark.circle"
         case .waiting: "clock"
         case .drafts: "pencil.circle"
+        }
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .needsReview: "No reviews waiting on you"
+        case .teamReview: "Your teams are all caught up"
+        case .needsAction: "Nothing needs fixing"
+        case .readyToMerge: "Nothing ready to merge"
+        case .waiting: "Nothing in review"
+        case .drafts: "No drafts"
+        }
+    }
+
+    var emptySubtitle: String {
+        switch self {
+        case .needsReview, .teamReview: "New review requests show up here."
+        case .needsAction: "Changes requested and failing checks show up here."
+        case .readyToMerge: "Approved pull requests with passing checks show up here."
+        case .waiting: "Your open pull requests waiting on reviewers show up here."
+        case .drafts: "Your draft pull requests show up here."
         }
     }
 

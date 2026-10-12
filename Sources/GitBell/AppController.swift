@@ -111,9 +111,11 @@ final class AppController: NSObject, NSWindowDelegate {
     private func makeWindow() -> NSWindow {
         let hosting = NSHostingController(rootView: MainWindowView().environment(store))
         hosting.sceneBridgingOptions = [.toolbars, .title]
-        let window = NSWindow(contentViewController: hosting)
+        let window = NSWindow()
+        // Before the content, so MainWindowView can find its window by identifier.
         window.identifier = Self.windowID
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.contentViewController = hosting
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
         window.delegate = self

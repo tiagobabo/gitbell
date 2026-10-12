@@ -5,7 +5,7 @@ struct NotificationList: View {
 
     var body: some View {
         if store.visible.isEmpty {
-            EmptyStateView(filter: store.filter, loading: store.lastUpdated == nil)
+            EmptyStateView(filter: store.filter, loading: store.lastUpdated == nil, search: store.searchText)
         } else {
             ScrollViewReader { proxy in
             ScrollView {
@@ -202,11 +202,20 @@ struct ReasonTag: View {
 struct EmptyStateView: View {
     let filter: InboxFilter
     let loading: Bool
+    var search = ""
 
     var body: some View {
         VStack(spacing: 10) {
             if loading {
                 ProgressView().controlSize(.small)
+            } else if !search.isEmpty {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.tertiary)
+                VStack(spacing: 3) {
+                    Text("No matches").font(.system(size: 14, weight: .semibold))
+                    Text("Nothing matches “\(search)”.").font(.system(size: 12)).foregroundStyle(.secondary)
+                }
             } else {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 44))

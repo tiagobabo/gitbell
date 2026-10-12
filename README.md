@@ -9,7 +9,7 @@ GitHub notifications and pull requests in a native Mac app.
 - **Menu bar:** an optional menu bar icon that opens the window or a compact popover.
 - **Banners:** a notification when someone requests your review.
 - **People filter:** only show activity from the people and teams you pick.
-- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe.
+- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link.
 
 ## Install
 

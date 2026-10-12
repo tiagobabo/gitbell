@@ -189,6 +189,7 @@ struct SettingsMenu: View {
                 Text("↑ ↓ or J K  Move")
                 Text("⏎ or O  Open")
                 Text("E  Done   M  Read   U  Unsubscribe")
+                Text("C  Copy link")
                 Text("← →  Filter   ⇥  Switch tab")
             }
             Divider()
@@ -257,7 +258,7 @@ extension View {
     }
 }
 
-// Arrow keys / J K to move, Return or O to open, E done, M read, U unsubscribe.
+// Arrow keys / J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link.
 // The popover also takes Tab to switch tabs and ← → for filters; the window leaves those to the sidebar.
 struct InboxKeyboard: ViewModifier {
     let inPopover: Bool
@@ -281,7 +282,7 @@ struct InboxKeyboard: ViewModifier {
             .onKeyPress(.leftArrow) { cycleFilter(-1) }
             .onKeyPress(.rightArrow) { cycleFilter(1) }
             .onKeyPress(.escape) { store.selection = nil; return .handled }
-            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemu"), phases: .down) { press in
+            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemuc"), phases: .down) { press in
                 handle(press.characters)
             }
     }
@@ -306,6 +307,10 @@ struct InboxKeyboard: ViewModifier {
         case "u":
             guard let n = store.selectedNotification else { return .ignored }
             Task { await store.unsubscribe(n) }
+        case "c":
+            if let n = store.selectedNotification { store.copyLink(n) }
+            else if let pr = store.selectedPull { store.copyLink(pr) }
+            else { return .ignored }
         default:
             return .ignored
         }

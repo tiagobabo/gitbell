@@ -53,9 +53,27 @@ struct SettingsView: View {
                     Button("Sign Out") { store.signOut() }
                 }
             }
+
+            Section {
+                LabeledContent("Version") {
+                    HStack(spacing: 10) {
+                        Text(Self.version)
+                        Button("Check for Updates") { updater.checkForUpdates() }
+                            .disabled(!updater.canCheck)
+                    }
+                }
+                Link("GitBell on GitHub", destination: URL(string: "https://github.com/tiagobabo/gitbell")!)
+            }
         }
         .formStyle(.grouped)
         .frame(width: 420)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private static var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(short) (\(build))"
     }
 }
