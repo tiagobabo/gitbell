@@ -3,6 +3,8 @@ import SwiftUI
 enum SidebarItem: Hashable {
     case inbox(InboxFilter)
     case pulls(PullSection)
+    case repo(String)
+    case repos
 }
 
 // The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
@@ -32,6 +34,13 @@ struct MainWindowView: View {
                 }
                 .inboxKeyboard(inPopover: false)
                 .toastOverlay(bottomPadding: 20)
+                // Outside the keyboard handling, so typing in it doesn't move the list selection.
+                .overlay {
+                    if store.quickOpenShown {
+                        QuickOpen { repo in selection = .repo(repo.fullName) }
+                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                    }
+                }
             }
         }
         .frame(minWidth: 760, minHeight: 480)
@@ -56,6 +65,13 @@ struct MainWindowView: View {
             NotificationList()
         case .pulls(let section):
             PullSectionList(section: section)
+        case .repo(let fullName):
+            RepoPage(fullName: fullName)
+        case .repos:
+            RepoBrowser { repo in
+                store.repos.visited(repo.fullName)
+                selection = .repo(repo.fullName)
+            }
         }
     }
 
@@ -72,7 +88,13 @@ struct MainWindowView: View {
                 .disabled(store.visible.isEmpty)
             }
             Button {
-                Task { await store.refreshAll() }
+                Task {
+                    switch selection {
+                    case .repo(let fullName): await store.refreshRepo(fullName)
+                    case .repos: await store.refreshRepos(force: true)
+                    default: await store.refreshAll()
+                    }
+                }
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
@@ -92,6 +114,8 @@ struct MainWindowView: View {
         switch selection {
         case .inbox(let filter): filter.windowTitle
         case .pulls(let section): section.windowTitle
+        case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
+        case .repos: "Repositories"
         case nil: "GitBell"
         }
     }
@@ -104,12 +128,18 @@ struct MainWindowView: View {
         case .pulls(let section):
             let count = store.pullTotals[section] ?? 0
             return count == 1 ? "1 pull request" : "\(count) pull requests"
+        case .repo(let fullName):
+            return String(fullName.split(separator: "/").first ?? "")
+        case .repos:
+            return "\(store.repos.all.count) in your organizations"
         }
     }
 
     private var webURL: URL {
         switch selection {
         case .pulls(let section): store.webURL(for: section)
+        case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
+        case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
         default: URL(string: "https://github.com/notifications")!
         }
     }
@@ -120,7 +150,7 @@ struct MainWindowView: View {
             store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
-        case nil:
+        case .repo, .repos, nil:
             break
         }
     }
@@ -129,6 +159,8 @@ struct MainWindowView: View {
         switch item {
         case .inbox(let filter): "inbox.\(filter.rawValue)"
         case .pulls(let section): "pulls.\(section.rawValue)"
+        case .repo(let fullName): "repo.\(fullName)"
+        case .repos: "repos.all"
         }
     }
 
@@ -138,6 +170,8 @@ struct MainWindowView: View {
         switch parts[0] {
         case "inbox": return InboxFilter(rawValue: parts[1]).map(SidebarItem.inbox)
         case "pulls": return PullSection(rawValue: parts[1]).map(SidebarItem.pulls)
+        case "repo": return .repo(parts[1])
+        case "repos": return .repos
         default: return nil
         }
     }
@@ -161,6 +195,21 @@ private struct Sidebar: View {
                         pullRow(section)
                     }
                 }
+            }
+            Section("Repositories") {
+                ForEach(store.yourRepos) { repo in
+                    RepoSidebarRow(repo: repo, unread: store.unreadCount(in: repo.fullName))
+                        .tag(SidebarItem.repo(repo.fullName))
+                        .contextMenu { RepoMenu(repo: repo) }
+                }
+                Label {
+                    Text("All Repositories")
+                } icon: {
+                    Image(systemName: "square.grid.2x2")
+                        .foregroundStyle(Palette.neutral)
+                        .frame(width: 18)
+                }
+                .tag(SidebarItem.repos)
             }
         }
         .listStyle(.sidebar)
@@ -224,6 +273,22 @@ private struct SidebarRow: View {
                 .frame(width: 18, alignment: .center)
         }
         .badge(count)
+    }
+}
+
+private struct RepoSidebarRow: View {
+    let repo: Repo
+    let unread: Int
+
+    var body: some View {
+        Label {
+            Text(repo.name).lineLimit(1).truncationMode(.middle)
+        } icon: {
+            Avatar(url: repo.ownerAvatar, size: 16, cornerRadius: 4)
+                .frame(width: 18)
+        }
+        .badge(unread)
+        .help(repo.fullName)
     }
 }
 

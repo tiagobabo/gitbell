@@ -6,10 +6,11 @@ GitHub notifications and pull requests in a native Mac app.
 
 - **Inbox:** unread notifications grouped by repository, each saying who commented, approved, pushed or merged.
 - **Pull requests:** review requests for you and your team, and your own PRs by status, with checks.
+- **Repositories:** the repos you work in, ranked by your pull requests and reviews, plus pins. Each has a page with its main branch's checks, open pull requests, merges and time to merge over the last 30 days, and who's shipping. ⌘K jumps to any repo in your organizations.
 - **Menu bar:** an optional menu bar icon that opens the window or a compact popover.
 - **Banners:** a notification when someone requests your review.
 - **People filter:** only show activity from the people and teams you pick.
-- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link.
+- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link, ⌘K go to repository.
 
 ## Install
 

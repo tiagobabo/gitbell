@@ -47,6 +47,7 @@ extension InboxStore {
         unfilteredPulls = Demo.pulls
         unfilteredTotals = Demo.totals
         applyPeopleToPulls()
+        repos.loadDemo()
         lastUpdated = .now
         phase = .ready
     }

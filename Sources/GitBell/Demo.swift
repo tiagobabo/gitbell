@@ -53,4 +53,51 @@ enum Demo {
     static let totals: [PullSection: Int] = [
         .needsReview: 2, .teamReview: 4, .needsAction: 1, .readyToMerge: 1, .waiting: 2, .drafts: 1,
     ]
+
+    static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,
+                     stars: Int = 0, isPrivate: Bool = true) -> Repo {
+        Repo(fullName: "acme/\(name)", description: description, url: URL(string: "https://github.com/acme/\(name)")!,
+             isPrivate: isPrivate, isFork: false, stars: stars, pushedAt: minutesAgo(minutes), language: language, languageColor: color)
+    }
+
+    static let repos: [Repo] = [
+        repo("web", "The acme.com storefront", "Ruby", "#701516", pushed: 3),
+        repo("api", "Public and partner REST API", "Go", "#00ADD8", pushed: 21),
+        repo("design-system", "Components, tokens and icons", "TypeScript", "#3178c6", pushed: 64, stars: 41, isPrivate: false),
+        repo("infra", "Terraform for every environment", "HCL", "#844FBA", pushed: 75),
+        repo("mobile", "iOS and Android apps", "Swift", "#F05138", pushed: 180),
+        repo("data-pipelines", "Nightly jobs that feed the warehouse", "Python", "#3572A5", pushed: 320),
+        repo("search", "Search indexing and ranking", "Rust", "#dea584", pushed: 600),
+        repo("payments", "Checkout and billing", "Ruby", "#701516", pushed: 900),
+        repo("docs", "developer.acme.com", "MDX", "#fcb32c", pushed: 1500, stars: 12, isPrivate: false),
+        repo("admin", "Internal admin tools", "Ruby", "#701516", pushed: 2900),
+        repo("email-templates", "Transactional email templates", "HTML", "#e34c26", pushed: 5000),
+        repo("feature-flags", "Flag definitions and rollout rules", "TypeScript", "#3178c6", pushed: 7200),
+        repo("ci-images", "Docker images for CI", "Dockerfile", "#384d54", pushed: 12000),
+        repo("observability", "Dashboards, alerts and SLOs", "HCL", "#844FBA", pushed: 20000),
+        repo("legacy-checkout", "The old checkout, still serving EU", "PHP", "#4F5D95", pushed: 90000),
+    ]
+
+    static let repoActivity: [String: Int] = ["acme/web": 40, "acme/api": 22, "acme/design-system": 9, "acme/infra": 4]
+
+    static func detail(for repo: Repo) -> RepoDetail {
+        let seed = repo.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        let people = ["alice", "bob", "carol", "dave", "erin", "frank", "grace", "heidi"]
+        let open = pulls.values.joined().filter { $0.repository == repo.fullName }
+        let merged = (0..<(seed % 30 + 8)).map { i in
+            let hours = Double((seed * (i + 3)) % 70 + 2)
+            let mergedAt = minutesAgo(Double(i) * 170 + 30)
+            return RepoDetail.MergedPull(createdAt: mergedAt.addingTimeInterval(-hours * 3600), mergedAt: mergedAt,
+                                         author: people[(seed + i * i) % people.count], avatar: avatar(people[(seed + i * i) % people.count]))
+        }
+        let author = people[seed % people.count]
+        return RepoDetail(
+            fullName: repo.fullName, homepage: nil, openPullCount: max(open.count, seed % 9 + 2), openIssueCount: seed % 14,
+            defaultBranch: "main",
+            lastCommit: .init(headline: "Merge pull request #\(400 + seed % 90)", url: nil, date: repo.pushedAt ?? .now,
+                              author: author, avatar: avatar(author), checks: seed % 5 == 0 ? "FAILURE" : "SUCCESS"),
+            latestRelease: seed % 3 == 0 ? nil : .init(tag: "v\(seed % 4 + 1).\(seed % 12).0", date: minutesAgo(Double(seed % 20) * 600),
+                                                     url: repo.page("releases")),
+            openPulls: open, mergedCount: merged.count, merged: merged)
+    }
 }

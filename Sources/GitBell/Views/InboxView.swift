@@ -48,6 +48,9 @@ struct HeaderView: View {
                 }
                 .disabled(store.visible.isEmpty)
             }
+            IconButton(symbol: "magnifyingglass", help: "Go to repository (⌘K)") {
+                AppController.shared?.showQuickOpen()
+            }
             IconButton(symbol: "arrow.clockwise", help: "Refresh (⌘R)", busy: store.isRefreshing || store.isRefreshingPulls) {
                 Task { await store.refreshAll() }
             }

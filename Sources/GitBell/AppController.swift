@@ -108,6 +108,11 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         store.leavePopover()
     }
 
+    func showQuickOpen() {
+        showWindow()
+        withAnimation(.snappy(duration: 0.15)) { store.quickOpenShown = true }
+    }
+
     func showWindow() {
         popover.performClose(nil)
         NSApp.setActivationPolicy(.regular)

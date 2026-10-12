@@ -18,6 +18,7 @@ final class InboxStore {
     var toast: String?
     var selection: String?
     var searchText = ""
+    var quickOpenShown = false
 
     // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "my-org/my-team, octocat".
     var peopleFilter = UserDefaults.standard.string(forKey: "peopleFilter") ?? "" {
@@ -78,7 +79,8 @@ final class InboxStore {
         }
     }
 
-    private var client: GitHubClient?
+    private(set) var client: GitHubClient?
+    let repos = RepoDirectory()
     private var pollTask: Task<Void, Never>?
     private var pullTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
@@ -175,6 +177,7 @@ final class InboxStore {
         notifications = []
         details = [:]
         lastUpdated = nil
+        repos.signOut()
         TokenStore.deleteToken()
         TokenStore.mode = .signedOut
         phase = .signedOut
@@ -231,6 +234,8 @@ final class InboxStore {
                     resolvedAt = .now
                 }
                 await self.refreshPulls()
+                // Only goes to GitHub when the list is more than a few hours old.
+                await self.refreshRepos()
                 try? await Task.sleep(for: .seconds(120))
             }
         }
@@ -477,7 +482,7 @@ extension InboxStore {
 
 extension InboxStore {
     // Assigning an unchanged value still redraws every observer, so only set what differs.
-    func show(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
+    func setView(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
         if self.tab != tab { self.tab = tab }
         if let filter, self.filter != filter { self.filter = filter }
         if self.pullsFocus != pullsFocus { self.pullsFocus = pullsFocus }
@@ -486,20 +491,20 @@ extension InboxStore {
     // The window's sidebar selection. Held back while the popover is open so it can't swap the popover's view.
     func showInWindow(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
         windowView = (tab, filter, pullsFocus)
-        if !popoverOpen { show(tab, filter: filter, pullsFocus: pullsFocus) }
+        if !popoverOpen { setView(tab, filter: filter, pullsFocus: pullsFocus) }
     }
 
     // Each side gets back what it last showed, instantly rather than animating from the other's view.
     func enterPopover() {
         popoverOpen = true
-        withoutAnimation { show(popoverView?.tab ?? tab, filter: popoverView?.filter, pullsFocus: nil) }
+        withoutAnimation { setView(popoverView?.tab ?? tab, filter: popoverView?.filter, pullsFocus: nil) }
     }
 
     func leavePopover() {
         guard popoverOpen else { return }
         popoverOpen = false
         popoverView = (tab, filter)
-        if let windowView { withoutAnimation { show(windowView.tab, filter: windowView.filter, pullsFocus: windowView.pullsFocus) } }
+        if let windowView { withoutAnimation { setView(windowView.tab, filter: windowView.filter, pullsFocus: windowView.pullsFocus) } }
     }
 
     private func withoutAnimation(_ body: () -> Void) {
