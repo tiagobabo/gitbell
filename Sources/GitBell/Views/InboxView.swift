@@ -31,7 +31,6 @@ struct InboxView: View {
         .frame(width: 400, height: 580)
         .toastOverlay(bottomPadding: 46)
         .inboxKeyboard(inPopover: true)
-        .onAppear { store.pullsFocus = nil }
     }
 }
 

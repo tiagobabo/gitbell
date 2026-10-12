@@ -42,10 +42,16 @@ final class InboxStore {
     enum Tab: String { case notifications, pulls }
     var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .notifications {
         didSet {
+            guard tab != oldValue else { return }
             UserDefaults.standard.set(tab.rawValue, forKey: "tab")
             selection = nil
         }
     }
+    // The window and popover share these fields but each keeps its own view of them: the window's comes
+    // from its sidebar, the popover's from where you left it. Nil until first set.
+    private var windowView: (tab: Tab, filter: InboxFilter?, pullsFocus: PullSection?)?
+    private var popoverView: (tab: Tab, filter: InboxFilter)?
+    private var popoverOpen = false
 
     var pulls: [PullSection: [PullRequest]] = [:]
     var pullTotals: [PullSection: Int] = [:]
@@ -464,6 +470,42 @@ extension InboxStore {
             }
         }
         defaults.set((direct + team).map(\.id), forKey: key)
+    }
+}
+
+// MARK: - Window and popover views
+
+extension InboxStore {
+    // Assigning an unchanged value still redraws every observer, so only set what differs.
+    func show(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
+        if self.tab != tab { self.tab = tab }
+        if let filter, self.filter != filter { self.filter = filter }
+        if self.pullsFocus != pullsFocus { self.pullsFocus = pullsFocus }
+    }
+
+    // The window's sidebar selection. Held back while the popover is open so it can't swap the popover's view.
+    func showInWindow(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
+        windowView = (tab, filter, pullsFocus)
+        if !popoverOpen { show(tab, filter: filter, pullsFocus: pullsFocus) }
+    }
+
+    // Each side gets back what it last showed, instantly rather than animating from the other's view.
+    func enterPopover() {
+        popoverOpen = true
+        withoutAnimation { show(popoverView?.tab ?? tab, filter: popoverView?.filter, pullsFocus: nil) }
+    }
+
+    func leavePopover() {
+        guard popoverOpen else { return }
+        popoverOpen = false
+        popoverView = (tab, filter)
+        if let windowView { withoutAnimation { show(windowView.tab, filter: windowView.filter, pullsFocus: windowView.pullsFocus) } }
+    }
+
+    private func withoutAnimation(_ body: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction, body)
     }
 }
 

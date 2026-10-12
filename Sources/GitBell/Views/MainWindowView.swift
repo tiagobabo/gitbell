@@ -47,10 +47,6 @@ struct MainWindowView: View {
         .onChange(of: title, initial: true) { _, title in
             NSApp.windows.first { $0.identifier == AppController.windowID }?.title = title
         }
-        // The popover shares the store; take the window's view back whenever it comes to the front.
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
-            if (note.object as? NSWindow)?.identifier == AppController.windowID { apply(selection) }
-        }
     }
 
     @ViewBuilder
@@ -121,12 +117,9 @@ struct MainWindowView: View {
     private func apply(_ item: SidebarItem?) {
         switch item {
         case .inbox(let filter):
-            store.tab = .notifications
-            store.filter = filter
-            store.pullsFocus = nil
+            store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
-            store.tab = .pulls
-            store.pullsFocus = section
+            store.showInWindow(.pulls, pullsFocus: section)
         case nil:
             break
         }

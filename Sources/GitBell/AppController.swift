@@ -26,7 +26,7 @@ enum MenuBarIcon {
 // GitBell is a normal Dock app whose Dock icon always opens the window. The menu bar item is optional;
 // a click on it opens the window or the popover, and a right-click shows a small menu with both.
 @MainActor
-final class AppController: NSObject, NSWindowDelegate {
+final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     static let windowID = NSUserInterfaceItemIdentifier("GitBellMain")
     // For the popover's ⋯ menu, which lives in SwiftUI and has no other way back here.
     static weak var shared: AppController?
@@ -47,7 +47,11 @@ final class AppController: NSObject, NSWindowDelegate {
         super.init()
         Self.shared = self
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: InboxView().environment(store))
+        popover.delegate = self
+        let popoverContent = NSHostingController(rootView: InboxView().environment(store))
+        popover.contentViewController = popoverContent
+        // Lay the popover out once up front so the first click doesn't pay for building it.
+        popoverContent.view.layoutSubtreeIfNeeded()
 
         if let button = statusItem.button {
             button.image = Self.icon
@@ -93,10 +97,15 @@ final class AppController: NSObject, NSWindowDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            store.enterPopover()
             NSApp.activate()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        store.leavePopover()
     }
 
     func showWindow() {
