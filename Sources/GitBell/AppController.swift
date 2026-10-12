@@ -1,6 +1,7 @@
 import AppKit
 import GitBellShared
 import Observation
+import Sparkle
 import SwiftUI
 
 enum Presentation: String, CaseIterable, Identifiable {
@@ -32,6 +33,7 @@ final class AppController: NSObject, NSWindowDelegate {
     static weak var shared: AppController?
 
     let store = InboxStore()
+    let updater = Updater()
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private var window: NSWindow?
@@ -129,6 +131,9 @@ final class AppController: NSObject, NSWindowDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Refresh", action: #selector(refreshItem), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Settings…", action: #selector(settingsItem), keyEquivalent: ",").target = self
+        // Sparkle's controller validates this item itself, disabling it while it can't check.
+        menu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+                     keyEquivalent: "").target = updater.controller
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit GitBell", action: #selector(quit), keyEquivalent: "q").target = self
         statusItem.menu = menu
@@ -164,7 +169,8 @@ final class AppController: NSObject, NSWindowDelegate {
     }
 
     private func makeSettingsWindow() -> NSWindow {
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView().environment(store)))
+        let settings = SettingsView().environment(store).environment(updater)
+        let window = NSWindow(contentViewController: NSHostingController(rootView: settings))
         window.title = "GitBell Settings"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false

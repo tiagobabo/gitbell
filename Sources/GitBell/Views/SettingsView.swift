@@ -3,11 +3,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(InboxStore.self) private var store
+    @Environment(Updater.self) private var updater
     @AppStorage(Presentation.key) private var presentation = Presentation.window
     @State private var showMenuBarIcon = MenuBarIcon.isShown
 
     var body: some View {
         @Bindable var store = store
+        @Bindable var updater = updater
         Form {
             Toggle("Show menu bar icon", isOn: $showMenuBarIcon)
                 .onChange(of: showMenuBarIcon) { _, shown in AppController.shared?.setMenuBarIconShown(shown) }
@@ -21,6 +23,8 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
 
             Toggle("Launch at login", isOn: $store.launchAtLogin)
+            Toggle("Automatically check for updates", isOn: $updater.automaticallyChecks)
+                .disabled(Demo.isOn)
 
             Section {
                 Toggle("Only show activity from these people", isOn: $store.peopleFilterOn)

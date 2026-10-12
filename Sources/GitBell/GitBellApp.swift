@@ -9,6 +9,10 @@ struct GitBellApp: App {
         // SwiftUI needs a scene; the real Settings window is AppController's, so ⌘, points there.
         Settings { EmptyView() }
             .commands {
+                CommandGroup(after: .appInfo) {
+                    Button("Check for Updates…") { delegate.controller.updater.checkForUpdates() }
+                        .disabled(!delegate.controller.updater.canCheck)
+                }
                 CommandGroup(replacing: .appSettings) {
                     Button("Settings…") { delegate.controller.settingsItem() }
                         .keyboardShortcut(",")

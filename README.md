@@ -32,6 +32,14 @@ xattr -dr com.apple.quarantine /Applications/GitBell.app
 
 To build it yourself instead, read on.
 
+## Updates
+
+GitBell updates itself with [Sparkle](https://sparkle-project.org). It checks GitHub for a new release once a day and asks before installing it. Use Check for Updates… in the GitBell menu, the menu bar icon's right-click menu or the popover's ⋯ menu to check now, and turn off "Automatically check for updates" in Settings to stop the daily check.
+
+Updates are signed, and GitBell only installs one whose signature matches the key it was built with. GitBell 0.3.0 predates this, so install 0.3.1 or later from Releases by hand once.
+
+If you signed in with a pasted token rather than the GitHub CLI, macOS may ask once after each update whether GitBell can read its Keychain item. Click "Always Allow". GitBell isn't signed with an Apple Developer ID, so each build looks like a different app to the Keychain.
+
 ## Requirements to build
 
 - macOS 14 or later
@@ -106,14 +114,24 @@ Versions come from git tags. `./build.sh` stamps the latest `vX.Y.Z` tag into th
 scripts/release.sh 0.4.0
 ```
 
-This builds the app, packages `build/GitBell-0.4.0.dmg`, tags `v0.4.0`, pushes the tag and publishes a GitHub release with the DMG attached and notes generated from the commits. It needs a clean working tree and a logged-in `gh`.
+This builds the app, packages `build/GitBell-0.4.0.dmg`, signs it for Sparkle, writes `build/appcast.xml`, tags `v0.4.0`, pushes the tag and publishes a GitHub release with the DMG and `appcast.xml` attached and notes generated from the commits. It needs a clean working tree and a logged-in `gh`.
+
+Installed copies read `appcast.xml` from the latest release, so publishing the release is what ships the update.
+
+Signing needs Sparkle's EdDSA private key in your login Keychain. Create it once, after a first `./build.sh` has downloaded Sparkle:
+
+```sh
+build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys
+```
+
+It prints the public key, which goes in `Resources/Info.plist` as `SUPublicEDKey`. Keep the private key out of the repository; `generate_keys -x private-key-file` exports it if you need a backup. The first release asks whether `sign_update` can use the key; click "Always Allow". A new Sparkle version asks again.
 
 ## Project layout
 
 ```
 project.yml              XcodeGen project: app, widget extension and a shared framework
 build.sh                 Build, and with --install copy to ~/Applications and launch
-scripts/release.sh       Build a DMG, tag the version and publish a GitHub release
+scripts/release.sh       Build and sign a DMG, tag the version and publish a GitHub release with appcast.xml
 Sources/GitBell          The app: window, popover, settings, GitHub client, store
 Sources/GitBellShared    Code used by both app and widget: models, palette, Octicons
 Sources/GitBellWidget    The WidgetKit extension and its App Intents

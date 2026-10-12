@@ -176,6 +176,10 @@ struct SettingsMenu: View {
             Button("Open in Window") { AppController.shared?.showWindow() }
             Button("Settings…") { AppController.shared?.settingsItem() }
                 .keyboardShortcut(",")
+            if let updater = AppController.shared?.updater {
+                Button("Check for Updates…") { updater.checkForUpdates() }
+                    .disabled(!updater.canCheck)
+            }
             Toggle("Launch at Login", isOn: $store.launchAtLogin)
             Divider()
             Section("Banners") {
