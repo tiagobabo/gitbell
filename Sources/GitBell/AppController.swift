@@ -146,6 +146,9 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     private func makeWindow() -> NSWindow {
         let hosting = NSHostingController(rootView: MainWindowView().environment(store).environment(updater))
         hosting.sceneBridgingOptions = [.toolbars, .title]
+        // Only the minimum size: by default SwiftUI also resizes the window to the content's ideal size,
+        // which shrank it to the minimum every time it opened.
+        hosting.sizingOptions = [.minSize]
         let window = NSWindow()
         // Before the content, so MainWindowView can find its window by identifier.
         window.identifier = Self.windowID
@@ -153,13 +156,18 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         window.contentViewController = hosting
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
+        // The saved frame below is the one source of truth; macOS's state restoration would replay an older one.
+        window.isRestorable = false
         window.delegate = self
-        // Most of the screen, up to a comfortable size. A new autosave name gives everyone this size once;
-        // after that GitBell remembers how you left it.
-        let screen = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
-        window.setContentSize(NSSize(width: min(1320, screen.width * 0.85), height: min(900, screen.height * 0.85)))
-        window.center()
-        window.setFrameAutosaveName("GitBellWindow")
+        // Where and how big you left it; the first time, most of the screen up to a comfortable size.
+        // Earlier names saved the shrunken frame, so this one starts afresh.
+        let name = "GitBellMainWindow"
+        if !window.setFrameUsingName(name) {
+            let screen = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
+            window.setContentSize(NSSize(width: min(1320, screen.width * 0.85), height: min(900, screen.height * 0.85)))
+            window.center()
+        }
+        window.setFrameAutosaveName(name)
         return window
     }
 

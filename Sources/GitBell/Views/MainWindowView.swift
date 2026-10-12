@@ -287,10 +287,17 @@ private struct Sidebar: View {
                 Button {
                     selection = .settings
                 } label: {
-                    Label(store.peopleFilter, systemImage: "line.3.horizontal.decrease.circle.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Palette.accent)
-                        .lineLimit(1)
+                    // Same columns as the row below: the icon over the avatar, the names over the login.
+                    HStack(spacing: 8) {
+                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                            .font(.system(size: 14))
+                            .frame(width: 22)
+                        Text(store.peopleFilter)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Palette.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Only showing activity from these people. Click to change.")
@@ -302,7 +309,8 @@ private struct Sidebar: View {
                 Text(store.viewer?.login ?? "")
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
-                Spacer()
+                    .truncationMode(.tail)
+                Spacer(minLength: 4)
                 FooterStatus()
                 Button {
                     selection = .settings
@@ -385,6 +393,8 @@ private struct FooterStatus: View {
                     Text(context.date.timeIntervalSince(updated) < 60 ? "Updated now" : "Updated \(RelativeTime.short(updated, now: context.date)) ago")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize()
                         .help("Last updated")
                 }
             }
