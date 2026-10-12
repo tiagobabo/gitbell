@@ -603,6 +603,57 @@ actor GitHubClient {
         )
     }
 
+    // Commits to the default branch since `since`, and open pull requests, for many repositories at once.
+    // Sixty repositories per request keeps each one quick; GitHub charges a single point for it.
+    func repoPulse(_ fullNames: [String], since: Date) async throws -> [String: RepoPulse] {
+        let timestamp = since.formatted(.iso8601)
+        let batches = stride(from: 0, to: fullNames.count, by: 60).map { Array(fullNames[$0..<min($0 + 60, fullNames.count)]) }
+        // The batches go out together, so a big organization takes about as long as a small one.
+        return try await withThrowingTaskGroup(of: [String: RepoPulse].self) { group in
+            for batch in batches {
+                group.addTask { try await self.pulseBatch(batch, since: timestamp) }
+            }
+            var pulse: [String: RepoPulse] = [:]
+            for try await result in group { pulse.merge(result) { $1 } }
+            return pulse
+        }
+    }
+
+    private func pulseBatch(_ fullNames: [String], since timestamp: String) async throws -> [String: RepoPulse] {
+        struct Node: Decodable {
+            struct Branch: Decodable { let target: Target? }
+            struct Target: Decodable { let history: Count? }
+            struct Count: Decodable { let totalCount: Int }
+            let nameWithOwner: String
+            let pullRequests: Count
+            let defaultBranchRef: Branch?
+        }
+        let fields = fullNames.enumerated().compactMap { index, fullName -> String? in
+            let parts = fullName.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2 else { return nil }
+            return "r\(index): repository(owner: \(Self.quoted(parts[0])), name: \(Self.quoted(parts[1]))) { ...pulse }"
+        }
+        let query = "query($since: GitTimestamp!) {\n\(fields.joined(separator: "\n"))\n}\n" + """
+        fragment pulse on Repository {
+          nameWithOwner
+          pullRequests(states: OPEN) { totalCount }
+          defaultBranchRef { target { ... on Commit { history(since: $since) { totalCount } } } }
+        }
+        """
+        let nodes: [String: Node?] = try await graphQL(query, ["since": timestamp])
+        var pulse: [String: RepoPulse] = [:]
+        for case let node? in nodes.values {
+            pulse[node.nameWithOwner] = RepoPulse(commits: node.defaultBranchRef?.target?.history?.totalCount ?? 0,
+                                                  openPulls: node.pullRequests.totalCount)
+        }
+        return pulse
+    }
+
+    private static func quoted(_ text: Substring) -> String {
+        let data = try? JSONSerialization.data(withJSONObject: [String(text)])
+        return data.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
+    }
+
     private struct GraphQL<T: Decodable>: Decodable {
         struct Message: Decodable { let message: String }
         let data: T?

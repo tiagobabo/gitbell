@@ -100,4 +100,13 @@ enum Demo {
                                                      url: repo.page("releases")),
             openPulls: open, mergedCount: merged.count, merged: merged)
     }
+
+    static let pulse: [String: RepoPulse] = [
+        "acme/web": .init(commits: 214, openPulls: 9), "acme/api": .init(commits: 132, openPulls: 6),
+        "acme/design-system": .init(commits: 61, openPulls: 4), "acme/infra": .init(commits: 88, openPulls: 3),
+        "acme/mobile": .init(commits: 97, openPulls: 7), "acme/data-pipelines": .init(commits: 45, openPulls: 2),
+        "acme/search": .init(commits: 38, openPulls: 1), "acme/payments": .init(commits: 54, openPulls: 5),
+        "acme/docs": .init(commits: 19, openPulls: 2), "acme/admin": .init(commits: 12, openPulls: 1),
+        "acme/email-templates": .init(commits: 6, openPulls: 0), "acme/feature-flags": .init(commits: 9, openPulls: 1),
+    ]
 }

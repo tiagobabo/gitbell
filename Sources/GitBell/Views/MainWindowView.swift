@@ -5,6 +5,7 @@ enum SidebarItem: Hashable {
     case pulls(PullSection)
     case repo(String)
     case repos
+    case org(String)
 }
 
 // The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
@@ -67,6 +68,11 @@ struct MainWindowView: View {
             PullSectionList(section: section)
         case .repo(let fullName):
             RepoPage(fullName: fullName)
+        case .org(let owner):
+            OrgPage(owner: owner) { repo in
+                store.repos.visited(repo.fullName)
+                selection = .repo(repo.fullName)
+            }
         case .repos:
             RepoBrowser { repo in
                 store.repos.visited(repo.fullName)
@@ -92,6 +98,7 @@ struct MainWindowView: View {
                     switch selection {
                     case .repo(let fullName): await store.refreshRepo(fullName)
                     case .repos: await store.refreshRepos(force: true)
+                    case .org(let owner): await store.loadPulse(owner, force: true)
                     default: await store.refreshAll()
                     }
                 }
@@ -116,6 +123,7 @@ struct MainWindowView: View {
         case .pulls(let section): section.windowTitle
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
+        case .org(let owner): owner
         case nil: "GitBell"
         }
     }
@@ -132,6 +140,8 @@ struct MainWindowView: View {
             return String(fullName.split(separator: "/").first ?? "")
         case .repos:
             return "\(store.repos.all.count) in your organizations"
+        case .org(let owner):
+            return "\(store.repos.repos(of: owner).count) repositories"
         }
     }
 
@@ -140,6 +150,7 @@ struct MainWindowView: View {
         case .pulls(let section): store.webURL(for: section)
         case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
         case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
+        case .org(let owner): URL(string: "https://github.com/\(owner)")!
         default: URL(string: "https://github.com/notifications")!
         }
     }
@@ -150,7 +161,7 @@ struct MainWindowView: View {
             store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
-        case .repo, .repos, nil:
+        case .repo, .repos, .org, nil:
             break
         }
     }
@@ -161,6 +172,7 @@ struct MainWindowView: View {
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
         case .repos: "repos.all"
+        case .org(let owner): "org.\(owner)"
         }
     }
 
@@ -172,6 +184,7 @@ struct MainWindowView: View {
         case "pulls": return PullSection(rawValue: parts[1]).map(SidebarItem.pulls)
         case "repo": return .repo(parts[1])
         case "repos": return .repos
+        case "org": return .org(parts[1])
         default: return nil
         }
     }
@@ -193,6 +206,20 @@ private struct Sidebar: View {
                 Section(group.title) {
                     ForEach(group.sections) { section in
                         pullRow(section)
+                    }
+                }
+            }
+            let orgs = store.repos.owners(viewer: store.viewer?.login).filter { $0 != store.viewer?.login }
+            if !orgs.isEmpty {
+                Section("Organizations") {
+                    ForEach(orgs, id: \.self) { owner in
+                        Label {
+                            Text(owner).lineLimit(1)
+                        } icon: {
+                            Avatar(url: URL(string: "https://github.com/\(owner).png"), size: 16, cornerRadius: 4)
+                                .frame(width: 18)
+                        }
+                        .tag(SidebarItem.org(owner))
                     }
                 }
             }
@@ -240,6 +267,9 @@ private struct Sidebar: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             }
+            // Opaque, so the list doesn't show through when it scrolls under the footer in a short window.
+            .background(.bar)
+            .overlay(alignment: .top) { Divider() }
         }
     }
 

@@ -21,6 +21,12 @@ struct Repo: Codable, Identifiable, Hashable, Sendable {
     func page(_ path: String) -> URL { url.appending(path: path) }
 }
 
+// How busy a repository is: commits to its default branch in the last 30 days, and open pull requests.
+struct RepoPulse: Codable, Sendable {
+    let commits: Int
+    let openPulls: Int
+}
+
 struct RepoDetail: Sendable {
     let fullName: String
     let homepage: URL?
@@ -93,6 +99,11 @@ final class RepoDirectory {
     private(set) var error: String?
     var details: [String: RepoDetail] = [:]
     var detailErrors: [String: String] = [:]
+    // Per organization, fetched when its page opens: how busy each recently pushed repository is.
+    private(set) var pulse: [String: RepoPulse] = [:]
+    private(set) var pulseLoadedAt: [String: Date] = [:]
+    private(set) var pulseLoading: Set<String> = []
+    private(set) var pulseErrors: [String: String] = [:]
 
     var pinned: [String] = UserDefaults.standard.stringArray(forKey: "pinnedRepos") ?? [] {
         didSet { UserDefaults.standard.set(pinned, forKey: "pinnedRepos") }
@@ -149,6 +160,36 @@ final class RepoDirectory {
         }
     }
 
+    // Organizations first, by how many repositories you have in each, then your own account.
+    func owners(viewer: String?) -> [String] {
+        var counts: [String: Int] = [:]
+        for repo in all { counts[repo.owner, default: 0] += 1 }
+        return counts.keys.sorted { a, b in
+            if (a == viewer) != (b == viewer) { return b == viewer }
+            return (counts[a]!, b) > (counts[b]!, a)
+        }
+    }
+
+    func repos(of owner: String) -> [Repo] { all.filter { $0.owner == owner } }
+
+    // Only repositories pushed in the last 30 days can have commits in that window, so only those are asked about.
+    func loadPulse(_ owner: String, using client: GitHubClient, force: Bool = false) async {
+        guard !pulseLoading.contains(owner) else { return }
+        if !force, let loaded = pulseLoadedAt[owner], Date.now.timeIntervalSince(loaded) < 3600 { return }
+        let since = Date.now.addingTimeInterval(-30 * 86400)
+        let names = repos(of: owner).filter { ($0.pushedAt ?? .distantPast) > since }.map(\.fullName)
+        pulseLoading.insert(owner)
+        defer { pulseLoading.remove(owner) }
+        do {
+            let fresh = try await client.repoPulse(names, since: since)
+            pulse.merge(fresh) { $1 }
+            pulseLoadedAt[owner] = .now
+            pulseErrors[owner] = nil
+        } catch {
+            pulseErrors[owner] = error.localizedDescription
+        }
+    }
+
     func togglePin(_ fullName: String) {
         if let index = pinned.firstIndex(of: fullName) { pinned.remove(at: index) } else { pinned.append(fullName) }
         hidden.remove(fullName)
@@ -168,12 +209,16 @@ final class RepoDirectory {
         activity = Demo.repoActivity
         loadedAt = .now
         for repo in all { details[repo.fullName] = Demo.detail(for: repo) }
+        pulse = Demo.pulse
+        pulseLoadedAt["acme"] = .now
     }
 
     func signOut() {
         all = []
         activity = [:]
         details = [:]
+        pulse = [:]
+        pulseLoadedAt = [:]
         loadedAt = nil
         try? FileManager.default.removeItem(at: Self.cacheURL)
     }
@@ -251,6 +296,11 @@ extension InboxStore {
     func refreshRepo(_ fullName: String) async {
         guard let client else { return }
         await repos.loadDetail(fullName, using: client)
+    }
+
+    func loadPulse(_ owner: String, force: Bool = false) async {
+        guard let client else { return }
+        await repos.loadPulse(owner, using: client, force: force)
     }
 
     func refreshRepos(force: Bool = false) async {

@@ -126,7 +126,7 @@ private struct Tag: View {
     }
 }
 
-private struct LinkChip: View {
+struct LinkChip: View {
     let title: String
     let symbol: String
     let url: URL
@@ -166,7 +166,7 @@ private struct StatTiles: View {
     }
 }
 
-private struct StatTile: View {
+struct StatTile: View {
     let value: String
     let title: String
     let note: String?
