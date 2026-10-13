@@ -470,6 +470,7 @@ private struct TodoRowActions: View {
                     NSWorkspace.shared.open(check.url!)
                 }
             }
+            IconButton(symbol: "arrow.up.right.square", help: "Open on GitHub (O)", size: 24) { store.open(item) }
             IconButton(symbol: "link", help: "Copy link", size: 24) { store.copyLink(item) }
             IconButton(symbol: item.hidden ? "arrow.uturn.backward" : "checkmark", help: doneHelp, size: 24) {
                 Task { await store.markDone(item) }
