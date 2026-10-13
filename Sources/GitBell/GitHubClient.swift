@@ -674,6 +674,7 @@ actor GitHubClient {
     private static let pullFragment = """
     fragment pr on PullRequest {
       id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue headRefOid
+      baseRefName headRefName
       author { login avatarUrl }
       repository { nameWithOwner }
       commits(last: 1) { nodes { commit { committedDate statusCheckRollup { ...rollup } } } }
@@ -737,6 +738,7 @@ actor GitHubClient {
             let latestReviews: Reviews?
             let yourCommits: Commits?
             let headRefOid: String?
+            let headRefName: String?
             let requestedAt: Events?
             let viewerLatestReview: YourReview?
 
@@ -817,6 +819,7 @@ actor GitHubClient {
                 )
                 pr.mergedAt = mergedAt
                 pr.baseRef = baseRefName
+                pr.headRef = headRefName
                 pr.mergeCommitURL = mergedAt == nil ? nil : mergeCommit?.url
                 pr.reviewers = reviewers(author: author?.login)
                 pr.headOid = headRefOid

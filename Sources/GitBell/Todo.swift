@@ -208,7 +208,19 @@ extension InboxStore {
 
         items = items.filter { isReady($0.kind) }
         for index in items.indices { items[index].hidden = isHidden(items[index]) }
-        return items.sorted { $0.updatedAt > $1.updatedAt }
+        // Most recent first, but a stack's pull requests keep together, bottom first, where its latest one would be.
+        var stackLatest: [String: Date] = [:]
+        for item in items { if let pr = item.pr, let stack = stacks[pr.id] { stackLatest[stack.id] = max(stackLatest[stack.id] ?? .distantPast, item.updatedAt) } }
+        func order(_ item: TodoItem) -> (Date, String, Int) {
+            guard let pr = item.pr, let stack = stacks[pr.id] else { return (item.updatedAt, item.id, 0) }
+            return (stackLatest[stack.id] ?? item.updatedAt, stack.id, stack.position(of: pr) ?? 0)
+        }
+        return items.sorted { a, b in
+            let (x, y) = (order(a), order(b))
+            if x.0 != y.0 { return x.0 > y.0 }
+            if x.1 != y.1 { return x.1 < y.1 }
+            return x.2 < y.2
+        }
     }
 
     // What a notification with no pull request item of its own asks of you, if anything.

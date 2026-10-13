@@ -39,9 +39,13 @@ struct YourPullsView: View {
                             if let pulls = pipeline[stage], !pulls.isEmpty {
                                 Section {
                                     VStack(spacing: 0) {
-                                        ForEach(Array(pulls.enumerated()), id: \.element.id) { index, pr in
+                                        ForEach(Array(runs(pulls).enumerated()), id: \.element.id) { index, run in
                                             if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
-                                            PullRow(pr: pr, showAuthor: false)
+                                            if let stack = run.stack {
+                                                StackCard(stack: stack, members: run.pulls)
+                                            } else {
+                                                PullRow(pr: run.pulls[0], showAuthor: false)
+                                            }
                                         }
                                     }
                                     .padding(3)
@@ -61,6 +65,69 @@ struct YourPullsView: View {
                     guard let id else { return }
                     proxy.scrollTo(id)
                 }
+            }
+        }
+    }
+}
+
+private struct Run: Identifiable {
+    let pulls: [PullRequest]
+    let stack: PullStack?
+    var id: String { stack?.id ?? pulls[0].id }
+}
+
+extension YourPullsView {
+    // A stage's list as single pull requests and stacks, which the pipeline keeps next to each other.
+    fileprivate func runs(_ pulls: [PullRequest]) -> [Run] {
+        var runs: [Run] = []
+        for pr in pulls {
+            let stack = store.stacks[pr.id]
+            if let stack, let last = runs.last, last.stack?.id == stack.id {
+                runs[runs.count - 1] = Run(pulls: last.pulls + [pr], stack: stack)
+            } else {
+                runs.append(Run(pulls: [pr], stack: stack))
+            }
+        }
+        return runs.map { $0.pulls.count > 1 ? $0 : Run(pulls: $0.pulls, stack: nil) }
+    }
+}
+
+// A stack's pull requests, bottom first, joined by a line down the left: the order they merge in.
+private struct StackCard: View {
+    let stack: PullStack
+    let members: [PullRequest]
+    @Environment(InboxStore.self) private var store
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "square.stack.3d.up.fill").font(.system(size: 9.5, weight: .semibold))
+                Text("\(stack.label(among: store.stackCount)) of \(stack.members.count)")
+                    .fontWeight(.semibold)
+                if let base = stack.members.first?.baseRef {
+                    Text("· merging bottom first into \(base)").foregroundStyle(.secondary)
+                }
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(Palette.teal)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+
+            ForEach(Array(members.enumerated()), id: \.element.id) { index, pr in
+                PullRow(pr: pr, showAuthor: false, showsStack: false)
+                    .padding(.leading, 22)
+                    // The rail: a dot per pull request, joined to the next. Drawn behind the row, so it takes the
+                    // row's height without having any say in it; sized from the row, it looped the window's layout.
+                    .background(alignment: .topLeading) {
+                        VStack(spacing: 0) {
+                            Rectangle().fill(index == 0 ? Color.clear : Palette.teal.opacity(0.35)).frame(width: 2, height: 16)
+                            Circle().fill(Palette.teal).frame(width: 7, height: 7)
+                            Rectangle().fill(index == members.count - 1 ? Color.clear : Palette.teal.opacity(0.35)).frame(width: 2)
+                        }
+                        .frame(width: 16)
+                        .padding(.leading, 6)
+                    }
             }
         }
     }

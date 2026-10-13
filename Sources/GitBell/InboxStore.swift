@@ -84,7 +84,16 @@ final class InboxStore {
     private var watchTask: Task<Void, Never>?
     private(set) var pullsRefreshedAt: Date?
 
-    var pulls: [PullSection: [PullRequest]] = [:]
+    var pulls: [PullSection: [PullRequest]] = [:] {
+        didSet {
+            stacks = PullStack.find(in: pulls)
+            stackCount = Set(stacks.values.map(\.id)).count
+        }
+    }
+    // Stacked pull requests' stacks, by pull request id, and how many stacks there are, worked out whenever the
+    // lists change.
+    private(set) var stacks: [String: PullStack] = [:]
+    private(set) var stackCount = 0
     var pullTotals: [PullSection: Int] = [:]
     // Which searches have answered at least once, and why any that failed did.
     var loadedPulls: Set<PullSource> = []
@@ -448,12 +457,33 @@ extension InboxStore {
         [PullSection.needsReview, .reReview, .needsAction, .readyToMerge].reduce(0) { $0 + (pullTotals[$1] ?? 0) }
     }
 
-    // Your pull requests by how far along they are, open and merged, until they've been live for a day.
+    // Your pull requests by how far along they are, open and merged, until they've been live for a day. A stack
+    // stays together, bottom first, in the stage of its bottom pull request: that's the one the rest wait on.
     var pipeline: [PipelineStage: [PullRequest]] {
         let now = Date.now
         let yours = [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged].flatMap { pulls(in: $0) }
-        return Dictionary(grouping: yours.compactMap { pr in PipelineStage.of(pr, now: now).map { ($0, pr) } }, by: \.0)
-            .mapValues { $0.map(\.1) }
+        var staged = yours.compactMap { pr in PipelineStage.of(pr, now: now).map { (stage: $0, pr: pr) } }
+        var bottom: [String: (position: Int, stage: PipelineStage)] = [:]
+        for (stage, pr) in staged {
+            guard let stack = stacks[pr.id], let position = stack.position(of: pr) else { continue }
+            if position < bottom[stack.id]?.position ?? .max { bottom[stack.id] = (position, stage) }
+        }
+        staged = staged.map { entry in
+            guard let stack = stacks[entry.pr.id], let stage = bottom[stack.id]?.stage else { return entry }
+            return (stage, entry.pr)
+        }
+        var result: [PipelineStage: [PullRequest]] = [:]
+        for stage in PipelineStage.allCases {
+            let here = staged.filter { $0.stage == stage }.map(\.pr)
+            var listed = Set<String>()
+            var ordered: [PullRequest] = []
+            for pr in here where !listed.contains(pr.id) {
+                let run = stacks[pr.id].map { stack in stack.members.filter { member in here.contains { $0.id == member.id } } } ?? [pr]
+                for member in run where listed.insert(member.id).inserted { ordered.append(member) }
+            }
+            if !ordered.isEmpty { result[stage] = ordered }
+        }
+        return result
     }
 
     var pipelineLoaded: Bool { loadedPulls.contains(.yours) && loadedPulls.contains(.merged) }

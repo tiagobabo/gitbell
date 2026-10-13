@@ -136,6 +136,8 @@ struct PullSectionView: View {
 struct PullRow: View {
     let pr: PullRequest
     let showAuthor: Bool
+    // Off inside a stack's card, which already says so.
+    var showsStack = true
     @Environment(InboxStore.self) private var store
     @State private var hovering = false
 
@@ -165,6 +167,7 @@ struct PullRow: View {
                         Avatar(url: pr.authorAvatar, size: 12)
                         Text(pr.author)
                     }
+                    if showsStack, let stack = store.stacks[pr.id] { StackTag(pr: pr, stack: stack) }
                 }
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)

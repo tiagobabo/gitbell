@@ -102,11 +102,17 @@ enum Demo {
         .waiting: [
             with(pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9),
                reviewers: ["approved:alice", "team:web-team"])) { $0.headCommittedAt = minutesAgo(20) },
+            // A stack: the webhook 404s first, then the invoice move on top of them.
             with(pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140, reviewers: ["carol"])) {
                 $0.reviewRequestedAt = minutesAgo(3 * 24 * 60 + 40)
+                $0.baseRef = "main"
+                $0.headRef = "webhooks/unknown-ids"
             },
-            pr(1207, "api", "Move invoices to the new PDF service", by: viewer, minutes: 85, checks: ("PENDING", 11, 0, 12),
-               held: ["build-and-deploy/approve_staging"]),
+            with(pr(1207, "api", "Move invoices to the new PDF service", by: viewer, minutes: 85, checks: ("PENDING", 11, 0, 12),
+               held: ["build-and-deploy/approve_staging"])) {
+                $0.baseRef = "webhooks/unknown-ids"
+                $0.headRef = "invoices/pdf-service"
+            },
         ],
         .merged: GitHubClient.markShippedLater([
             merged(1204, "api", "Retry webhook deliveries with backoff", minutes: 18, checks: ("PENDING", 14, 0, 16),

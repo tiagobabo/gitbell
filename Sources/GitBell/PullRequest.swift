@@ -18,7 +18,9 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     var checks: Checks?
     // Set on merged pull requests.
     var mergedAt: Date?
+    // The branch it merges into, and its own: a pull request based on another's branch is stacked on it.
     var baseRef: String?
+    var headRef: String?
     var mergeCommitURL: URL?
     // A newer merge to the same branch deployed, and its commit carries this one's changes.
     var shippedLater = false

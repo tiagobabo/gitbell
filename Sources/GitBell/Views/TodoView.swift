@@ -281,6 +281,7 @@ struct TodoRow: View {
                         Text(pr.author)
                         if pr.yourCommits > 0 { ContributingTag(pr: pr) }
                     }
+                    if let pr = item.pr, let stack = store.stacks[pr.id] { StackTag(pr: pr, stack: stack) }
                 }
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
