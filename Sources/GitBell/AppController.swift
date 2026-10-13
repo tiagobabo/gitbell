@@ -81,6 +81,10 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         }
         trackBadge()
         statusItem.isVisible = MenuBarIcon.isShown
+        updater.willRelaunch = { [weak self] in
+            self?.quitting = true
+            self?.popover.performClose(nil)
+        }
     }
 
     // Called by the Settings toggle. Not driven by a defaults observer: hiding a status item writes

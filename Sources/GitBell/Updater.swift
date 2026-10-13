@@ -7,9 +7,16 @@ import Sparkle
 @MainActor
 @Observable
 final class Updater {
-    @ObservationIgnored let controller = SPUStandardUpdaterController(
-        startingUpdater: !Demo.isOn, updaterDelegate: nil, userDriverDelegate: nil)
+    @ObservationIgnored private let delegate = UpdaterDelegate()
+    @ObservationIgnored let controller: SPUStandardUpdaterController
     @ObservationIgnored private var observation: NSKeyValueObservation?
+
+    // Called just before Sparkle quits GitBell to install an update and relaunch it, so the quit goes through
+    // rather than sending GitBell back to the menu bar, which left the update waiting for a quit that never came.
+    var willRelaunch: () -> Void {
+        get { delegate.willRelaunch }
+        set { delegate.willRelaunch = newValue }
+    }
 
     // False until the updater starts, and while a check is already running.
     private(set) var canCheck = false
@@ -19,6 +26,7 @@ final class Updater {
     }
 
     init() {
+        controller = SPUStandardUpdaterController(startingUpdater: !Demo.isOn, updaterDelegate: delegate, userDriverDelegate: nil)
         automaticallyChecks = controller.updater.automaticallyChecksForUpdates
         observation = controller.updater.observe(\.canCheckForUpdates, options: [.initial, .new]) { [weak self] updater, _ in
             MainActor.assumeIsolated { self?.canCheck = updater.canCheckForUpdates }
@@ -27,5 +35,13 @@ final class Updater {
 
     func checkForUpdates() {
         controller.checkForUpdates(nil)
+    }
+}
+
+private final class UpdaterDelegate: NSObject, SPUUpdaterDelegate {
+    var willRelaunch: () -> Void = {}
+
+    func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
+        willRelaunch()
     }
 }
