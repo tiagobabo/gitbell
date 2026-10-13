@@ -331,11 +331,27 @@ actor GitHubClient {
             if let names = required[pr.id] { pr.checks = pr.checks?.markingRequired(names) }
             sections[PullSection.classify(pr), default: []].append(pr)
         }
-        sections[.merged] = (done["merged"]?.pulls ?? []).sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) }
+        sections[.merged] = Self.markShippedLater((done["merged"]?.pulls ?? [])
+            .sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) })
         for section in [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged] {
             totals[section] = sections[section]?.count ?? 0
         }
         return PullInbox(sections: sections, totals: totals)
+    }
+
+    // A merge whose own pipeline failed or was cancelled still shipped if a later merge to the same branch
+    // deployed, since that commit includes it. Only your merges are known, so this can miss some.
+    // `merged` is newest first.
+    static func markShippedLater(_ merged: [PullRequest]) -> [PullRequest] {
+        var deployedSince: [String: Bool] = [:]
+        var marked: [PullRequest] = []
+        for var pr in merged {
+            let branch = "\(pr.repository)@\(pr.baseRef ?? "")"
+            pr.shippedLater = deployedSince[branch] ?? false
+            if pr.status == .deployed { deployedSince[branch] = true }
+            marked.append(pr)
+        }
+        return marked
     }
 
     // CircleCI names every status "ci/circleci: job"; the job is the useful part.
@@ -399,7 +415,7 @@ actor GitHubClient {
     private static let mergedPullsQuery = """
     query($q: String!) { merged: search(query: $q, type: ISSUE, first: 20) { issueCount nodes { ...pr ...merged } } }
     fragment merged on PullRequest {
-      mergedAt baseRefName mergeCommit { statusCheckRollup { ...rollup } }
+      mergedAt baseRefName mergeCommit { url statusCheckRollup { ...rollup } }
     }
     """ + pullFragment
 
@@ -456,7 +472,7 @@ actor GitHubClient {
             struct Repository: Decodable { let nameWithOwner: String }
             struct Commits: Decodable { let nodes: [CommitNode] }
             struct CommitNode: Decodable { let commit: Commit }
-            struct Commit: Decodable { let statusCheckRollup: Rollup? }
+            struct Commit: Decodable { let url: URL?; let statusCheckRollup: Rollup? }
             struct Rollup: Decodable { let state: String; let contexts: Contexts }
             struct Contexts: Decodable {
                 let totalCount: Int
@@ -502,6 +518,7 @@ actor GitHubClient {
                 )
                 pr.mergedAt = mergedAt
                 pr.baseRef = baseRefName
+                pr.mergeCommitURL = mergedAt == nil ? nil : mergeCommit?.url
                 return pr
             }
 

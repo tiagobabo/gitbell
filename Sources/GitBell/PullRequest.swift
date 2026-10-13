@@ -19,6 +19,12 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     // Set on merged pull requests.
     var mergedAt: Date?
     var baseRef: String?
+    var mergeCommitURL: URL?
+    // A newer merge to the same branch deployed, and its commit carries this one's changes.
+    var shippedLater = false
+
+    // Where a row takes you: a merged pull request is about its merge commit.
+    var link: URL { mergeCommitURL ?? url }
 
     struct Checks: Codable, Hashable, Sendable {
         let state: String
@@ -134,19 +140,25 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
 extension PullRequest {
     // How a merged pull request's merge commit is doing: its checks, and its deploys where there are any.
     private var mergedStatus: PullStatus {
-        guard let checks, checks.total > 0 else { return .merged }
-        if checks.failing.contains(where: { !$0.cancelled }) { return .failingAfterMerge }
-        if !checks.failing.isEmpty { return .cancelledAfterMerge }
+        guard let checks, checks.total > 0 else { return shippedLater ? .deployedLater : .merged }
+        let own: PullStatus
+        if checks.failing.contains(where: { !$0.cancelled }) { own = .failingAfterMerge }
+        else if !checks.failing.isEmpty { own = .cancelledAfterMerge }
         // Other jobs can stay pending for good (manual holds), so the deploys alone say whether it shipped.
-        if checks.hasDeploys { return checks.deploysRunning ? .deploying : .deployed }
-        return checks.passed < checks.total ? .runningAfterMerge : .passedAfterMerge
+        else if checks.hasDeploys { own = checks.deploysRunning ? .deploying : .deployed }
+        else { own = checks.passed < checks.total ? .runningAfterMerge : .passedAfterMerge }
+        // Two merges close together can clash or cancel each other's pipeline; a later deploy still ships both.
+        if shippedLater, [.failingAfterMerge, .cancelledAfterMerge, .deploying, .runningAfterMerge].contains(own) {
+            return .deployedLater
+        }
+        return own
     }
 }
 
 enum PullStatus: Sendable {
     case notReady, inMergeQueue, mergeConflicts, checksFailing, changesRequested,
          awaitingCI, awaitingApproval, needsUpdate, mergeable, readyToMerge,
-         merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed
+         merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed, deployedLater
 
     enum Tone: Sendable { case neutral, pending, danger, success, merged }
 
@@ -162,12 +174,13 @@ enum PullStatus: Sendable {
         case .needsUpdate: "Update branch"
         case .mergeable: "Can merge"
         case .merged: "Merged"
-        case .failingAfterMerge: "Failing after merge"
+        case .failingAfterMerge: "Checks failed"
         case .cancelledAfterMerge: "Checks cancelled"
         case .runningAfterMerge: "Checks running after merge"
         case .passedAfterMerge: "Checks passed after merge"
         case .deploying: "Deploying"
         case .deployed: "Deployed"
+        case .deployedLater: "Deployed with a later merge"
         case .readyToMerge: "Ready to merge"
         }
     }
@@ -177,7 +190,7 @@ enum PullStatus: Sendable {
         case .notReady, .cancelledAfterMerge: .neutral
         case .awaitingCI, .awaitingApproval, .runningAfterMerge, .deploying: .pending
         case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate, .failingAfterMerge: .danger
-        case .readyToMerge, .mergeable, .passedAfterMerge, .deployed: .success
+        case .readyToMerge, .mergeable, .passedAfterMerge, .deployed, .deployedLater: .success
         case .inMergeQueue, .merged: .merged
         }
     }
@@ -196,7 +209,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         case .waiting: "Waiting for review or checks"
         case .needsAction: "Needs action"
         case .readyToMerge: "Ready to merge"
-        case .merged: "Merged this week"
+        case .merged: "Recent merges"
         }
     }
 

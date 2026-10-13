@@ -135,8 +135,7 @@ struct PullSectionView: View {
         case .needsReview: return Palette.pending
         case .needsAction: return Palette.danger
         case .readyToMerge: return Palette.open
-        case .merged: return store.failingMerges.isEmpty ? nil : Palette.danger
-        case .teamReview, .drafts, .waiting: return nil
+        case .teamReview, .drafts, .waiting, .merged: return nil
         }
     }
 }
@@ -163,6 +162,10 @@ struct PullRow: View {
 
                 HStack(spacing: 4) {
                     Text(verbatim: "\(pr.repositoryName)#\(pr.number)")
+                    if pr.mergedAt != nil, let base = pr.baseRef {
+                        Text("·").foregroundStyle(.tertiary)
+                        Text("merged into \(base)")
+                    }
                     if showAuthor {
                         Text("·").foregroundStyle(.tertiary)
                         Avatar(url: pr.authorAvatar, size: 12)
@@ -192,7 +195,10 @@ struct PullRow: View {
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
         .onTapGesture { store.open(pr) }
         .contextMenu {
-            Button("Open in Browser") { store.open(pr) }
+            Button(pr.mergeCommitURL == nil ? "Open in Browser" : "Open Merge Commit") { store.open(pr) }
+            if pr.mergeCommitURL != nil {
+                Button("Open Pull Request") { NSWorkspace.shared.open(pr.url) }
+            }
             Button("Copy Link") { store.copyLink(pr) }
             Button("Open Repository") {
                 NSWorkspace.shared.open(URL(string: "https://github.com/\(pr.repository)")!)

@@ -452,7 +452,7 @@ extension InboxStore {
             unfilteredTotals = inbox.totals
             applyPeopleToPulls()
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
-            announceYourPulls(failing: (pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? []) + recentFailingMerges,
+            announceYourPulls(failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
                               ready: pulls[.readyToMerge]?.filter { [.readyToMerge, .mergeable].contains($0.status) } ?? [])
             pullsLoaded = true
         } catch let error as APIError where error.isUnauthorized {
@@ -464,23 +464,13 @@ extension InboxStore {
     }
 
     func open(_ pr: PullRequest) {
-        NSWorkspace.shared.open(pr.url)
+        NSWorkspace.shared.open(pr.link)
     }
 
     func copyLink(_ pr: PullRequest) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(pr.url.absoluteString, forType: .string)
+        NSPasteboard.general.setString(pr.link.absoluteString, forType: .string)
         show("Link copied")
-    }
-
-    // Your merged pull requests whose merge commit is failing checks.
-    var failingMerges: [PullRequest] { (pulls[.merged] ?? []).filter { $0.status == .failingAfterMerge } }
-
-    // The ones recent enough to be yours to fix. A merge commit stays red after someone fixes the branch in a
-    // later commit, so older failures stay in the Merged list rather than in Your turn.
-    var recentFailingMerges: [PullRequest] {
-        let cutoff = Date.now.addingTimeInterval(-2 * 86400)
-        return failingMerges.filter { ($0.mergedAt ?? .distantPast) > cutoff }
     }
 
     func webURL(for section: PullSection) -> URL {

@@ -45,6 +45,7 @@ enum Demo {
         }
         pr.mergedAt = minutesAgo(minutes)
         pr.baseRef = "main"
+        pr.mergeCommitURL = URL(string: "https://github.com/acme/\(repo)/commit/\(String(repeating: "\(number)", count: 8).prefix(40))")
         return pr
     }
 
@@ -72,13 +73,15 @@ enum Demo {
             pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9)),
             pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
         ],
-        .merged: [
+        .merged: GitHubClient.markShippedLater([
             merged(1204, "api", "Retry webhook deliveries with backoff", minutes: 18, checks: ("PENDING", 14, 0, 16),
                    deploying: ["deploy_eu", "deploy_us"]),
+            merged(477, "web", "Show stock levels on product pages", minutes: 95, checks: ("SUCCESS", 16, 0, 16)),
             merged(475, "web", "Lazy-load product images", minutes: 140, checks: ("FAILURE", 15, 1, 16), failing: ["tests_uk"]),
             merged(88, "design-system", "Dark mode colour tokens", minutes: 400, checks: ("SUCCESS", 12, 0, 12)),
+            merged(1202, "api", "Rename the billing worker queues", minutes: 600, checks: ("FAILURE", 15, 1, 16), failing: ["lint"]),
             merged(1199, "api", "Drop the legacy v1 endpoints", minutes: 1500, checks: ("SUCCESS", 16, 0, 16)),
-        ],
+        ]),
         .drafts: [
             pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12),
                failing: ["cypress", "lighthouse"]),
@@ -86,7 +89,7 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 4, .waiting: 2, .drafts: 1,
+        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 2, .drafts: 1,
     ]
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,

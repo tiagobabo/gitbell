@@ -49,7 +49,7 @@ extension TodoItem.Kind {
     var subtitle: String {
         switch self {
         case .review: "Someone is waiting on your review"
-        case .fix: "Failing checks, conflicts, requested changes and merges that broke"
+        case .fix: "Failing checks, conflicts and requested changes"
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
         case .mergeable: "Approved, with optional checks still running or failing"
@@ -106,7 +106,7 @@ extension InboxStore {
 
         var items: [TodoItem] = []
         for pr in pulls[.needsReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
-        for pr in (pulls[.needsAction] ?? []) + recentFailingMerges { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
+        for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
         for pr in pulls[.readyToMerge] ?? [] {
             items.append(item(pr, pr.status == .mergeable ? .mergeable : .merge, threads: byURL[pr.url] ?? []))
         }

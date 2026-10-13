@@ -335,8 +335,8 @@ private struct Sidebar: View {
 
     private func pullRow(_ section: PullSection) -> some View {
         SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: section.tint,
-                   // Merged pull requests only count when they broke something.
-                   count: section == .merged ? store.failingMerges.count : store.pullTotals[section] ?? 0,
+                   // Recent merges are for reference, so they don't get a badge.
+                   count: section == .merged ? 0 : store.pullTotals[section] ?? 0,
                    selected: selection == .pulls(section))
             .tag(SidebarItem.pulls(section))
     }
@@ -496,7 +496,7 @@ extension PullSection {
         case .readyToMerge: "Ready to merge"
         case .waiting: "In review"
         case .drafts: "Drafts"
-        case .merged: "Merged"
+        case .merged: "Recent merges"
         }
     }
 
@@ -520,7 +520,7 @@ extension PullSection {
         case .readyToMerge: "Nothing ready to merge"
         case .waiting: "Nothing in review"
         case .drafts: "No drafts"
-        case .merged: "Nothing merged this week"
+        case .merged: "Nothing merged in the last week"
         }
     }
 
@@ -531,7 +531,7 @@ extension PullSection {
         case .readyToMerge: "Approved pull requests whose required checks passed show up here."
         case .waiting: "Your open pull requests waiting on reviewers show up here."
         case .drafts: "Your draft pull requests show up here."
-        case .merged: "Your pull requests merged in the last 7 days show up here, with how their checks and deploys went."
+        case .merged: "Your pull requests merged in the last 7 days show up here, with how their merge commits' checks and deploys went."
         }
     }
 
@@ -558,7 +558,8 @@ extension PullSection {
     // How the window and popover group and order the sections, most urgent first.
     static let windowGroups = [
         SectionGroup(title: "To Review", sections: [.needsReview, .teamReview]),
-        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts, .merged]),
+        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts]),
+        SectionGroup(title: "Deploys", sections: [.merged]),
     ]
     static var windowOrder: [PullSection] { windowGroups.flatMap(\.sections) }
 }

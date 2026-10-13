@@ -33,7 +33,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func checksFailed(_ pr: PullRequest) {
         let names = pr.checks?.failing.prefix(3).map(\.name).joined(separator: ", ")
-        post(id: "fail:\(pr.id)", title: pr.mergedAt == nil ? "Checks failing" : "Failing after merge", subtitle: "\(pr.repository)#\(pr.number)",
+        post(id: "fail:\(pr.id)", title: "Checks failing", subtitle: "\(pr.repository)#\(pr.number)",
              body: [pr.title, names.map { "Failing: \($0)" }].compactMap { $0 }.joined(separator: "\n"),
              url: pr.checks?.failing.first?.url ?? pr.url)
     }
