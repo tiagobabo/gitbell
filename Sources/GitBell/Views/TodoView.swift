@@ -622,8 +622,9 @@ private struct TodoRowActions: View {
                     store.requestApproval(check, on: pr, from: .todo)
                 }
             }
-            if let check = item.pr?.checks?.failing.first, check.url != nil {
+            if let pr = item.pr, let check = pr.checks?.failing.first, check.url != nil {
                 IconButton(symbol: "doc.text.magnifyingglass", help: "Open \(check.name) logs", size: 24) {
+                    store.watch(pr)
                     NSWorkspace.shared.open(check.url!)
                 }
             }

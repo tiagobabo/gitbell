@@ -11,6 +11,7 @@ GitHub notifications and pull requests in a native Mac app.
 - **Pull requests:** review requests for you and your team, re-reviews, and the ones you're contributing to, with checks.
 - **Repositories:** the repos you work in, ranked by your pull requests and reviews, plus pins, each with how much is waiting on you there. Each has a page with its main branch's checks, open pull requests, merges and time to merge over the last 30 days, and who's shipping. ⌘K jumps to any repo in your organizations.
 - **Organizations:** a map of each organization's repositories, sized by commits or open pull requests over the last 30 days and coloured by language. Click a tile to open that repository.
+- **Quick to notice:** a pull request you open from GitBell is checked every 20 seconds for half an hour, since you're probably acting on it, and so are your merges while they deploy. As soon as one changes, the lists refresh. Coming back to GitBell refreshes too.
 - **Menu bar:** an optional menu bar icon that opens the window or a compact popover.
 - **Notifications:** when someone requests your review, when checks fail on your pull request, when changes are requested, when it's ready to merge, when it deploys, or when its checks fail after merging.
 - **Appearance:** light, dark or follow the system.

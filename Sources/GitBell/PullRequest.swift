@@ -147,6 +147,16 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         self.checks = checks
     }
 
+    // Everything about its state that a fresh fetch could change, in one string, to tell whether it moved.
+    var fingerprint: String {
+        let checks = checks.map { c in
+            "\(c.state) \(c.passed)/\(c.failed)/\(c.total) \(c.failing.map(\.name)) \(c.running.map { "\($0.name)\($0.onHold)" })"
+        } ?? "-"
+        let reviews = (reviewers ?? []).map { "\($0.name):\($0.state.rawValue)" }.joined(separator: ",")
+        return [isDraft.description, reviewDecision ?? "-", mergeable ?? "-", mergeStateStatus ?? "-", isInMergeQueue.description,
+                mergedAt.map { "\($0.timeIntervalSince1970)" } ?? "-", headOid ?? "-", checks, reviews].joined(separator: "|")
+    }
+
     var repositoryName: String {
         repository.split(separator: "/").last.map(String.init) ?? repository
     }

@@ -249,6 +249,8 @@ extension InboxStore {
             if let n = item.notification { open(n) }
             return
         }
+        watch(pr)
+        if Demo.isOn { return }
         NSWorkspace.shared.open(pr.url)
         for n in item.threads { Task { await markRead(n) } }
     }

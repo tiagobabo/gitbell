@@ -81,6 +81,10 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         }
         trackBadge()
         statusItem.isVisible = MenuBarIcon.isShown
+        // Back from the browser, most likely: catch up on what you just did there.
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.store.refreshIfStale() }
+        }
         updater.willRelaunch = { [weak self] in
             self?.quitting = true
             self?.popover.performClose(nil)

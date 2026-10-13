@@ -367,6 +367,24 @@ actor GitHubClient {
         return marked
     }
 
+    // A short fingerprint of each pull request's state, by id: checks, reviews, your own review, merge and deploys.
+    // Cheap enough to ask every few seconds for the few you're working on, to notice the moment one moves.
+    func fingerprints(_ ids: [String]) async throws -> [String: String] {
+        guard !ids.isEmpty else { return [:] }
+        struct Result: Decodable { let nodes: [GraphQLResponse.Node?] }
+        let result: Result = try await graphQL("""
+        query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest {
+          ...pr ...reviewers mergedAt mergeCommit { url statusCheckRollup { ...rollup } } viewerLatestReview { state commit { oid } }
+        } } }
+        """ + Self.reviewersFragment + Self.pullFragment, ["ids": ids])
+        var prints: [String: String] = [:]
+        for case let node? in result.nodes {
+            guard let pr = node.pullRequest else { continue }
+            prints[pr.id] = pr.fingerprint + "|" + (node.viewerLatestReview?.state ?? "")
+        }
+        return prints
+    }
+
     // Merges whose own checks failed or were cancelled, looked up against anyone's later commits to the same
     // branch: one that deployed carries the change out too, and one deploying might.
     func laterMerges(_ merged: [PullRequest]) async throws -> [PullRequest] {

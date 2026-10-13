@@ -77,6 +77,12 @@ final class InboxStore {
     var timelineErrors: [String: String] = [:]
     // The timeline being shown, and which list asked: the popover keeps both its lists alive.
     var timelineRequest: TimelineRequest?
+    // Pull requests you opened from here, watched closely for a while since you're probably acting on them, by
+    // id, with when to stop. What each looked like last time, to notice it change.
+    var watching: [String: Date] = [:]
+    var watchPrints: [String: String] = [:]
+    private var watchTask: Task<Void, Never>?
+    private(set) var pullsRefreshedAt: Date?
 
     var pulls: [PullSection: [PullRequest]] = [:]
     var pullTotals: [PullSection: Int] = [:]
@@ -188,6 +194,8 @@ final class InboxStore {
     func signOut() {
         pollTask?.cancel()
         pullTask?.cancel()
+        watchTask?.cancel()
+        watching = [:]
         pulls = [:]
         pullTotals = [:]
         loadedPulls = []
@@ -255,6 +263,13 @@ final class InboxStore {
                 await self.refresh()
                 let interval = await self.client?.pollInterval ?? 60
                 try? await Task.sleep(for: .seconds(max(interval, 30)))
+            }
+        }
+        watchTask?.cancel()
+        watchTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Self.watchInterval))
+                await self?.checkWatched()
             }
         }
         pullTask?.cancel()
@@ -486,7 +501,10 @@ extension InboxStore {
     func refreshPulls() async {
         guard let client, !isRefreshingPulls else { return }
         isRefreshingPulls = true
-        defer { isRefreshingPulls = false }
+        defer {
+            isRefreshingPulls = false
+            pullsRefreshedAt = .now
+        }
 
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
         let viewer = viewer?.login
@@ -537,7 +555,8 @@ extension InboxStore {
     }
 
     func open(_ pr: PullRequest) {
-        NSWorkspace.shared.open(pr.link)
+        watch(pr)
+        if !Demo.isOn { NSWorkspace.shared.open(pr.link) }
     }
 
     // Asks before approving a held CircleCI job, since it usually sets off a deploy, in a popover by its row.
