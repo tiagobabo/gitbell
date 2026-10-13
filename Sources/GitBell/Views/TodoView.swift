@@ -64,8 +64,7 @@ private struct TodoSummary: View {
     let jump: (TodoItem.Kind) -> Void
 
     var body: some View {
-        // Mergeable is the exception rather than the rule, so its tile only shows when it has something.
-        let kinds = TodoItem.Kind.yours.filter { $0 != .mergeable || count($0) > 0 }
+        let kinds = TodoItem.Kind.yours.filter { !$0.tileOnlyWhenUsed || count($0) > 0 }
         ViewThatFits(in: .horizontal) {
             tiles(kinds, labelled: true)
             tiles(kinds, labelled: false)
@@ -304,6 +303,13 @@ struct TodoRow: View {
             Button("Open in Browser") { store.open(item) }
             Button("Copy Link") { store.copyLink(item) }
             Button("Open Repository") { NSWorkspace.shared.open(URL(string: "https://github.com/\(item.repository)")!) }
+            if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
+                Section("On hold") {
+                    ForEach(held, id: \.self) { check in
+                        Button("Approve \(check.jobName)…") { Task { await store.approve(check, on: pr) } }
+                    }
+                }
+            }
             if let failing = item.pr?.checks?.failing, !failing.isEmpty {
                 Section("Failing checks") {
                     ForEach(failing, id: \.self) { check in
@@ -361,12 +367,12 @@ struct PullStatusLine: View {
             }
             .fixedSize()
             if let checks = pr.checks, checks.total > 0 {
-                // Failing checks, then optional ones still running (the required ones are just "Awaiting CI"),
-                // or the deploys still going after a merge.
+                // Failing checks, held jobs, then optional ones still running (the required ones are just
+                // "Awaiting CI"), or the deploys still going after a merge.
                 let running = status == .deploying
                     ? checks.running.filter { PullRequest.Checks.isDeploy($0.name) }
-                    : checks.running.filter { $0.required == false }
-                let chips = checks.failing + running
+                    : checks.running.filter { $0.required == false && !$0.onHold }
+                let chips = checks.failing + checks.onHold + running
                 if chips.isEmpty || maxFailing == 0 {
                     ChecksBadge(checks: checks).fixedSize()
                 } else {
@@ -397,12 +403,14 @@ struct CheckChip: View {
             if let url = check.url { NSWorkspace.shared.open(url) }
         } label: {
             HStack(spacing: 3) {
-                if running {
+                if check.onHold {
+                    Image(systemName: "pause.circle.fill").font(.system(size: 10)).foregroundStyle(tint)
+                } else if running {
                     OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
                 } else {
                     OcticonView(check.cancelled ? .skip : .xCircleFill, size: 10).foregroundStyle(tint)
                 }
-                Text(check.name)
+                Text(check.onHold ? check.jobName : check.name)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(maxWidth: 160, alignment: .leading)
@@ -420,9 +428,13 @@ struct CheckChip: View {
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering } }
     }
 
-    private var tint: Color { running ? Palette.pending : check.cancelled ? Palette.neutral : Palette.danger }
+    private var tint: Color {
+        if check.onHold { return Palette.indigo }
+        return running ? Palette.pending : check.cancelled ? Palette.neutral : Palette.danger
+    }
 
     private var help: String {
+        if check.onHold { return "\(check.jobName) is on hold, waiting for someone to approve it. Click to open it in CircleCI." }
         let what = running ? "\(check.name) is still running" : check.cancelled ? "\(check.name) was cancelled" : "\(check.name) failed"
         let optional = check.required == false ? " It's optional and doesn't block merging." : ""
         return what + "." + optional + (check.url == nil ? "" : " Click for its logs.")
@@ -435,6 +447,11 @@ private struct TodoRowActions: View {
 
     var body: some View {
         HStack(spacing: 0) {
+            if let pr = item.pr, let check = pr.checks?.onHold.first {
+                IconButton(symbol: "play.circle", help: "Approve \(check.jobName) on CircleCI", size: 24) {
+                    Task { await store.approve(check, on: pr) }
+                }
+            }
             if let check = item.pr?.checks?.failing.first, check.url != nil {
                 IconButton(symbol: "doc.text.magnifyingglass", help: "Open \(check.name) logs", size: 24) {
                     NSWorkspace.shared.open(check.url!)

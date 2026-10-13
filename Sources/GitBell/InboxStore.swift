@@ -452,7 +452,9 @@ extension InboxStore {
             unfilteredTotals = inbox.totals
             applyPeopleToPulls()
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
-            announceYourPulls(failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
+            announceYourPulls(held: ([PullSection.readyToMerge, .waiting, .drafts].flatMap { pulls[$0] ?? [] })
+                                .filter { $0.checks?.onHold.isEmpty == false },
+                              failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
                               ready: pulls[.readyToMerge]?.filter { [.readyToMerge, .mergeable].contains($0.status) } ?? [])
             pullsLoaded = true
         } catch let error as APIError where error.isUnauthorized {
@@ -465,6 +467,33 @@ extension InboxStore {
 
     func open(_ pr: PullRequest) {
         NSWorkspace.shared.open(pr.link)
+    }
+
+    // Approves a held CircleCI job after asking, since it usually sets off a deploy. Without a CircleCI token,
+    // or a workflow to approve it in, it opens the job in CircleCI instead.
+    func approve(_ check: PullRequest.Check, on pr: PullRequest) async {
+        guard let workflow = check.workflowID, let token = TokenStore.circleCIToken()?.token else {
+            if let url = check.url { NSWorkspace.shared.open(url) }
+            if check.workflowID != nil { show("Add a CircleCI token in Settings to approve from GitBell") }
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Approve \(check.jobName)?"
+        alert.informativeText = "CircleCI will carry on with \(pr.repositoryName)#\(pr.number) “\(pr.title)” past this hold."
+        alert.addButton(withTitle: "Approve")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        do {
+            let approved = try await CircleCIClient(token: token).approve(job: check.jobName, workflow: workflow)
+            show(approved ? "Approved \(check.jobName)" : "\(check.jobName) isn't on hold any more")
+            // CircleCI takes a moment to update GitHub.
+            try? await Task.sleep(for: .seconds(4))
+            await refreshPulls()
+        } catch {
+            show(error.localizedDescription)
+        }
     }
 
     func copyLink(_ pr: PullRequest) {
@@ -504,16 +533,21 @@ extension InboxStore {
 
     // Banners when checks start failing on one of your pull requests, or it becomes ready to merge.
     // Keyed by head state, so a fix that fails again announces again.
-    private func announceYourPulls(failing: [PullRequest], ready: [PullRequest]) {
+    private func announceYourPulls(held: [PullRequest], failing: [PullRequest], ready: [PullRequest]) {
         // Renamed when merges joined in, so their first fetch only records what's already failing.
         let key = "seenYourPulls2"
         let defaults = UserDefaults.standard
-        let current = failing.map { "fail:\($0.id)" } + ready.map { "ready:\($0.id)" }
+        let current = failing.map { "fail:\($0.id)" } + ready.map { "ready:\($0.id)" } + held.map { "hold:\($0.id)" }
         if pullBanners, let seen = defaults.stringArray(forKey: key).map(Set.init) {
             for pr in failing where !seen.contains("fail:\(pr.id)") { Notifier.shared.checksFailed(pr) }
             for pr in ready where !seen.contains("ready:\(pr.id)") { Notifier.shared.readyToMerge(pr) }
+            // Only if we've been keeping track of holds, so they don't all announce at once after updating.
+            if defaults.bool(forKey: "holdsTracked") {
+                for pr in held where !seen.contains("hold:\(pr.id)") { Notifier.shared.onHold(pr) }
+            }
         }
         defaults.set(current, forKey: key)
+        defaults.set(true, forKey: "holdsTracked")
     }
 }
 

@@ -55,8 +55,8 @@ enum TokenStore {
         }.value
     }
 
-    static func saveToken(_ token: String) {
-        deleteToken()
+    static func saveToken(_ token: String, account: String = account) {
+        deleteToken(account: account)
         let item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -66,7 +66,7 @@ enum TokenStore {
         SecItemAdd(item as CFDictionary, nil)
     }
 
-    static func deleteToken() {
+    static func deleteToken(account: String = account) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -75,7 +75,30 @@ enum TokenStore {
         SecItemDelete(query as CFDictionary)
     }
 
-    private static func keychainToken() -> String? {
+    // MARK: CircleCI
+
+    static let circleCIAccount = "circleci-token"
+
+    enum CircleCISource { case keychain, cli }
+
+    // A personal API token for approving held jobs: the one pasted into Settings, else the CircleCI CLI's.
+    static func circleCIToken() -> (token: String, source: CircleCISource)? {
+        if let token = keychainToken(account: circleCIAccount), !token.isEmpty { return (token, .keychain) }
+        return circleCICLIToken().map { ($0, .cli) }
+    }
+
+    // `circleci setup` writes "token: …" to ~/.circleci/cli.yml.
+    private static func circleCICLIToken() -> String? {
+        let path = NSHomeDirectory() + "/.circleci/cli.yml"
+        guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n") where line.hasPrefix("token:") {
+            let token = line.dropFirst("token:".count).trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
+            if !token.isEmpty { return token }
+        }
+        return nil
+    }
+
+    private static func keychainToken(account: String = account) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

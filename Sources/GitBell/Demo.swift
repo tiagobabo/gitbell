@@ -17,12 +17,17 @@ enum Demo {
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
                    checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = [],
-                   optionalRunning: [String] = []) -> PullRequest {
+                   optionalRunning: [String] = [], held: [String] = []) -> PullRequest {
         let failing = failing.map {
             PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"))
         }
         let running = optionalRunning.map {
             PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"), required: false)
+        } + held.map {
+            var check = PullRequest.Check(name: $0, url: URL(string: "https://app.circleci.com/pipelines/github/acme/\(repo)"), required: false)
+            check.onHold = true
+            check.workflowID = "demo-workflow"
+            return check
         }
         return PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
                     url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
@@ -72,6 +77,8 @@ enum Demo {
         .waiting: [
             pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9)),
             pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
+            pr(1207, "api", "Move invoices to the new PDF service", by: viewer, minutes: 85, checks: ("PENDING", 11, 0, 12),
+               held: ["build-and-deploy/approve_staging"]),
         ],
         .merged: GitHubClient.markShippedLater([
             merged(1204, "api", "Retry webhook deliveries with backoff", minutes: 18, checks: ("PENDING", 14, 0, 16),
@@ -89,7 +96,7 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 2, .drafts: 1,
+        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1,
     ]
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,

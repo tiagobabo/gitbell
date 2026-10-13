@@ -354,6 +354,14 @@ actor GitHubClient {
         return marked
     }
 
+    // The workflow id in a CircleCI link: circleci.com/workflow-run/<id> or app.circleci.com/…/workflows/<id>.
+    nonisolated static func circleCIWorkflow(_ url: URL) -> String? {
+        guard url.host()?.hasSuffix("circleci.com") == true else { return nil }
+        let parts = url.pathComponents
+        guard let index = parts.lastIndex(where: { $0 == "workflow-run" || $0 == "workflows" }), index + 1 < parts.count else { return nil }
+        return parts[index + 1]
+    }
+
     // CircleCI names every status "ci/circleci: job"; the job is the useful part.
     nonisolated static func checkName(_ name: String) -> String {
         name.hasPrefix("ci/circleci: ") ? String(name.dropFirst(13)) : name
@@ -434,7 +442,7 @@ actor GitHubClient {
         nodes {
           __typename
           ... on CheckRun { name status conclusion detailsUrl }
-          ... on StatusContext { context state targetUrl }
+          ... on StatusContext { context state targetUrl description }
         }
       }
     }
@@ -490,11 +498,15 @@ actor GitHubClient {
                 let context: String?
                 let state: String?
                 let targetUrl: URL?
+                let description: String?
 
                 var check: PullRequest.Check? {
                     guard let name = name ?? context else { return nil }
                     var check = PullRequest.Check(name: GitHubClient.checkName(name), url: detailsUrl ?? targetUrl)
                     check.cancelled = conclusion == "CANCELLED" || state == "ERROR"
+                    // CircleCI says "Your job is on hold on CircleCI!" for an approval job nobody has approved yet.
+                    check.onHold = state == "PENDING" && description?.localizedCaseInsensitiveContains("on hold") == true
+                    check.workflowID = (targetUrl ?? detailsUrl).flatMap(GitHubClient.circleCIWorkflow)
                     return check
                 }
                 var isFailing: Bool { Node.failedStates.contains(conclusion ?? state ?? "") }

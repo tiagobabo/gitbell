@@ -7,6 +7,9 @@ struct SettingsView: View {
     @AppStorage(Appearance.key) private var appearance = Appearance.system
     @State private var showMenuBarIcon = MenuBarIcon.isShown
     @State private var badgesAllowed = true
+    @State private var circleCI = TokenStore.circleCIToken()?.source
+    @State private var circleCIToken = ""
+    @State private var circleCIStatus: String?
 
     var body: some View {
         @Bindable var store = store
@@ -72,6 +75,43 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section {
+                switch circleCI {
+                case .cli:
+                    LabeledContent("Token", value: "From the CircleCI CLI")
+                case .keychain:
+                    LabeledContent("Token") {
+                        HStack {
+                            Text("Saved in your Keychain").foregroundStyle(.secondary)
+                            Button("Remove") {
+                                TokenStore.deleteToken(account: TokenStore.circleCIAccount)
+                                circleCI = TokenStore.circleCIToken()?.source
+                                circleCIStatus = nil
+                            }
+                        }
+                    }
+                case nil:
+                    HStack {
+                        SecureField("Personal API token", text: $circleCIToken)
+                            .onSubmit(saveCircleCIToken)
+                        Button("Save", action: saveCircleCIToken)
+                            .disabled(circleCIToken.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+                if let circleCIStatus {
+                    Text(circleCIStatus).font(.caption).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("CircleCI")
+            } footer: {
+                HStack(spacing: 4) {
+                    Text("Lets GitBell approve jobs that are on hold.")
+                    Link("Create a token", destination: URL(string: "https://app.circleci.com/settings/user/tokens")!)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
             if let login = store.viewer?.login {
                 Section("Account") {
                     LabeledContent("Signed in as", value: login)
@@ -99,6 +139,23 @@ struct SettingsView: View {
         // A readable column in the middle of the window's detail pane.
         .frame(maxWidth: 600)
         .frame(maxWidth: .infinity)
+    }
+
+    private func saveCircleCIToken() {
+        let token = circleCIToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { return }
+        circleCIStatus = "Checking…"
+        Task {
+            do {
+                let login = try await CircleCIClient(token: token).me()
+                TokenStore.saveToken(token, account: TokenStore.circleCIAccount)
+                circleCIToken = ""
+                circleCI = .keychain
+                circleCIStatus = "Signed in to CircleCI as \(login)"
+            } catch {
+                circleCIStatus = error.localizedDescription
+            }
+        }
     }
 
     private static var version: String {

@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, fix, reply, merge, mergeable, waiting
+        case review, fix, onHold, reply, merge, mergeable, waiting
 
         var id: String { rawValue }
     }
@@ -33,12 +33,16 @@ struct TodoItem: Identifiable {
 
 extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
-    static let yours: [TodoItem.Kind] = [.review, .fix, .reply, .merge, .mergeable]
+    static let yours: [TodoItem.Kind] = [.review, .fix, .onHold, .reply, .merge, .mergeable]
+
+    // Groups that are the exception rather than the rule only get a summary tile when they have something.
+    var tileOnlyWhenUsed: Bool { self == .onHold || self == .mergeable }
 
     var title: String {
         switch self {
         case .review: "Review"
         case .fix: "Fix"
+        case .onHold: "On hold"
         case .reply: "Reply"
         case .merge: "Merge"
         case .mergeable: "Mergeable"
@@ -50,6 +54,7 @@ extension TodoItem.Kind {
         switch self {
         case .review: "Someone is waiting on your review"
         case .fix: "Failing checks, conflicts and requested changes"
+        case .onHold: "CircleCI jobs waiting for someone to approve them"
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
         case .mergeable: "Approved, with optional checks still running or failing"
@@ -61,6 +66,7 @@ extension TodoItem.Kind {
         switch self {
         case .review: "eye"
         case .fix: "wrench.and.screwdriver"
+        case .onHold: "pause.circle"
         case .reply: "bubble.left.and.bubble.right"
         case .merge: "arrow.triangle.merge"
         case .mergeable: "clock.badge.checkmark"
@@ -72,6 +78,7 @@ extension TodoItem.Kind {
         switch self {
         case .review: Palette.pending
         case .fix: Palette.danger
+        case .onHold: Palette.indigo
         case .reply: Palette.accent
         case .merge: Palette.open
         case .mergeable: Palette.teal
@@ -107,13 +114,18 @@ extension InboxStore {
         var items: [TodoItem] = []
         for pr in pulls[.needsReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
         for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
+        // A held CircleCI job on one of your pull requests, drafts included, is waiting on a click from you.
+        // Anything that needs fixing comes first.
+        func held(_ pr: PullRequest) -> Bool { pr.checks?.onHold.isEmpty == false }
         for pr in pulls[.readyToMerge] ?? [] {
-            items.append(item(pr, pr.status == .mergeable ? .mergeable : .merge, threads: byURL[pr.url] ?? []))
+            let kind: TodoItem.Kind = held(pr) ? .onHold : pr.status == .mergeable ? .mergeable : .merge
+            items.append(item(pr, kind, threads: byURL[pr.url] ?? []))
         }
         // A comment on a pull request that's otherwise waiting on others is yours to answer.
         for pr in (pulls[.waiting] ?? []) + (pulls[.drafts] ?? []) {
             let unread = byURL[pr.url] ?? []
-            items.append(item(pr, unread.contains(where: asksForReply) ? .reply : .waiting, threads: unread))
+            let kind: TodoItem.Kind = held(pr) ? .onHold : unread.contains(where: asksForReply) ? .reply : .waiting
+            items.append(item(pr, kind, threads: unread))
         }
         // Team review requests don't show up here, so drop their notifications rather than counting them as replies.
         for n in threads where !used.contains(n.id) {

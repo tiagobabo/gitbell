@@ -60,6 +60,9 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
             return knowsRequired ? running.contains { $0.required == true } : state == "PENDING"
         }
 
+        // CircleCI approval jobs waiting on someone.
+        var onHold: [Check] { running.filter(\.onHold) }
+
         // Checks that haven't passed but don't stop the merge.
         var optionalPending: [Check] { knowsRequired ? (failing + running).filter { $0.required == false } : [] }
 
@@ -90,6 +93,12 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         // Cancelled rather than failed. CircleCI reports a cancelled job as an ERROR status, which is what
         // happens to a merge's pipeline when the next merge supersedes it.
         var cancelled = false
+        // A CircleCI approval job waiting for someone to approve it, and the workflow it's in.
+        var onHold = false
+        var workflowID: String?
+
+        // The job's own name, without the workflow in front: "approve_de_es" for "build-and-deploy/approve_de_es".
+        var jobName: String { name.split(separator: "/").last.map(String.init) ?? name }
 
         func marking(_ requiredNames: Set<String>) -> Check {
             var copy = self

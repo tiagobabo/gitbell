@@ -38,6 +38,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
              url: pr.checks?.failing.first?.url ?? pr.url)
     }
 
+    func onHold(_ pr: PullRequest) {
+        let jobs = pr.checks?.onHold.map(\.jobName).joined(separator: ", ") ?? ""
+        post(id: "hold:\(pr.id)", title: "Waiting for your approval", subtitle: "\(pr.repository)#\(pr.number)",
+             body: "\(pr.title)\nOn hold: \(jobs)", url: pr.checks?.onHold.first?.url ?? pr.url)
+    }
+
     func readyToMerge(_ pr: PullRequest) {
         post(id: "ready:\(pr.id)", title: "Ready to merge", subtitle: "\(pr.repository)#\(pr.number)", body: pr.title, url: pr.url)
     }
