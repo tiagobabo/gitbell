@@ -92,7 +92,7 @@ struct PullSectionView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
                         if index > 0 { Divider().padding(.leading, 38).opacity(0.6) }
-                        PullRow(pr: pr, showAuthor: section.isReviewRequest)
+                        PullRow(pr: pr, showAuthor: section.isReviewRequest || section == .contributing)
                     }
                     if total > items.count {
                         Divider().opacity(0.6)
@@ -127,7 +127,7 @@ struct PullSectionView: View {
         case .needsReview: return Palette.pending
         case .needsAction: return Palette.danger
         case .readyToMerge: return Palette.open
-        case .teamReview, .drafts, .waiting, .merged: return nil
+        case .teamReview, .drafts, .waiting, .contributing, .merged: return nil
         }
     }
 }
@@ -168,7 +168,7 @@ struct PullRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-                PullStatusLine(pr: pr)
+                PullStatusLine(pr: pr, origin: .pulls)
                 ReviewersLine(pr: pr)
             }
 
@@ -180,6 +180,7 @@ struct PullRow: View {
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
             }
+            .approvalPopover(for: pr, from: .pulls)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 9)
@@ -194,7 +195,7 @@ struct PullRow: View {
             }
             Button("Copy Link") { store.copyLink(pr) }
             ForEach(pr.checks?.onHold ?? [], id: \.self) { check in
-                Button("Approve \(check.jobName)…") { Task { await store.approve(check, on: pr) } }
+                Button("Approve \(check.jobName)…") { store.requestApproval(check, on: pr, from: .pulls) }
                     .disabled(store.isApproving(check, on: pr))
             }
             Button("Open Repository") {

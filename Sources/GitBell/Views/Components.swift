@@ -128,12 +128,6 @@ enum LoadingLines {
         "Counting review requests, no peeking…",
         "Reading the room…",
     ]
-    static let inbox = [
-        "Sorting the mail…",
-        "Untangling threads…",
-        "Opening the envelopes…",
-        "Catching up on the chatter…",
-    ]
     static let pulls = [
         "Herding pull requests…",
         "Reading the checks…",
@@ -224,5 +218,56 @@ struct SignInForm: View {
             await work()
             busy = false
         }
+    }
+}
+
+struct ReasonTag: View {
+    let reason: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle().fill(Reason.tint(reason)).frame(width: 6, height: 6)
+            Text(Reason.label(reason))
+        }
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundStyle(.secondary)
+        .padding(.leading, 5)
+        .padding(.trailing, 7)
+        .padding(.vertical, 1.5)
+        .background(Color.primary.opacity(0.06), in: Capsule())
+    }
+}
+
+extension View {
+    // The system's selection and hover fills, shared by every list so they all select alike.
+    func rowHighlight(hovering: Bool, selected: Bool) -> some View {
+        background(
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
+                .fill(selected ? AnyShapeStyle(Color(nsColor: .unemphasizedSelectedContentBackgroundColor))
+                               : hovering ? AnyShapeStyle(.fill.quaternary) : AnyShapeStyle(Color.clear))
+        )
+    }
+}
+
+// "alice approved", "bob commented: Looks good…", "carol pushed 3 commits: Fix the thing".
+struct ActivityLine: View {
+    let activity: Activity
+
+    var body: some View {
+        HStack(spacing: 5) {
+            OcticonView(activity.icon, size: 11)
+                .foregroundStyle(activity.color)
+            if activity.avatar != nil {
+                Avatar(url: activity.avatar, size: 14)
+            }
+            (Text(activity.actor ?? "Someone").fontWeight(.semibold)
+                + Text(" \(activity.verb)")
+                + Text(activity.snippet.map { ": \($0)" } ?? "").foregroundStyle(.secondary))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .font(.system(size: 11.5))
+        .foregroundStyle(Color.primary.opacity(0.85))
+        .transition(.opacity)
     }
 }

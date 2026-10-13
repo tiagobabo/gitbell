@@ -7,36 +7,52 @@ struct TodoView: View {
 
     var body: some View {
         let items = store.todo
-        let yours = items.filter { $0.kind != .waiting }
+        let yours = items.filter(\.kind.counted)
         let pending = yours.filter { !$0.hidden }
+        let contributing = items.filter { $0.kind == .contributing }
         let waiting = items.filter { $0.kind == .waiting }
 
-        if !store.pullsLoaded || store.lastUpdated == nil {
+        // Groups fill in as their searches answer; only a first load that got nowhere takes the whole page.
+        if store.nothingLoaded, store.firstLoadError != nil {
             LoadingView(lines: LoadingLines.todo)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
+                    // The window pins each group's header while you scroll through it. The popover is too short to need it.
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: compact ? [] : .sectionHeaders) {
                         TodoSummary(items: pending, compact: compact) { kind in
                             withAnimation(.snappy) { proxy.scrollTo(kind, anchor: .top) }
                         }
                         .padding(.bottom, compact ? 4 : 8)
 
-                        if yours.isEmpty {
+                        if store.todoLoaded, yours.isEmpty {
                             CaughtUp(search: store.searchText, waiting: waiting.count)
                         }
                         ForEach(TodoItem.Kind.yours) { kind in
                             let group = yours.filter { $0.kind == kind }
                             if !group.isEmpty {
-                                TodoGroupHeader(kind: kind, count: group.count, compact: compact)
-                                    .id(kind)
-                                if kind == .onHold, store.circleCISource == nil, !store.circleCIHintDismissed {
-                                    CircleCIHint()
-                                        .padding(.bottom, 6)
-                                        .transition(.opacity)
+                                Section {
+                                    if kind == .onHold, store.circleCISource == nil, !store.circleCIHintDismissed {
+                                        CircleCIHint()
+                                            .padding(.bottom, 6)
+                                            .transition(.opacity)
+                                    }
+                                    TodoCard(items: group)
+                                } header: {
+                                    TodoGroupHeader(kind: kind, count: group.count, compact: compact).id(kind)
                                 }
-                                TodoCard(items: group)
+                            } else if !store.isReady(kind), !kind.tileOnlyWhenUsed, kind != .merge {
+                                placeholder(kind)
                             }
+                        }
+                        if !contributing.isEmpty {
+                            Section {
+                                TodoCard(items: contributing)
+                            } header: {
+                                TodoGroupHeader(kind: .contributing, count: contributing.count, compact: compact)
+                            }
+                        } else if !store.isReady(.contributing) {
+                            placeholder(.contributing)
                         }
                         if !waiting.isEmpty {
                             WaitingHeader(count: waiting.count, compact: compact)
@@ -59,6 +75,16 @@ struct TodoView: View {
             }
         }
     }
+
+    // A group still on its way: its header with a spinner for a count, over rows shaped like the ones coming.
+    private func placeholder(_ kind: TodoItem.Kind) -> some View {
+        Section {
+            TodoPlaceholder(error: store.loadError(for: kind))
+                .transition(.opacity)
+        } header: {
+            TodoGroupHeader(kind: kind, count: nil, compact: compact)
+        }
+    }
 }
 
 // A tile per group with its count; a tile scrolls to its group.
@@ -66,9 +92,10 @@ private struct TodoSummary: View {
     let items: [TodoItem]
     let compact: Bool
     let jump: (TodoItem.Kind) -> Void
+    @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let kinds = TodoItem.Kind.yours.filter { !$0.tileOnlyWhenUsed || count($0) > 0 }
+        let kinds = TodoItem.Kind.yours.filter { !$0.tileOnlyWhenUsed || (count($0) ?? 0) > 0 }
         ViewThatFits(in: .horizontal) {
             tiles(kinds, labelled: true)
             tiles(kinds, labelled: false)
@@ -83,12 +110,15 @@ private struct TodoSummary: View {
         }
     }
 
-    private func count(_ kind: TodoItem.Kind) -> Int { items.filter { $0.kind == kind }.count }
+    // Nil while the group is still loading.
+    private func count(_ kind: TodoItem.Kind) -> Int? {
+        store.isReady(kind) ? items.filter { $0.kind == kind }.count : nil
+    }
 }
 
 private struct SummaryTile: View {
     let kind: TodoItem.Kind
-    let count: Int
+    let count: Int?
     let compact: Bool
     var labelled = true
     let action: () -> Void
@@ -100,7 +130,7 @@ private struct SummaryTile: View {
                 HStack(spacing: 5) {
                     Image(systemName: kind.symbol)
                         .font(.system(size: compact ? 10 : 11, weight: .semibold))
-                        .foregroundStyle(count > 0 ? kind.tint : Color.secondary)
+                        .foregroundStyle((count ?? 0) > 0 ? kind.tint : Color.secondary)
                     if labelled {
                         Text(kind.title)
                             .font(.system(size: compact ? 10.5 : 11.5, weight: .medium))
@@ -109,11 +139,12 @@ private struct SummaryTile: View {
                             .fixedSize()
                     }
                 }
-                Text("\(count)")
+                Text("\(count ?? 0)")
                     .font(.system(size: compact ? 17 : 24, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(count > 0 ? Color.primary : Color.secondary.opacity(0.6))
+                    .foregroundStyle((count ?? 0) > 0 ? Color.primary : Color.secondary.opacity(0.6))
                     .contentTransition(.numericText())
+                    .redacted(reason: count == nil ? .placeholder : [])
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, compact ? 9 : 12)
@@ -125,15 +156,17 @@ private struct SummaryTile: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(count == 0)
+        .disabled((count ?? 0) == 0)
         .help(kind.subtitle)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
     }
 }
 
+// Pinned in the window, so it sits on the window's background rather than letting rows show through.
 private struct TodoGroupHeader: View {
     let kind: TodoItem.Kind
-    let count: Int
+    // Nil while the group is loading.
+    let count: Int?
     let compact: Bool
 
     var body: some View {
@@ -144,10 +177,16 @@ private struct TodoGroupHeader: View {
                 .frame(width: 16)
             Text(kind.title)
                 .font(.system(size: 13, weight: .semibold))
-            Text("\(count)")
-                .font(.system(size: 11, weight: .medium))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
+            if let count {
+                Text("\(count)")
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+            } else {
+                ProgressView().controlSize(.mini).scaleEffect(0.8).frame(width: 12, height: 10)
+                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
+            }
             if !compact {
                 Text(kind.subtitle)
                     .font(.system(size: 11.5))
@@ -159,6 +198,9 @@ private struct TodoGroupHeader: View {
         .padding(.horizontal, 4)
         .padding(.top, 14)
         .padding(.bottom, 6)
+        .background {
+            if !compact { Rectangle().fill(Color(nsColor: .windowBackgroundColor)).padding(.horizontal, -4) }
+        }
     }
 }
 
@@ -223,7 +265,8 @@ struct TodoRow: View {
     @State private var hovering = false
 
     var body: some View {
-        let active = hovering || store.selection == item.id
+        let prompting = item.pr != nil && store.approvalPrompt?.pr.id == item.pr?.id
+        let active = hovering || store.selection == item.id || prompting
         let detail = item.notification.flatMap { store.details[$0.detailKey] }
 
         HStack(alignment: .top, spacing: 10) {
@@ -246,6 +289,10 @@ struct TodoRow: View {
                         Text("·").foregroundStyle(.tertiary)
                         Avatar(url: pr.authorAvatar, size: 12)
                         Text(pr.author)
+                        if pr.yourCommits > 0 {
+                            Text("·").foregroundStyle(.tertiary)
+                            Text(pr.yourCommits == 1 ? "1 commit by you" : "\(pr.yourCommits)\(pr.yourCommits >= 50 ? "+" : "") commits by you")
+                        }
                     }
                 }
                 .font(.system(size: 11))
@@ -264,7 +311,8 @@ struct TodoRow: View {
                     .foregroundStyle(.secondary)
                 }
 
-                if let activity = detail?.activity {
+                // "alice requested a review" only repeats the group it's in.
+                if let activity = detail?.activity, !(item.kind == .review && activity.kind == .reviewRequested) {
                     ActivityLine(activity: activity)
                     if item.threads.count > 1 {
                         Text("and \(item.threads.count - 1) more unread")
@@ -290,6 +338,7 @@ struct TodoRow: View {
         .rowHighlight(hovering: hovering, selected: store.selection == item.id)
         .overlay(alignment: .topTrailing) {
             TodoRowActions(item: item)
+                .approvalPopover(for: item.pr, from: .todo)
                 .padding(.top, 6)
                 .padding(.trailing, 6)
                 .opacity(active ? 1 : 0)
@@ -305,7 +354,7 @@ struct TodoRow: View {
             if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
                 Section("On hold") {
                     ForEach(held, id: \.self) { check in
-                        Button("Approve \(check.jobName)…") { Task { await store.approve(check, on: pr) } }
+                        Button("Approve \(check.jobName)…") { store.requestApproval(check, on: pr, from: .todo) }
                             .disabled(store.isApproving(check, on: pr))
                     }
                 }
@@ -346,6 +395,8 @@ struct TodoRow: View {
 // The status dot, then the checks: which ones fail, as links to their logs, or how many are still running.
 struct PullStatusLine: View {
     let pr: PullRequest
+    // Where clicking a held job asks to approve it from.
+    var origin = ApprovalPrompt.Origin.todo
     @Environment(InboxStore.self) private var store
 
     var body: some View {
@@ -380,7 +431,9 @@ struct PullStatusLine: View {
                     HStack(spacing: 4) {
                         ForEach(chips.prefix(maxFailing), id: \.self) { check in
                             CheckChip(check: check, running: checks.running.contains(check),
-                                      approving: store.isApproving(check, on: pr))
+                                      approval: store.approvalState(check, on: pr)) {
+                                store.requestApproval(check, on: pr, from: origin)
+                            }
                         }
                         if chips.count > maxFailing {
                             Text("+\(chips.count - maxFailing)")
@@ -478,17 +531,23 @@ private struct ReviewerChip: View {
 struct CheckChip: View {
     let check: PullRequest.Check
     var running = false
-    // Approved here; CircleCI hasn't told GitHub yet.
-    var approving = false
+    // Being approved here, or approved and CircleCI hasn't told GitHub yet.
+    var approval = ApprovalState.none
+    // What clicking a held job does: ask to approve it. Other checks open their logs.
+    var approve: () -> Void = {}
     @State private var hovering = false
 
     var body: some View {
         Button {
-            if let url = check.url { NSWorkspace.shared.open(url) }
+            if check.onHold, approval == .none { approve() }
+            else if let url = check.url { NSWorkspace.shared.open(url) }
         } label: {
             HStack(spacing: 3) {
-                if approving {
+                if approval == .approving {
                     ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10)
+                } else if approval == .approved {
+                    StateSymbol("checkmark.circle.fill", Palette.open)
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                 } else if check.onHold {
                     StateSymbol("pause.circle.fill", tint)
                 } else if running {
@@ -496,7 +555,7 @@ struct CheckChip: View {
                 } else {
                     StateSymbol(check.cancelled ? "minus.circle.fill" : "xmark.circle.fill", tint)
                 }
-                Text(approving ? "\(check.jobName) · approving" : check.onHold ? check.jobName : check.name)
+                Text(label)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(maxWidth: 160, alignment: .leading)
@@ -514,14 +573,24 @@ struct CheckChip: View {
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering } }
     }
 
+    private var label: String {
+        switch approval {
+        case .approving: "\(check.jobName) · approving"
+        case .approved: "\(check.jobName) · approved"
+        case .none: check.onHold ? check.jobName : check.name
+        }
+    }
+
     private var tint: Color {
+        if approval == .approved { return Palette.open }
         if check.onHold { return Palette.indigo }
         return running ? Palette.pending : check.cancelled ? Palette.neutral : Palette.danger
     }
 
     private var help: String {
-        if approving { return "Approved \(check.jobName). Waiting for CircleCI to carry on." }
-        if check.onHold { return "\(check.jobName) is on hold, waiting for someone to approve it. Click to open it in CircleCI." }
+        if approval == .approving { return "Approving \(check.jobName)…" }
+        if approval == .approved { return "Approved \(check.jobName). Waiting for CircleCI to carry on." }
+        if check.onHold { return "\(check.jobName) is on hold, waiting for someone to approve it. Click to approve it." }
         let what = running ? "\(check.name) is still running" : check.cancelled ? "\(check.name) was cancelled" : "\(check.name) failed"
         let optional = check.required == false ? " It's optional and doesn't block merging." : ""
         return what + "." + optional + (check.url == nil ? "" : " Click for its logs.")
@@ -536,7 +605,7 @@ private struct TodoRowActions: View {
         HStack(spacing: 0) {
             if let pr = item.pr, let check = pr.checks?.onHold.first, !store.isApproving(check, on: pr) {
                 IconButton(symbol: "play.circle", help: "Approve \(check.jobName) on CircleCI", size: 24) {
-                    Task { await store.approve(check, on: pr) }
+                    store.requestApproval(check, on: pr, from: .todo)
                 }
             }
             if let check = item.pr?.checks?.failing.first, check.url != nil {
@@ -651,5 +720,72 @@ private struct CaughtUp: View {
         case 1: return "1 of your pull requests is waiting on others."
         default: return "\(waiting) of your pull requests are waiting on others."
         }
+    }
+}
+
+// Rows shaped like the ones on their way, gently pulsing; or, if the search behind them failed, why, with a retry.
+private struct TodoPlaceholder: View {
+    let error: String?
+    @Environment(InboxStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dim = false
+
+    var body: some View {
+        Group {
+            if let error {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Palette.pending)
+                    Text("Couldn't load these: \(error)")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    Spacer(minLength: 4)
+                    Button("Try Again") { Task { await store.refreshAll() } }
+                        .controlSize(.small)
+                        .disabled(store.isRefreshingPulls)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            } else {
+                VStack(spacing: 0) {
+                    SkeletonRow(widths: (0.55, 0.3, 0.4))
+                    Divider().padding(.leading, 46).opacity(0.6)
+                    SkeletonRow(widths: (0.42, 0.24, 0.34))
+                }
+                .padding(3)
+                .opacity(dim ? 0.45 : 1)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: dim)
+                .onAppear { dim = !reduceMotion }
+                .accessibilityLabel("Loading")
+            }
+        }
+        .card()
+    }
+}
+
+private struct SkeletonRow: View {
+    let widths: (CGFloat, CGFloat, CGFloat)
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle().frame(width: 28, height: 28)
+            GeometryReader { proxy in
+                VStack(alignment: .leading, spacing: 8) {
+                    bar(proxy.size.width * widths.0, height: 11)
+                    bar(proxy.size.width * widths.1, height: 9)
+                    bar(proxy.size.width * widths.2, height: 9)
+                }
+                .padding(.top, 2)
+            }
+            .frame(height: 50)
+        }
+        .foregroundStyle(.quaternary)
+        .padding(9)
+    }
+
+    private func bar(_ width: CGFloat, height: CGFloat) -> some View {
+        Capsule().frame(width: width, height: height)
     }
 }

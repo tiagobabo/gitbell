@@ -297,6 +297,7 @@ actor GitHubClient {
             .needsReview: "\(base) user-review-requested:@me",
             .teamReview: "\(base) review-requested:@me -user-review-requested:@me",
             .waiting: "\(base) author:@me",
+            .contributing: "\(base) involves:@me -author:@me",
         ]
     }
 
@@ -306,37 +307,41 @@ actor GitHubClient {
         return "is:pr is:merged archived:false author:@me merged:>=\(since) sort:updated-desc"
     }
 
-    func pullInbox(since: Date) async throws -> PullInbox {
+    // One of the searches behind the pull request lists. Each is fetched on its own, so the lists can fill in
+    // as their answers arrive instead of waiting on the slowest.
+    func pulls(_ source: PullSource, since: Date, viewer: String?) async throws -> PullInbox {
         let queries = Self.searchQueries(since: since)
         typealias Searches = [String: GraphQLResponse.Search]
-        // Three requests side by side: together they took GitHub long enough to time out now and then.
-        async let reviews: Searches = graphQL(Self.reviewsQuery, ["direct": queries[.needsReview]!, "team": queries[.teamReview]!])
-        async let mine: Searches = graphQL(Self.mineQuery, ["q": queries[.waiting]!])
-        async let merged: Searches = graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
-        let (review, yours, done) = try await (reviews, mine, merged)
-        let direct = review["direct"], team = review["team"], open = yours["mine"]?.pulls ?? []
-
-        var sections: [PullSection: [PullRequest]] = [
-            .needsReview: direct?.pulls ?? [],
-            .teamReview: team?.pulls ?? [],
-        ]
-        var totals: [PullSection: Int] = [
-            .needsReview: direct?.issueCount ?? 0,
-            .teamReview: team?.issueCount ?? 0,
-        ]
-        // Optional checks shouldn't hold your pull requests back, so find out which ones are required.
-        // Best effort: without it, every check counts.
-        let required = (try? await requiredChecks(for: open)) ?? [:]
-        for var pr in open {
-            if let names = required[pr.id] { pr.checks = pr.checks?.markingRequired(names) }
-            sections[PullSection.classify(pr), default: []].append(pr)
+        switch source {
+        case .reviews:
+            let found: Searches = try await graphQL(Self.reviewsQuery, ["direct": queries[.needsReview]!, "team": queries[.teamReview]!])
+            let direct = found["direct"], team = found["team"]
+            return PullInbox(sections: [.needsReview: direct?.pulls ?? [], .teamReview: team?.pulls ?? []],
+                             totals: [.needsReview: direct?.issueCount ?? 0, .teamReview: team?.issueCount ?? 0])
+        case .yours:
+            let found: Searches = try await graphQL(Self.mineQuery, ["q": queries[.waiting]!])
+            let open = found["mine"]?.pulls ?? []
+            var sections: [PullSection: [PullRequest]] = [.drafts: [], .waiting: [], .needsAction: [], .readyToMerge: []]
+            // Optional checks shouldn't hold your pull requests back, so find out which ones are required.
+            // Best effort: without it, every check counts.
+            let required = (try? await requiredChecks(for: open)) ?? [:]
+            for var pr in open {
+                if let names = required[pr.id] { pr.checks = pr.checks?.markingRequired(names) }
+                sections[PullSection.classify(pr), default: []].append(pr)
+            }
+            return PullInbox(sections: sections, totals: sections.mapValues(\.count))
+        case .contributing:
+            // GitHub can't search by committer, so look through the ones you're involved in for your commits.
+            guard let viewer else { return PullInbox(sections: [.contributing: []], totals: [.contributing: 0]) }
+            let found: Searches = try await graphQL(Self.contributingQuery, ["q": queries[.contributing]!])
+            let pulls = (found["contributing"]?.pulls(commitsBy: viewer) ?? []).filter { $0.yourCommits > 0 }
+            return PullInbox(sections: [.contributing: pulls], totals: [.contributing: pulls.count])
+        case .merged:
+            let found: Searches = try await graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
+            let merged = Self.markShippedLater((found["merged"]?.pulls ?? [])
+                .sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) })
+            return PullInbox(sections: [.merged: merged], totals: [.merged: merged.count])
         }
-        sections[.merged] = Self.markShippedLater((done["merged"]?.pulls ?? [])
-            .sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) })
-        for section in [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged] {
-            totals[section] = sections[section]?.count ?? 0
-        }
-        return PullInbox(sections: sections, totals: totals)
     }
 
     // A merge whose own pipeline failed or was cancelled still shipped if a later merge to the same branch
@@ -434,6 +439,14 @@ actor GitHubClient {
     }
     """
 
+    // Others' pull requests you're involved in, with who wrote their latest commits.
+    private static let contributingQuery = """
+    query($q: String!) { contributing: search(query: $q, type: ISSUE, first: 30) { issueCount nodes { ...pr ...reviewers ...committers } } }
+    fragment committers on PullRequest {
+      yourCommits: commits(last: 50) { nodes { commit { authors(first: 3) { nodes { user { login } } } } } }
+    }
+    """ + reviewersFragment + pullFragment
+
     private static let mergedPullsQuery = """
     query($q: String!) { merged: search(query: $q, type: ISSUE, first: 20) { issueCount nodes { ...pr ...merged } } }
     fragment merged on PullRequest {
@@ -470,6 +483,17 @@ actor GitHubClient {
             let nodes: [Node?]
 
             var pulls: [PullRequest] { nodes.compactMap { $0?.pullRequest } }
+
+            // With how many of each one's latest commits `viewer` wrote or co-wrote.
+            func pulls(commitsBy viewer: String) -> [PullRequest] {
+                nodes.compactMap { node in
+                    guard let node, var pr = node.pullRequest else { return nil }
+                    pr.yourCommits = (node.yourCommits?.nodes ?? []).filter { commit in
+                        commit.commit.authors?.nodes.contains { $0?.user?.login.caseInsensitiveCompare(viewer) == .orderedSame } == true
+                    }.count
+                    return pr
+                }
+            }
         }
 
         struct Node: Decodable {
@@ -491,6 +515,7 @@ actor GitHubClient {
             let mergeCommit: Commit?
             let reviewRequests: Requests?
             let latestReviews: Reviews?
+            let yourCommits: Commits?
 
             struct Requests: Decodable { let nodes: [Request?] }
             struct Request: Decodable { let requestedReviewer: Requested? }
@@ -508,7 +533,10 @@ actor GitHubClient {
             struct Repository: Decodable { let nameWithOwner: String }
             struct Commits: Decodable { let nodes: [CommitNode] }
             struct CommitNode: Decodable { let commit: Commit }
-            struct Commit: Decodable { let url: URL?; let statusCheckRollup: Rollup? }
+            struct Commit: Decodable { let url: URL?; let statusCheckRollup: Rollup?; let authors: Authors? }
+            struct Authors: Decodable { let nodes: [GitActor?] }
+            struct GitActor: Decodable { let user: User? }
+            struct User: Decodable { let login: String }
             struct Rollup: Decodable { let state: String; let contexts: Contexts }
             struct Contexts: Decodable {
                 let totalCount: Int

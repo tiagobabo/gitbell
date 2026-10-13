@@ -2,14 +2,13 @@ import SwiftUI
 
 enum SidebarItem: Hashable {
     case todo
-    case inbox(InboxFilter)
     case pulls(PullSection)
     case repo(String)
     case repos
     case org(String)
 }
 
-// The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
+// The full window: Your turn and PR sections in a sidebar, the chosen list on the right.
 struct MainWindowView: View {
     @Environment(InboxStore.self) private var store
     @AppStorage("windowSelection") private var savedSelection = "todo"
@@ -68,6 +67,9 @@ struct MainWindowView: View {
         .onChange(of: title, initial: true) { _, title in
             NSApp.windows.first { $0.identifier == AppController.windowID }?.title = title
         }
+        .onChange(of: subtitle, initial: true) { _, subtitle in
+            NSApp.windows.first { $0.identifier == AppController.windowID }?.subtitle = subtitle
+        }
     }
 
     @ViewBuilder
@@ -75,8 +77,6 @@ struct MainWindowView: View {
         switch selection {
         case .todo, nil:
             TodoView()
-        case .inbox:
-            NotificationList()
         case .pulls(let section):
             PullSectionList(section: section)
         case .repo(let fullName):
@@ -104,15 +104,6 @@ struct MainWindowView: View {
                 }
                 .help(store.showHiddenTodos ? "Showing hidden items" : "Show items you hid")
                 .disabled(store.hiddenTodoCount == 0 && !store.showHiddenTodos)
-            }
-            if case .inbox(let filter) = selection {
-                Button {
-                    Task { await store.markVisibleRead() }
-                } label: {
-                    Label(filter == .all ? "Mark All as Read" : "Mark \(filter.windowTitle) as Read", systemImage: "checkmark.circle")
-                }
-                .help("Mark everything shown as read")
-                .disabled(store.visible.isEmpty)
             }
             Button {
                 Task {
@@ -142,7 +133,6 @@ struct MainWindowView: View {
         // Setup and sign-in aren't any page yet.
         guard store.phase == .ready, !store.onboarding else { return "GitBell" }
         return switch selection {
-        case .inbox(let filter): filter.windowTitle
         case .pulls(let section): section.windowTitle
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
@@ -154,12 +144,9 @@ struct MainWindowView: View {
     private var subtitle: String {
         switch selection {
         case .todo, nil:
-            guard store.pullsLoaded, store.lastUpdated != nil else { return "" }
+            guard store.todoLoaded else { return "Loading…" }
             let count = store.todoCount
             return count == 0 ? "All caught up" : count == 1 ? "1 waiting on you" : "\(count) waiting on you"
-        case .inbox:
-            let count = store.visible.count
-            return count == 0 ? "All caught up" : count == 1 ? "1 unread" : "\(count) unread"
         case .pulls(let section):
             let count = store.pullTotals[section] ?? 0
             return count == 1 ? "1 pull request" : "\(count) pull requests"
@@ -179,7 +166,6 @@ struct MainWindowView: View {
         case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
         case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
         case .org(let owner): URL(string: "https://github.com/\(owner)")!
-        default: URL(string: "https://github.com/notifications")!
         }
     }
 
@@ -187,8 +173,6 @@ struct MainWindowView: View {
         switch item {
         case .todo:
             store.showInWindow(.todo, pullsFocus: nil)
-        case .inbox(let filter):
-            store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
         case .repo, .repos, .org, nil:
@@ -199,7 +183,6 @@ struct MainWindowView: View {
     private static func encode(_ item: SidebarItem) -> String {
         switch item {
         case .todo: "todo"
-        case .inbox(let filter): "inbox.\(filter.rawValue)"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
         case .repos: "repos.all"
@@ -212,7 +195,6 @@ struct MainWindowView: View {
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
-        case "inbox": return InboxFilter(rawValue: parts[1]).map(SidebarItem.inbox)
         case "pulls": return PullSection(rawValue: parts[1]).map(SidebarItem.pulls)
         case "repo": return .repo(parts[1])
         case "repos": return .repos
@@ -232,13 +214,6 @@ private struct Sidebar: View {
                 SidebarRow(title: TodoItem.title, symbol: TodoItem.symbol, tint: Palette.accent, count: store.todoCount,
                            selected: selection == .todo)
                     .tag(SidebarItem.todo)
-            }
-            Section("Inbox") {
-                ForEach(InboxFilter.allCases) { filter in
-                    SidebarRow(title: filter.windowTitle, symbol: filter.symbol, tint: Palette.accent,
-                               count: store.count(for: filter), selected: selection == .inbox(filter))
-                        .tag(SidebarItem.inbox(filter))
-                }
             }
             ForEach(PullSection.windowGroups) { group in
                 Section(group.title) {
@@ -263,7 +238,7 @@ private struct Sidebar: View {
             }
             Section("Repositories") {
                 ForEach(store.yourRepos) { repo in
-                    RepoSidebarRow(repo: repo, unread: store.unreadCount(in: repo.fullName))
+                    RepoSidebarRow(repo: repo, count: store.todoCount(in: repo.fullName))
                         .tag(SidebarItem.repo(repo.fullName))
                         .contextMenu { RepoMenu(repo: repo) }
                 }
@@ -353,7 +328,8 @@ private struct SidebarRow: View {
 
 private struct RepoSidebarRow: View {
     let repo: Repo
-    let unread: Int
+    // What's waiting on you there.
+    let count: Int
 
     var body: some View {
         Label {
@@ -362,7 +338,7 @@ private struct RepoSidebarRow: View {
             Avatar(url: repo.ownerAvatar, size: 16, cornerRadius: 4)
                 .frame(width: 18)
         }
-        .badge(unread)
+        .badge(count)
         .help(repo.fullName)
     }
 }
@@ -399,7 +375,7 @@ struct PullSectionList: View {
     var body: some View {
         let items = store.pulls(in: section)
         let total = store.pullTotals[section] ?? items.count
-        if !store.pullsLoaded {
+        if !store.loadedPulls.contains(section.source) {
             LoadingView(lines: LoadingLines.pulls)
         } else if items.isEmpty {
             VStack(spacing: 10) {
@@ -421,7 +397,7 @@ struct PullSectionList: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
                             if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
-                            PullRow(pr: pr, showAuthor: section.isReviewRequest)
+                            PullRow(pr: pr, showAuthor: section.isReviewRequest || section == .contributing)
                         }
                         if total > items.count, store.searchText.isEmpty {
                             Divider().opacity(0.6)
@@ -450,27 +426,6 @@ struct PullSectionList: View {
     }
 }
 
-// The window's own wording; the popover keeps GitHub's section names.
-extension InboxFilter {
-    var windowTitle: String {
-        switch self {
-        case .all: "All activity"
-        case .reviews: "Review requests"
-        case .mentions: "Mentions"
-        case .participating: "Involving me"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .all: "tray.circle"
-        case .reviews: "eye.circle"
-        case .mentions: "at.circle"
-        case .participating: "person.circle"
-        }
-    }
-}
-
 extension PullSection {
     var windowTitle: String {
         switch self {
@@ -478,6 +433,7 @@ extension PullSection {
         case .teamReview: "Asked of your team"
         case .needsAction: "Needs fixing"
         case .readyToMerge: "Ready to merge"
+        case .contributing: "Contributing"
         case .waiting: "In review"
         case .drafts: "Drafts"
         case .merged: "Recent merges"
@@ -490,6 +446,7 @@ extension PullSection {
         case .teamReview: "person.2.circle"
         case .needsAction: "exclamationmark.circle"
         case .readyToMerge: "checkmark.circle"
+        case .contributing: "arrow.triangle.pull"
         case .waiting: "clock"
         case .drafts: "pencil.circle"
         case .merged: "shippingbox.circle"
@@ -502,6 +459,7 @@ extension PullSection {
         case .teamReview: "Your teams are all caught up"
         case .needsAction: "Nothing needs fixing"
         case .readyToMerge: "Nothing ready to merge"
+        case .contributing: "Not contributing to anything"
         case .waiting: "Nothing in review"
         case .drafts: "No drafts"
         case .merged: "Nothing merged in the last week"
@@ -513,6 +471,7 @@ extension PullSection {
         case .needsReview, .teamReview: "New review requests show up here."
         case .needsAction: "Changes requested and failing checks show up here."
         case .readyToMerge: "Approved pull requests whose required checks passed show up here."
+        case .contributing: "Other people's open pull requests you've pushed commits to show up here."
         case .waiting: "Your open pull requests waiting on reviewers show up here."
         case .drafts: "Your draft pull requests show up here."
         case .merged: "Your pull requests merged in the last 7 days show up here, with how their merge commits' checks and deploys went."
@@ -525,6 +484,7 @@ extension PullSection {
         case .teamReview: Palette.indigo
         case .needsAction: Palette.danger
         case .readyToMerge: Palette.open
+        case .contributing: Palette.accent
         case .waiting: Palette.teal
         case .drafts: Palette.neutral
         case .merged: Palette.merged
@@ -543,6 +503,7 @@ extension PullSection {
     static let windowGroups = [
         SectionGroup(title: "To Review", sections: [.needsReview, .teamReview]),
         SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts]),
+        SectionGroup(title: "Others' Pull Requests", sections: [.contributing]),
         SectionGroup(title: "Deploys", sections: [.merged]),
     ]
     static var windowOrder: [PullSection] { windowGroups.flatMap(\.sections) }

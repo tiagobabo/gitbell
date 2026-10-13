@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, fix, onHold, reply, merge, mergeable, waiting
+        case review, fix, onHold, reply, merge, mergeable, contributing, waiting
 
         var id: String { rawValue }
     }
@@ -35,6 +35,9 @@ extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
     static let yours: [TodoItem.Kind] = [.review, .fix, .onHold, .reply, .merge, .mergeable]
 
+    // Shown in full but not counted: other people's pull requests you've pushed to.
+    var counted: Bool { Self.yours.contains(self) }
+
     // Groups that are the exception rather than the rule only get a summary tile when they have something.
     var tileOnlyWhenUsed: Bool { self == .onHold || self == .mergeable }
 
@@ -46,6 +49,7 @@ extension TodoItem.Kind {
         case .reply: "Reply"
         case .merge: "Merge"
         case .mergeable: "Mergeable"
+        case .contributing: "Contributing"
         case .waiting: "Waiting on others"
         }
     }
@@ -58,6 +62,7 @@ extension TodoItem.Kind {
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
         case .mergeable: "Approved, with optional checks still running or failing"
+        case .contributing: "Other people's pull requests you've pushed commits to"
         case .waiting: "Your pull requests waiting on reviewers or CI"
         }
     }
@@ -70,6 +75,7 @@ extension TodoItem.Kind {
         case .reply: "bubble.left.and.bubble.right"
         case .merge: "arrow.triangle.merge"
         case .mergeable: "clock.badge.checkmark"
+        case .contributing: "arrow.triangle.pull"
         case .waiting: "hourglass"
         }
     }
@@ -82,6 +88,7 @@ extension TodoItem.Kind {
         case .reply: Palette.accent
         case .merge: Palette.open
         case .mergeable: Palette.teal
+        case .contributing: Palette.accent
         case .waiting: Palette.neutral
         }
     }
@@ -94,7 +101,38 @@ extension InboxStore {
         allTodos.filter { (showHiddenTodos || !$0.hidden) && matchesSearch($0) }
     }
 
-    var todoCount: Int { allTodos.filter { $0.kind != .waiting && !$0.hidden }.count }
+    var todoCount: Int { allTodos.filter { $0.kind.counted && !$0.hidden }.count }
+
+    func todoCount(in repository: String) -> Int {
+        allTodos.filter { $0.kind.counted && !$0.hidden && $0.repository == repository }.count
+    }
+
+    // Everything Your turn is built from has arrived at least once.
+    var todoLoaded: Bool {
+        notificationsLoaded && [PullSource.reviews, .yours, .contributing].allSatisfy(loadedPulls.contains)
+    }
+
+    // Whether a group has what it's built from, so it can show rather than a placeholder. A thread about a pull
+    // request folds into that pull request's item, so replies wait for everything; otherwise a thread would show
+    // on its own first and then jump into its pull request.
+    func isReady(_ kind: TodoItem.Kind) -> Bool {
+        switch kind {
+        case .review: loadedPulls.contains(.reviews)
+        case .contributing: loadedPulls.contains(.contributing)
+        case .reply: todoLoaded
+        case .fix, .onHold, .merge, .mergeable, .waiting: loadedPulls.contains(.yours)
+        }
+    }
+
+    // Why a group that isn't ready couldn't load, if it failed.
+    func loadError(for kind: TodoItem.Kind) -> String? {
+        switch kind {
+        case .review: pullErrors[.reviews]
+        case .contributing: pullErrors[.contributing]
+        case .reply: pullErrors[.reviews] ?? pullErrors[.yours] ?? pullErrors[.contributing] ?? (notificationsLoaded ? nil : statusError)
+        case .fix, .onHold, .merge, .mergeable, .waiting: pullErrors[.yours]
+        }
+    }
 
     var hiddenTodoCount: Int { allTodos.filter(\.hidden).count }
 
@@ -116,6 +154,13 @@ extension InboxStore {
         // Asked of one of your teams; the reviewers line says which. The people filter still applies.
         if teamReviewsInTodo {
             for pr in pulls[.teamReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
+        }
+        // Someone else's pull request you've pushed to, unless it's already here as a review request.
+        // A comment on it that wants an answer makes it yours to reply to.
+        let listed = Set(items.map(\.id))
+        for pr in pulls[.contributing] ?? [] where !listed.contains("pr:\(pr.id)") {
+            let unread = byURL[pr.url] ?? []
+            items.append(item(pr, unread.contains(where: asksForReply) ? .reply : .contributing, threads: unread))
         }
         for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
         // A held CircleCI job on one of your pull requests, drafts included, is waiting on a click from you.
@@ -139,6 +184,7 @@ extension InboxStore {
                                   updatedAt: n.updatedAt, pr: nil, threads: [n]))
         }
 
+        items = items.filter { isReady($0.kind) }
         for index in items.indices { items[index].hidden = isHidden(items[index]) }
         return items.sorted { $0.updatedAt > $1.updatedAt }
     }

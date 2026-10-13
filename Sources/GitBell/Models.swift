@@ -156,37 +156,6 @@ struct PersonSuggestion: Identifiable, Hashable {
     }
 }
 
-struct RepoSection: Identifiable {
-    var id: String { repo.fullName }
-    let repo: GHNotification.Repository
-    let items: [GHNotification]
-}
-
-enum InboxFilter: String, CaseIterable, Identifiable {
-    case all, reviews, mentions, participating
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .all: "All"
-        case .reviews: "Reviews"
-        case .mentions: "Mentions"
-        case .participating: "Participating"
-        }
-    }
-
-    func matches(_ n: GHNotification) -> Bool {
-        switch self {
-        case .all: true
-        case .reviews: ["review_requested", "approval_requested"].contains(n.reason)
-        case .mentions: ["mention", "team_mention"].contains(n.reason)
-        case .participating: ["author", "comment", "mention", "team_mention", "review_requested",
-                              "approval_requested", "assign", "state_change"].contains(n.reason)
-        }
-    }
-}
-
 enum Reason {
     static func label(_ reason: String) -> String {
         switch reason {

@@ -24,6 +24,8 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     var shippedLater = false
     // Who was asked to review and what they've done, for your own pull requests. Nil when not fetched.
     var reviewers: [Reviewer]?
+    // On others' pull requests you've pushed to: how many of the latest commits are yours.
+    var yourCommits = 0
 
     struct Reviewer: Codable, Hashable, Sendable {
         enum State: String, Codable, Sendable { case requested, approved, changesRequested, commented, dismissed }
@@ -215,8 +217,22 @@ enum PullStatus: Sendable {
     }
 }
 
+// The searches the pull request lists come from, each fetched on its own.
+enum PullSource: CaseIterable, Sendable {
+    case reviews, yours, contributing, merged
+}
+
 enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
-    case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge, merged
+    case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge, contributing, merged
+
+    var source: PullSource {
+        switch self {
+        case .needsReview, .teamReview: .reviews
+        case .drafts, .waiting, .needsAction, .readyToMerge: .yours
+        case .contributing: .contributing
+        case .merged: .merged
+        }
+    }
 
     var id: String { rawValue }
 
@@ -228,6 +244,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         case .waiting: "Waiting for review or checks"
         case .needsAction: "Needs action"
         case .readyToMerge: "Ready to merge"
+        case .contributing: "Contributing"
         case .merged: "Recent merges"
         }
     }
@@ -240,6 +257,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         case .waiting: "Waiting"
         case .needsAction: "To fix"
         case .readyToMerge: "To merge"
+        case .contributing: "Contributing"
         case .merged: "Merged"
         }
     }

@@ -12,16 +12,10 @@ struct InboxView: View {
                 SignInView()
             case .ready:
                 HeaderView()
-                if store.tab == .notifications {
-                    FilterBar()
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 10)
-                }
                 Divider().opacity(0.5)
                 // Both lists stay alive so each keeps its scroll position across tab switches.
                 ZStack {
                     TodoView(compact: true).tabVisible(store.tab == .todo)
-                    NotificationList().tabVisible(store.tab == .notifications)
                     PullsView().tabVisible(store.tab == .pulls)
                 }
                 .frame(maxHeight: .infinity)
@@ -41,12 +35,6 @@ struct HeaderView: View {
         HStack(spacing: 8) {
             TabSwitcher()
             Spacer(minLength: 0)
-            if store.tab == .notifications {
-                IconButton(symbol: "checkmark.circle", help: markHelp) {
-                    Task { await store.markVisibleRead() }
-                }
-                .disabled(store.visible.isEmpty)
-            }
             IconButton(symbol: "magnifyingglass", help: "Go to repository (⌘K)") {
                 AppController.shared?.showQuickOpen()
             }
@@ -60,10 +48,6 @@ struct HeaderView: View {
         .padding(.top, 12)
         .padding(.bottom, 10)
     }
-
-    private var markHelp: String {
-        store.filter == .all ? "Mark all as read" : "Mark \(store.filter.windowTitle.lowercased()) as read"
-    }
 }
 
 // A native segmented control; counts ride in the labels.
@@ -74,7 +58,6 @@ struct TabSwitcher: View {
         @Bindable var store = store
         Picker("View", selection: $store.tab) {
             Text(label(TodoItem.title, store.todoCount)).tag(InboxStore.Tab.todo)
-            Text(label("Inbox", store.unreadCount)).tag(InboxStore.Tab.notifications)
             Text(label("PRs", store.actionablePulls)).tag(InboxStore.Tab.pulls)
         }
         .pickerStyle(.segmented)
@@ -84,53 +67,6 @@ struct TabSwitcher: View {
 
     private func label(_ title: String, _ count: Int) -> String {
         count > 0 ? "\(title) \(count > 999 ? "999+" : "\(count)")" : title
-    }
-}
-
-struct FilterBar: View {
-    @Environment(InboxStore.self) private var store
-    @Namespace private var namespace
-
-    var body: some View {
-        // The window's longer labels can overflow the popover, so the chips scroll sideways if needed.
-        ScrollView(.horizontal) {
-        HStack(spacing: 4) {
-            ForEach(InboxFilter.allCases) { filter in
-                let selected = store.filter == filter
-                let count = store.count(for: filter)
-                Button {
-                    withAnimation(.snappy(duration: 0.25)) { store.filter = filter }
-                    store.selection = nil
-                } label: {
-                    HStack(spacing: 5) {
-                        Text(filter.windowTitle)
-                        if count > 0 {
-                            Text("\(count)")
-                                .monospacedDigit()
-                                .foregroundStyle(selected ? Color.white.opacity(0.8) : Color.secondary)
-                                .contentTransition(.numericText())
-                        }
-                    }
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(selected ? Color.white : Color.primary.opacity(0.8))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background {
-                        if selected {
-                            Capsule()
-                                .fill(Palette.accent)
-                                .matchedGeometryEffect(id: "chip", in: namespace)
-                        } else {
-                            Capsule().fill(Color.primary.opacity(0.045))
-                        }
-                    }
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        }
-        .scrollIndicators(.never)
     }
 }
 
@@ -160,9 +96,9 @@ struct SettingsMenu: View {
             Section("Keyboard") {
                 Text("↑ ↓ or J K  Move")
                 Text("⏎ or O  Open")
-                Text("E  Done   M  Read   U  Unsubscribe")
+                Text("E  Done   M  Read")
                 Text("C  Copy link")
-                Text("← →  Filter   ⇥  Switch tab")
+                Text("⇥  Switch tab")
             }
             Divider()
             Button("Open GitHub Notifications") {
@@ -204,8 +140,7 @@ struct FooterView: View {
             }
             Spacer()
             Button {
-                let url = store.tab == .notifications ? "https://github.com/notifications" : "https://github.com/pulls/inbox"
-                NSWorkspace.shared.open(URL(string: url)!)
+                NSWorkspace.shared.open(URL(string: "https://github.com/pulls/inbox")!)
             } label: {
                 HStack(spacing: 3) {
                     Text("github.com")
@@ -230,8 +165,8 @@ extension View {
     }
 }
 
-// Arrow keys / J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link.
-// The popover also takes Tab to switch tabs and ← → for filters; the window leaves those to the sidebar.
+// Arrow keys / J K to move, Return or O to open, E done, M read, C copy link.
+// The popover also takes Tab to switch tabs; the window leaves that to the sidebar.
 struct InboxKeyboard: ViewModifier {
     let inPopover: Bool
     @Environment(InboxStore.self) private var store
@@ -248,22 +183,14 @@ struct InboxKeyboard: ViewModifier {
             .onKeyPress(.return) { store.openSelection(); return .handled }
             .onKeyPress(.tab) {
                 guard inPopover else { return .ignored }
-                let order: [InboxStore.Tab] = [.todo, .notifications, .pulls]
+                let order: [InboxStore.Tab] = [.todo, .pulls]
                 store.tab = order[((order.firstIndex(of: store.tab) ?? 0) + 1) % order.count]
                 return .handled
             }
-            .onKeyPress(.leftArrow) { cycleFilter(-1) }
-            .onKeyPress(.rightArrow) { cycleFilter(1) }
             .onKeyPress(.escape) { store.selection = nil; return .handled }
-            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemuc"), phases: .down) { press in
+            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemc"), phases: .down) { press in
                 handle(press.characters)
             }
-    }
-
-    private func cycleFilter(_ delta: Int) -> KeyPress.Result {
-        guard inPopover, store.tab == .notifications else { return .ignored }
-        store.cycleFilter(delta)
-        return .handled
     }
 
     private func handle(_ key: String) -> KeyPress.Result {
@@ -272,18 +199,13 @@ struct InboxKeyboard: ViewModifier {
         case "k": store.moveSelection(-1)
         case "o": store.openSelection()
         case "e":
-            if let item = store.selectedTodo { Task { await store.markDone(item) }; return .handled }
-            guard let n = store.selectedNotification else { return .ignored }
-            Task { await store.markDone(n) }
+            guard let item = store.selectedTodo else { return .ignored }
+            Task { await store.markDone(item) }
         case "m":
-            guard let n = store.selectedNotification ?? store.selectedTodo?.notification else { return .ignored }
+            guard let n = store.selectedTodo?.notification else { return .ignored }
             Task { await store.markRead(n) }
-        case "u":
-            guard let n = store.selectedNotification else { return .ignored }
-            Task { await store.unsubscribe(n) }
         case "c":
             if let item = store.selectedTodo { store.copyLink(item) }
-            else if let n = store.selectedNotification { store.copyLink(n) }
             else if let pr = store.selectedPull { store.copyLink(pr) }
             else { return .ignored }
         default:

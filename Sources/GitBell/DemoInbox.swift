@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 // The inbox side of demo mode (see Demo): notifications with their latest activity.
 extension InboxStore {
@@ -45,12 +45,22 @@ extension InboxStore {
                  minutes: 75, author: "grace", .approved, by: "heidi"),
         ]
 
-        pullsLoaded = true
-        unfilteredPulls = Demo.pulls
-        unfilteredTotals = Demo.totals
-        applyPeopleToPulls()
         repos.loadDemo()
-        lastUpdated = .now
         phase = .ready
+        // GITBELL_DEMO_SLOW=1 lands each search a little after the last, to see Your turn fill in.
+        let slow = ProcessInfo.processInfo.environment["GITBELL_DEMO_SLOW"] != nil
+        Task {
+            for (index, source) in [PullSource.reviews, .contributing, .yours, .merged].enumerated() {
+                if slow { try? await Task.sleep(for: .seconds(index == 0 ? 1.5 : 1)) }
+                let sections = Demo.pulls.filter { $0.key.source == source }
+                unfilteredPulls.merge(sections) { $1 }
+                unfilteredTotals.merge(Demo.totals.filter { $0.key.source == source }) { $1 }
+                withAnimation(.snappy) {
+                    loadedPulls.insert(source)
+                    applyPeopleToPulls()
+                }
+            }
+            withAnimation(.snappy) { lastUpdated = .now }
+        }
     }
 }

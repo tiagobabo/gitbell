@@ -266,10 +266,6 @@ extension InboxStore {
         return pinned + suggested
     }
 
-    func unreadCount(in fullName: String) -> Int {
-        shownNotifications.filter { $0.repository.fullName == fullName }.count
-    }
-
     // Quick open's results: best match first, with the repositories you use breaking ties.
     // An empty query lists yours, then the most recently pushed.
     func searchRepos(_ query: String, limit: Int = 50) -> [Repo] {

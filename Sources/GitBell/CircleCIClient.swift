@@ -24,14 +24,15 @@ struct CircleCIClient {
         return me.login
     }
 
-    // Approves the held job called `job` in a workflow. Returns false if there was nothing on hold by that name,
-    // for instance because someone already approved it.
-    func approve(job: String, workflow: String) async throws -> Bool {
+    // The approval request for the held job called `job` in a workflow, or nil if nothing is on hold by that name,
+    // for instance because someone already approved it. Looked up while you confirm, so approving is one request.
+    func heldApproval(job: String, workflow: String) async throws -> String? {
         let jobs: Jobs = try await send(base.appending(path: "workflow/\(workflow)/job"))
-        guard let held = jobs.items.first(where: { $0.type == "approval" && $0.status == "on_hold" && $0.name == job }),
-              let request = held.approvalRequestId else { return false }
+        return jobs.items.first { $0.type == "approval" && $0.status == "on_hold" && $0.name == job }?.approvalRequestId
+    }
+
+    func approve(request: String, workflow: String) async throws {
         let _: [String: String] = try await send(base.appending(path: "workflow/\(workflow)/approve/\(request)"), method: "POST")
-        return true
     }
 
     private func send<T: Decodable>(_ url: URL, method: String = "GET") async throws -> T {

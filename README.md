@@ -4,17 +4,16 @@ GitHub notifications and pull requests in a native Mac app.
 
 ![GitBell](docs/gitbell.png)
 
-- **Your turn:** everything waiting on you in one list: pull requests to review (asked of you or one of your teams), your pull requests to fix (failing checks named, one click from their logs, plus conflicts and requested changes), threads to reply to, CircleCI jobs on hold waiting for your approval (approve them from GitBell with a CircleCI token), pull requests ready to merge, and approved ones you can merge while optional checks are still running. Checks your branch protection doesn't require never hold a pull request back. Notifications about a pull request fold into it instead of showing twice. Press E to hide an item until something changes on it, or show hidden items again with the eye button. The Dock icon counts these.
-- **Inbox:** unread notifications grouped by repository, each saying who commented, approved, pushed or merged.
-- **Pull requests:** review requests for you and your team, and your own PRs by status, with checks.
+- **Your turn:** everything waiting on you in one list: pull requests to review (asked of you or one of your teams), your pull requests to fix (failing checks named, one click from their logs, plus conflicts and requested changes), threads to reply to, CircleCI jobs on hold waiting for your approval (approve them from GitBell with a CircleCI token), pull requests ready to merge, and approved ones you can merge while optional checks are still running. Checks your branch protection doesn't require never hold a pull request back. Notifications about a pull request fold into it instead of showing twice. Each group appears as soon as its search answers, so the list fills in rather than waiting on the slowest. Press E to hide an item until something changes on it, or show hidden items again with the eye button. The Dock icon counts these. Pull requests by other people that you've pushed commits to also show, under Contributing, with their checks and reviewers.
+- **Pull requests:** review requests for you and your team, your own PRs by status, and the ones you're contributing to, with checks.
 - **Deploys:** your pull requests merged in the last week and what happened to their merge commits: deploying, deployed, deployed with a later merge, or checks failed. Each links to its merge commit. Deploys are recognised by job name (CircleCI's `deploy_*` jobs and the like).
-- **Repositories:** the repos you work in, ranked by your pull requests and reviews, plus pins. Each has a page with its main branch's checks, open pull requests, merges and time to merge over the last 30 days, and who's shipping. ⌘K jumps to any repo in your organizations.
+- **Repositories:** the repos you work in, ranked by your pull requests and reviews, plus pins, each with how much is waiting on you there. Each has a page with its main branch's checks, open pull requests, merges and time to merge over the last 30 days, and who's shipping. ⌘K jumps to any repo in your organizations.
 - **Organizations:** a map of each organization's repositories, sized by commits or open pull requests over the last 30 days and coloured by language. Click a tile to open that repository.
 - **Menu bar:** an optional menu bar icon that opens the window or a compact popover.
 - **Notifications:** when someone requests your review, when checks fail on your pull request, or when it's ready to merge.
 - **Appearance:** light, dark or follow the system.
 - **People filter:** only show activity from the people and teams you pick.
-- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, U unsubscribe, C copy link, ⌘K go to repository.
+- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, E done, M read, C copy link, ⌘K go to repository.
 
 ## Install
 

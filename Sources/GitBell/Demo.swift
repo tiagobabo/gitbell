@@ -106,6 +106,22 @@ enum Demo {
             merged(1202, "api", "Rename the billing worker queues", minutes: 600, checks: ("FAILURE", 15, 1, 16), failing: ["lint"]),
             merged(1199, "api", "Drop the legacy v1 endpoints", minutes: 1500, checks: ("SUCCESS", 16, 0, 16)),
         ]),
+        .contributing: [
+            {
+                var pr = Demo.pr(1210, "api", "Split the billing worker into smaller jobs", by: "dave", minutes: 9, review: "APPROVED",
+                            mergeState: "CLEAN", checks: ("PENDING", 10, 0, 12), reviewers: [])
+                pr.yourCommits = 4
+                pr.reviewers = [.init(name: "monalisa", avatar: avatar("monalisa"), isTeam: false, state: .approved),
+                                .init(name: "carol", avatar: avatar("carol"), isTeam: false, state: .requested)]
+                return pr
+            }(),
+            {
+                var pr = Demo.pr(486, "web", "Move checkout to the new payments API", by: "erin", minutes: 110,
+                            checks: ("FAILURE", 13, 1, 14), failing: ["system specs"])
+                pr.yourCommits = 1
+                return pr
+            }(),
+        ],
         .drafts: [
             pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12),
                failing: ["cypress", "lighthouse"]),
@@ -113,7 +129,7 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1,
+        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1, .contributing: 2,
     ]
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,

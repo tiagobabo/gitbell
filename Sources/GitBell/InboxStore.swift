@@ -11,7 +11,6 @@ final class InboxStore {
     var viewer: Viewer?
     var notifications: [GHNotification] = []
     var details: [String: SubjectDetail] = [:]
-    var filter: InboxFilter = .all
     var isRefreshing = false
     var lastUpdated: Date?
     var statusError: String?
@@ -42,7 +41,7 @@ final class InboxStore {
     // The single PR section the window is showing; nil in the popover, which shows them all.
     var pullsFocus: PullSection?
 
-    enum Tab: String { case todo, notifications, pulls }
+    enum Tab: String { case todo, pulls }
     var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .todo {
         didSet {
             guard tab != oldValue else { return }
@@ -52,15 +51,19 @@ final class InboxStore {
     }
     // The window and popover share these fields but each keeps its own view of them: the window's comes
     // from its sidebar, the popover's from where you left it. Nil until first set.
-    private var windowView: (tab: Tab, filter: InboxFilter?, pullsFocus: PullSection?)?
-    private var popoverView: (tab: Tab, filter: InboxFilter)?
+    private var windowView: (tab: Tab, pullsFocus: PullSection?)?
+    private var popoverView: Tab?
     private var popoverOpen = false
 
     var hiddenTodos = HiddenTodos()
     // Whether held CircleCI jobs can be approved from here. Settings updates it when you add or remove a token.
     var circleCISource = TokenStore.circleCISource()
-    // Held jobs you've approved here, until GitHub stops reporting them as on hold. Keyed by approvalKey.
+    // Held jobs being approved here, then approved until GitHub stops reporting them as on hold. Keyed by ApprovalPrompt.key.
     var approving: Set<String> = []
+    var approved: Set<String> = []
+    // The held job you've been asked to confirm, and its approval request being looked up meanwhile.
+    var approvalPrompt: ApprovalPrompt?
+    private var lookup: Task<String?, Error>?
     var circleCIHintDismissed = UserDefaults.standard.bool(forKey: "circleCIHintDismissed") {
         didSet { UserDefaults.standard.set(circleCIHintDismissed, forKey: "circleCIHintDismissed") }
     }
@@ -71,7 +74,9 @@ final class InboxStore {
 
     var pulls: [PullSection: [PullRequest]] = [:]
     var pullTotals: [PullSection: Int] = [:]
-    var pullsLoaded = false
+    // Which searches have answered at least once, and why any that failed did.
+    var loadedPulls: Set<PullSource> = []
+    var pullErrors: [PullSource: String] = [:]
     var isRefreshingPulls = false
     // Everything starts folded on launch; what you open stays open until you quit.
     var collapsed = Set(PullSection.allCases)
@@ -130,7 +135,9 @@ final class InboxStore {
         Task { await bootstrap() }
     }
 
-    var unreadCount: Int { shownNotifications.count }
+    var pullsLoaded: Bool { loadedPulls.count == PullSource.allCases.count }
+    var notificationsLoaded: Bool { lastUpdated != nil }
+    var nothingLoaded: Bool { !notificationsLoaded && loadedPulls.isEmpty }
 
     // Why nothing has loaded yet, once a first attempt has failed.
     var firstLoadError: String? { lastUpdated == nil || !pullsLoaded ? statusError : nil }
@@ -145,25 +152,6 @@ final class InboxStore {
         }
     }
 
-    var visible: [GHNotification] { shownNotifications.filter { matches($0, filter) && matchesSearch($0) } }
-
-    // GitHub keeps a "review requested" notification after you've reviewed or the PR has merged.
-    // The PR search only returns ones still waiting on you or your team, so Review requests trusts that.
-    func matches(_ n: GHNotification, _ filter: InboxFilter) -> Bool {
-        guard filter.matches(n) else { return false }
-        guard filter == .reviews, pullsLoaded else { return true }
-        return stillRequested.contains(n.fallbackURL)
-    }
-
-    private var stillRequested: Set<URL> {
-        Set([PullSection.needsReview, .teamReview].flatMap { (unfilteredPulls[$0] ?? []).map(\.url) })
-    }
-
-    func matchesSearch(_ n: GHNotification) -> Bool {
-        searchText.isEmpty || n.subject.title.localizedCaseInsensitiveContains(searchText)
-            || n.repository.fullName.localizedCaseInsensitiveContains(searchText)
-    }
-
     func matchesSearch(_ pr: PullRequest) -> Bool {
         searchText.isEmpty || pr.title.localizedCaseInsensitiveContains(searchText)
             || pr.repository.localizedCaseInsensitiveContains(searchText)
@@ -171,20 +159,6 @@ final class InboxStore {
 
     func pulls(in section: PullSection) -> [PullRequest] {
         (pulls[section] ?? []).filter(matchesSearch)
-    }
-
-    var sections: [RepoSection] {
-        var order: [String] = []
-        var groups: [String: [GHNotification]] = [:]
-        for n in visible {
-            if groups[n.repository.fullName] == nil { order.append(n.repository.fullName) }
-            groups[n.repository.fullName, default: []].append(n)
-        }
-        return order.map { RepoSection(repo: groups[$0]![0].repository, items: groups[$0]!) }
-    }
-
-    func count(for filter: InboxFilter) -> Int {
-        shownNotifications.filter { matches($0, filter) }.count
     }
 
     // MARK: Auth
@@ -210,7 +184,8 @@ final class InboxStore {
         pullTask?.cancel()
         pulls = [:]
         pullTotals = [:]
-        pullsLoaded = false
+        loadedPulls = []
+        pullErrors = [:]
         client = nil
         viewer = nil
         myTeams = nil
@@ -381,37 +356,6 @@ final class InboxStore {
         await clear([n]) { try await $0.markDone(n.id) }
     }
 
-    func unsubscribe(_ n: GHNotification) async {
-        await clear([n]) { try await $0.unsubscribe(n.id) }
-        show("Unsubscribed from thread")
-    }
-
-    func markRead(_ section: RepoSection) async {
-        let all = notifications.filter { $0.repository.fullName == section.id }
-        if filter == .all || all.count == section.items.count {
-            await clear(section.items) { try await $0.markRepoRead(section.id) }
-        } else {
-            await clear(section.items) { try await Self.markEach(section.items, with: $0) }
-        }
-    }
-
-    func markVisibleRead() async {
-        let items = visible
-        guard !items.isEmpty else { return }
-        if filter == .all {
-            await clear(items) { try await $0.markAllRead() }
-        } else {
-            await clear(items) { try await Self.markEach(items, with: $0) }
-        }
-    }
-
-    private nonisolated static func markEach(_ items: [GHNotification], with client: GitHubClient) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for n in items { group.addTask { try await client.markRead(n.id) } }
-            try await group.waitForAll()
-        }
-    }
-
     // Optimistic: drop the rows now, put them back if GitHub says no.
     private func clear(_ items: [GHNotification], action: @escaping (GitHubClient) async throws -> Void) async {
         guard let client else { return }
@@ -453,6 +397,25 @@ final class InboxStore {
 
 // MARK: - Pull request inbox
 
+// A held CircleCI job waiting on you to confirm approving it.
+// Which list asked, so only that list's row shows the prompt: the popover keeps both its lists alive.
+struct ApprovalPrompt: Equatable {
+    enum Origin { case todo, pulls }
+    let check: PullRequest.Check
+    let pr: PullRequest
+    var origin = Origin.todo
+    var key: String { "\(pr.id)|\(check.name)" }
+}
+
+enum ApprovalState { case none, approving, approved }
+
+// One search's answer: its lists, or why it failed.
+private struct PullAnswer: Sendable {
+    let source: PullSource
+    var part: GitHubClient.PullInbox?
+    var error: Error?
+}
+
 extension InboxStore {
     var actionablePulls: Int {
         [PullSection.needsReview, .needsAction, .readyToMerge].reduce(0) { $0 + (pullTotals[$1] ?? 0) }
@@ -480,22 +443,48 @@ extension InboxStore {
         defer { isRefreshingPulls = false }
 
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
-        do {
-            let inbox = try await client.pullInbox(since: since)
-            unfilteredPulls = inbox.sections
-            unfilteredTotals = inbox.totals
+        let viewer = viewer?.login
+        await withTaskGroup(of: PullAnswer.self) { group in
+            for source in PullSource.allCases {
+                group.addTask {
+                    do { return PullAnswer(source: source, part: try await client.pulls(source, since: since, viewer: viewer)) }
+                    catch { return PullAnswer(source: source, error: error) }
+                }
+            }
+            for await answer in group {
+                if let part = answer.part {
+                    receive(part, from: answer.source)
+                } else if let error = answer.error as? APIError, error.isUnauthorized {
+                    group.cancelAll()
+                    show("Your GitHub session expired.")
+                    signOut()
+                    return
+                } else if let error = answer.error {
+                    statusError = error.localizedDescription
+                    withAnimation(.snappy) { pullErrors[answer.source] = error.localizedDescription }
+                }
+            }
+        }
+    }
+
+    private func receive(_ part: GitHubClient.PullInbox, from source: PullSource) {
+        unfilteredPulls.merge(part.sections) { $1 }
+        unfilteredTotals.merge(part.totals) { $1 }
+        withAnimation(.snappy) {
+            pullErrors[source] = nil
+            loadedPulls.insert(source)
             applyPeopleToPulls()
+        }
+        switch source {
+        case .reviews:
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
+        case .yours:
             announceYourPulls(held: ([PullSection.readyToMerge, .waiting, .drafts].flatMap { pulls[$0] ?? [] })
                                 .filter { $0.checks?.onHold.isEmpty == false },
                               failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
                               ready: pulls[.readyToMerge]?.filter { [.readyToMerge, .mergeable].contains($0.status) } ?? [])
-            pullsLoaded = true
-        } catch let error as APIError where error.isUnauthorized {
-            show("Your GitHub session expired.")
-            signOut()
-        } catch {
-            statusError = error.localizedDescription
+        case .contributing, .merged:
+            break
         }
     }
 
@@ -503,29 +492,54 @@ extension InboxStore {
         NSWorkspace.shared.open(pr.link)
     }
 
-    // Approves a held CircleCI job after asking, since it usually sets off a deploy. Without a CircleCI token,
-    // or a workflow to approve it in, it opens the job in CircleCI instead.
-    func approve(_ check: PullRequest.Check, on pr: PullRequest) async {
+    // Asks before approving a held CircleCI job, since it usually sets off a deploy, in a popover by its row.
+    // The approval request is looked up meanwhile, so Approve has a single request left to make. Without a
+    // CircleCI token, or a workflow to approve it in, it opens the job in CircleCI instead.
+    func requestApproval(_ check: PullRequest.Check, on pr: PullRequest, from origin: ApprovalPrompt.Origin) {
         guard let workflow = check.workflowID, let token = TokenStore.circleCIToken()?.token else {
             if let url = check.url { NSWorkspace.shared.open(url) }
             if check.workflowID != nil { show("Add a CircleCI token in Settings to approve from GitBell") }
             return
         }
-        let alert = NSAlert()
-        alert.messageText = "Approve \(check.jobName)?"
-        alert.informativeText = "CircleCI will carry on with \(pr.repositoryName)#\(pr.number) “\(pr.title)” past this hold."
-        alert.addButton(withTitle: "Approve")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate()
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let prompt = ApprovalPrompt(check: check, pr: pr, origin: origin)
+        lookup?.cancel()
+        lookup = Task { try await CircleCIClient(token: token).heldApproval(job: check.jobName, workflow: workflow) }
+        approvalPrompt = prompt
+    }
 
-        let key = Self.approvalKey(check, on: pr)
+    func cancelApproval() {
+        lookup?.cancel()
+        lookup = nil
+        approvalPrompt = nil
+    }
+
+    // Closes the prompt straight away; the job's chip shows the approval going through, then that it went.
+    func approve(_ prompt: ApprovalPrompt) async {
+        guard let workflow = prompt.check.workflowID, let token = TokenStore.circleCIToken()?.token else { return }
+        let (check, pr, key) = (prompt.check, prompt.pr, prompt.key)
+        let pending = lookup
+        lookup = nil
+        approvalPrompt = nil
         withAnimation(.snappy) { _ = approving.insert(key) }
+        let client = CircleCIClient(token: token)
         do {
-            let approved = try await CircleCIClient(token: token).approve(job: check.jobName, workflow: workflow)
-            show(approved ? "Approved \(check.jobName)" : "\(check.jobName) isn't on hold any more")
+            // Usually already looked up while you read the prompt.
+            let request = if let pending { try await pending.value }
+                else { try await client.heldApproval(job: check.jobName, workflow: workflow) }
+            guard let request else {
+                withAnimation(.snappy) { _ = approving.remove(key) }
+                show("\(check.jobName) isn't on hold any more")
+                await refreshPulls()
+                return
+            }
+            try await client.approve(request: request, workflow: workflow)
+            withAnimation(.snappy) {
+                _ = approving.remove(key)
+                _ = approved.insert(key)
+            }
+            show("Approved \(check.jobName)")
             // CircleCI takes a moment to tell GitHub, so look again a few times, a little further apart each time.
-            for delay in [3, 4, 6, 8, 12, 15, 20] {
+            for delay in [2, 3, 4, 6, 8, 12, 15, 20] {
                 try? await Task.sleep(for: .seconds(delay))
                 await refreshPulls()
                 if !isStillHeld(check, on: pr) { break }
@@ -533,13 +547,19 @@ extension InboxStore {
         } catch {
             show(error.localizedDescription)
         }
-        withAnimation(.snappy) { _ = approving.remove(key) }
+        withAnimation(.snappy) {
+            _ = approving.remove(key)
+            _ = approved.remove(key)
+        }
     }
 
-    static func approvalKey(_ check: PullRequest.Check, on pr: PullRequest) -> String { "\(pr.id)|\(check.name)" }
+    func approvalState(_ check: PullRequest.Check, on pr: PullRequest) -> ApprovalState {
+        let key = ApprovalPrompt(check: check, pr: pr).key
+        return approving.contains(key) ? .approving : approved.contains(key) ? .approved : .none
+    }
 
     func isApproving(_ check: PullRequest.Check, on pr: PullRequest) -> Bool {
-        approving.contains(Self.approvalKey(check, on: pr))
+        approvalState(check, on: pr) != .none
     }
 
     private func isStillHeld(_ check: PullRequest.Check, on pr: PullRequest) -> Bool {
@@ -557,9 +577,9 @@ extension InboxStore {
             return URL(string: "https://github.com/search?type=pullrequests")!
                 .appending(queryItems: [URLQueryItem(name: "q", value: GitHubClient.mergedQuery())])
         }
-        guard section.isReviewRequest else { return URL(string: "https://github.com/pulls/inbox")! }
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
-        let query = GitHubClient.searchQueries(since: since)[section] ?? ""
+        guard section.isReviewRequest || section == .contributing,
+              let query = GitHubClient.searchQueries(since: since)[section] else { return URL(string: "https://github.com/pulls/inbox")! }
         return URL(string: "https://github.com/search?type=pullrequests")!
             .appending(queryItems: [URLQueryItem(name: "q", value: query)])
     }
@@ -605,29 +625,28 @@ extension InboxStore {
 
 extension InboxStore {
     // Assigning an unchanged value still redraws every observer, so only set what differs.
-    func setView(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
+    func setView(_ tab: Tab, pullsFocus: PullSection?) {
         if self.tab != tab { self.tab = tab }
-        if let filter, self.filter != filter { self.filter = filter }
         if self.pullsFocus != pullsFocus { self.pullsFocus = pullsFocus }
     }
 
     // The window's sidebar selection. Held back while the popover is open so it can't swap the popover's view.
-    func showInWindow(_ tab: Tab, filter: InboxFilter? = nil, pullsFocus: PullSection?) {
-        windowView = (tab, filter, pullsFocus)
-        if !popoverOpen { setView(tab, filter: filter, pullsFocus: pullsFocus) }
+    func showInWindow(_ tab: Tab, pullsFocus: PullSection?) {
+        windowView = (tab, pullsFocus)
+        if !popoverOpen { setView(tab, pullsFocus: pullsFocus) }
     }
 
     // Each side gets back what it last showed, instantly rather than animating from the other's view.
     func enterPopover() {
         popoverOpen = true
-        withoutAnimation { setView(popoverView?.tab ?? tab, filter: popoverView?.filter, pullsFocus: nil) }
+        withoutAnimation { setView(popoverView ?? tab, pullsFocus: nil) }
     }
 
     func leavePopover() {
         guard popoverOpen else { return }
         popoverOpen = false
-        popoverView = (tab, filter)
-        if let windowView { withoutAnimation { setView(windowView.tab, filter: windowView.filter, pullsFocus: windowView.pullsFocus) } }
+        popoverView = tab
+        if let windowView { withoutAnimation { setView(windowView.tab, pullsFocus: windowView.pullsFocus) } }
     }
 
     private func withoutAnimation(_ body: () -> Void) {
@@ -644,8 +663,6 @@ extension InboxStore {
         switch tab {
         case .todo:
             todo.filter { $0.kind != .waiting || waitingExpanded }.map(\.id)
-        case .notifications:
-            sections.flatMap { $0.items.map(\.id) }
         case .pulls:
             if let pullsFocus { pulls(in: pullsFocus).map(\.id) }
             else { PullSection.windowOrder.filter(isExpanded).flatMap { (pulls[$0] ?? []).map(\.id) } }
@@ -662,27 +679,12 @@ extension InboxStore {
         }
     }
 
-    func cycleFilter(_ delta: Int) {
-        let all = InboxFilter.allCases
-        let index = all.firstIndex(of: filter) ?? 0
-        withAnimation(.snappy(duration: 0.25)) {
-            filter = all[(index + delta + all.count) % all.count]
-        }
-        selection = nil
-    }
-
-    var selectedNotification: GHNotification? {
-        guard tab == .notifications else { return nil }
-        return notifications.first { $0.id == selection }
-    }
-
     var selectedPull: PullRequest? {
         guard tab == .pulls else { return nil }
         return pulls.values.lazy.flatMap { $0 }.first { $0.id == self.selection }
     }
 
     func openSelection() {
-        if let n = selectedNotification { open(n) }
         if let pr = selectedPull { open(pr) }
         if let item = selectedTodo { open(item) }
     }
