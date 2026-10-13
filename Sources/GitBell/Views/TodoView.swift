@@ -312,6 +312,7 @@ struct TodoRow: View {
                 Section("On hold") {
                     ForEach(held, id: \.self) { check in
                         Button("Approve \(check.jobName)…") { Task { await store.approve(check, on: pr) } }
+                            .disabled(store.isApproving(check, on: pr))
                     }
                 }
             }
@@ -351,6 +352,7 @@ struct TodoRow: View {
 // The status dot, then the checks: which ones fail, as links to their logs, or how many are still running.
 struct PullStatusLine: View {
     let pr: PullRequest
+    @Environment(InboxStore.self) private var store
 
     var body: some View {
         let status = pr.status
@@ -383,7 +385,8 @@ struct PullStatusLine: View {
                 } else {
                     HStack(spacing: 4) {
                         ForEach(chips.prefix(maxFailing), id: \.self) { check in
-                            CheckChip(check: check, running: checks.running.contains(check))
+                            CheckChip(check: check, running: checks.running.contains(check),
+                                      approving: store.isApproving(check, on: pr))
                         }
                         if chips.count > maxFailing {
                             Text("+\(chips.count - maxFailing)")
@@ -401,6 +404,8 @@ struct PullStatusLine: View {
 struct CheckChip: View {
     let check: PullRequest.Check
     var running = false
+    // Approved here; CircleCI hasn't told GitHub yet.
+    var approving = false
     @State private var hovering = false
 
     var body: some View {
@@ -408,14 +413,16 @@ struct CheckChip: View {
             if let url = check.url { NSWorkspace.shared.open(url) }
         } label: {
             HStack(spacing: 3) {
-                if check.onHold {
+                if approving {
+                    ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10)
+                } else if check.onHold {
                     Image(systemName: "pause.circle.fill").font(.system(size: 10)).foregroundStyle(tint)
                 } else if running {
                     OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
                 } else {
                     OcticonView(check.cancelled ? .skip : .xCircleFill, size: 10).foregroundStyle(tint)
                 }
-                Text(check.onHold ? check.jobName : check.name)
+                Text(approving ? "\(check.jobName) · approving" : check.onHold ? check.jobName : check.name)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(maxWidth: 160, alignment: .leading)
@@ -439,6 +446,7 @@ struct CheckChip: View {
     }
 
     private var help: String {
+        if approving { return "Approved \(check.jobName). Waiting for CircleCI to carry on." }
         if check.onHold { return "\(check.jobName) is on hold, waiting for someone to approve it. Click to open it in CircleCI." }
         let what = running ? "\(check.name) is still running" : check.cancelled ? "\(check.name) was cancelled" : "\(check.name) failed"
         let optional = check.required == false ? " It's optional and doesn't block merging." : ""
@@ -452,7 +460,7 @@ private struct TodoRowActions: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if let pr = item.pr, let check = pr.checks?.onHold.first {
+            if let pr = item.pr, let check = pr.checks?.onHold.first, !store.isApproving(check, on: pr) {
                 IconButton(symbol: "play.circle", help: "Approve \(check.jobName) on CircleCI", size: 24) {
                     Task { await store.approve(check, on: pr) }
                 }

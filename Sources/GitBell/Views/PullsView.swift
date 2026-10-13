@@ -202,6 +202,7 @@ struct PullRow: View {
             Button("Copy Link") { store.copyLink(pr) }
             ForEach(pr.checks?.onHold ?? [], id: \.self) { check in
                 Button("Approve \(check.jobName)…") { Task { await store.approve(check, on: pr) } }
+                    .disabled(store.isApproving(check, on: pr))
             }
             Button("Open Repository") {
                 NSWorkspace.shared.open(URL(string: "https://github.com/\(pr.repository)")!)

@@ -59,6 +59,8 @@ final class InboxStore {
     var hiddenTodos = HiddenTodos()
     // Whether held CircleCI jobs can be approved from here. Settings updates it when you add or remove a token.
     var circleCISource = TokenStore.circleCISource()
+    // Held jobs you've approved here, until GitHub stops reporting them as on hold. Keyed by approvalKey.
+    var approving: Set<String> = []
     var circleCIHintDismissed = UserDefaults.standard.bool(forKey: "circleCIHintDismissed") {
         didSet { UserDefaults.standard.set(circleCIHintDismissed, forKey: "circleCIHintDismissed") }
     }
@@ -490,15 +492,31 @@ extension InboxStore {
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
+        let key = Self.approvalKey(check, on: pr)
+        withAnimation(.snappy) { _ = approving.insert(key) }
         do {
             let approved = try await CircleCIClient(token: token).approve(job: check.jobName, workflow: workflow)
             show(approved ? "Approved \(check.jobName)" : "\(check.jobName) isn't on hold any more")
-            // CircleCI takes a moment to update GitHub.
-            try? await Task.sleep(for: .seconds(4))
-            await refreshPulls()
+            // CircleCI takes a moment to tell GitHub, so look again a few times, a little further apart each time.
+            for delay in [3, 4, 6, 8, 12, 15, 20] {
+                try? await Task.sleep(for: .seconds(delay))
+                await refreshPulls()
+                if !isStillHeld(check, on: pr) { break }
+            }
         } catch {
             show(error.localizedDescription)
         }
+        withAnimation(.snappy) { _ = approving.remove(key) }
+    }
+
+    static func approvalKey(_ check: PullRequest.Check, on pr: PullRequest) -> String { "\(pr.id)|\(check.name)" }
+
+    func isApproving(_ check: PullRequest.Check, on pr: PullRequest) -> Bool {
+        approving.contains(Self.approvalKey(check, on: pr))
+    }
+
+    private func isStillHeld(_ check: PullRequest.Check, on pr: PullRequest) -> Bool {
+        pulls.values.joined().contains { $0.id == pr.id && $0.checks?.onHold.contains { $0.name == check.name } == true }
     }
 
     func copyLink(_ pr: PullRequest) {
