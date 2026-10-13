@@ -77,6 +77,10 @@ final class InboxStore {
     var dockBadge = UserDefaults.standard.object(forKey: "dockBadge") as? Bool ?? true {
         didSet { UserDefaults.standard.set(dockBadge, forKey: "dockBadge") }
     }
+    // Review requests for your teams count as yours in Your turn.
+    var teamReviewsInTodo = UserDefaults.standard.object(forKey: "teamReviewsInTodo") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(teamReviewsInTodo, forKey: "teamReviewsInTodo") }
+    }
     var pullBanners = UserDefaults.standard.object(forKey: "pullBanners") as? Bool ?? true {
         didSet { UserDefaults.standard.set(pullBanners, forKey: "pullBanners") }
     }

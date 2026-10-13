@@ -113,6 +113,10 @@ extension InboxStore {
 
         var items: [TodoItem] = []
         for pr in pulls[.needsReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
+        // Asked of one of your teams; the reviewers line says which. The people filter still applies.
+        if teamReviewsInTodo {
+            for pr in pulls[.teamReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
+        }
         for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
         // A held CircleCI job on one of your pull requests, drafts included, is waiting on a click from you.
         // Anything that needs fixing comes first.

@@ -412,12 +412,17 @@ actor GitHubClient {
     private static let reviewsQuery = """
     query($direct: String!, $team: String!) {
       direct: search(query: $direct, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
-      team: search(query: $team, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
+      team: search(query: $team, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } }
     }
-    """ + pullFragment
+    """ + reviewersFragment + pullFragment
 
     private static let mineQuery = """
     query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } } }
+    """ + reviewersFragment + pullFragment
+
+    // Who's been asked to review and what they've done: on your own pull requests, and on team review requests
+    // to show which of your teams was asked.
+    private static let reviewersFragment = """
     fragment reviewers on PullRequest {
       reviewRequests(first: 10) { nodes { requestedReviewer {
         __typename
@@ -427,7 +432,7 @@ actor GitHubClient {
       } } }
       latestReviews(first: 10) { nodes { state author { login avatarUrl } } }
     }
-    """ + pullFragment
+    """
 
     private static let mergedPullsQuery = """
     query($q: String!) { merged: search(query: $q, type: ISSUE, first: 20) { issueCount nodes { ...pr ...merged } } }

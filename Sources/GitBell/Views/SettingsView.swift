@@ -53,6 +53,16 @@ struct SettingsView: View {
             }
 
             Section {
+                Toggle("Include review requests for your teams", isOn: $store.teamReviewsInTodo)
+            } header: {
+                Text(TodoItem.title)
+            } footer: {
+                Text("Team requests follow the people filter above.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle("Review requests", isOn: $store.reviewBanners)
                 Toggle("Team review requests", isOn: $store.teamReviewBanners)
                 Toggle("Your pull requests fail checks or are ready to merge", isOn: $store.pullBanners)
