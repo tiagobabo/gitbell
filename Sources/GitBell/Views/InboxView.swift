@@ -161,6 +161,7 @@ extension View {
     func tabVisible(_ visible: Bool) -> some View {
         opacity(visible ? 1 : 0)
             .allowsHitTesting(visible)
+            .environment(\.tooltipsShown, visible)
             .accessibilityHidden(!visible)
     }
 }

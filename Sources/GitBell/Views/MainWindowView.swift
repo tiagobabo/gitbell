@@ -295,7 +295,7 @@ private struct Sidebar: View {
                     .foregroundStyle(Palette.accent)
                 }
                 .buttonStyle(.plain)
-                .help("Only showing activity from these people. Click to change.")
+                .tooltip("Only showing activity from these people. Click to change.")
                 .padding(.horizontal, 14)
                 .padding(.top, 8)
             }
@@ -362,7 +362,7 @@ private struct RepoSidebarRow: View {
                 .frame(width: 18)
         }
         .badge(count)
-        .help(repo.fullName)
+        .tooltip(repo.fullName)
     }
 }
 
@@ -374,7 +374,7 @@ private struct FooterStatus: View {
         Group {
             if store.statusError != nil {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Palette.pending)
-                    .help(store.statusError ?? "")
+                    .tooltip(store.statusError ?? "")
             } else if let updated = store.lastUpdated {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     Text(context.date.timeIntervalSince(updated) < 60 ? "Updated now" : "Updated \(RelativeTime.short(updated, now: context.date)) ago")
@@ -383,7 +383,7 @@ private struct FooterStatus: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .fixedSize()
-                        .help("Last updated")
+                        .tooltip("Last updated")
                 }
             }
         }

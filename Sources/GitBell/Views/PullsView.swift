@@ -74,8 +74,9 @@ struct PullSectionView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Open on GitHub")
+                .tooltip("Open on GitHub")
                 .opacity(hovering ? 1 : 0)
+                .environment(\.tooltipsShown, hovering)
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 6)
@@ -191,6 +192,7 @@ struct PullRow: View {
                 .offset(x: 2, y: -4)
                 .opacity(active ? 1 : 0)
                 .allowsHitTesting(active)
+                .environment(\.tooltipsShown, active)
             }
             .approvalPopover(for: pr, from: .pulls)
             .timelinePopover(for: pr, from: .pulls)
@@ -248,6 +250,6 @@ struct ChecksBadge: View {
             }
             Text("\(checks.passed)/\(checks.total)").monospacedDigit()
         }
-        .help(checks.failed > 0 ? "\(checks.failed) failing" : "\(checks.passed) of \(checks.total) checks passed")
+        .tooltip(checks.failed > 0 ? "\(checks.failed) failing" : "\(checks.passed) of \(checks.total) checks passed")
     }
 }

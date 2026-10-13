@@ -344,8 +344,10 @@ actor GitHubClient {
                              totals: [.contributing: pulls.count, .reReview: again.count])
         case .merged:
             let found: Searches = try await graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
-            let merged = Self.markShippedLater((found["merged"]?.pulls ?? [])
+            var merged = Self.markShippedLater((found["merged"]?.pulls ?? [])
                 .sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) })
+            // Best effort: without it, only your own later merges count.
+            if let followed = try? await laterMerges(merged) { merged = followed }
             return PullInbox(sections: [.merged: merged], totals: [.merged: merged.count])
         }
     }
@@ -363,6 +365,47 @@ actor GitHubClient {
             marked.append(pr)
         }
         return marked
+    }
+
+    // Merges whose own checks failed or were cancelled, looked up against anyone's later commits to the same
+    // branch: one that deployed carries the change out too, and one deploying might.
+    func laterMerges(_ merged: [PullRequest]) async throws -> [PullRequest] {
+        let wanted = merged.enumerated().filter { _, pr in
+            [.failingAfterMerge, .cancelledAfterMerge].contains(pr.status) && pr.baseRef != nil && pr.mergedAt != nil
+        }
+        guard !wanted.isEmpty else { return merged }
+
+        struct Node: Decodable {
+            struct Ref: Decodable { let target: Target? }
+            struct Target: Decodable { let history: History? }
+            struct History: Decodable { let nodes: [Commit] }
+            struct Commit: Decodable { let oid: String; let statusCheckRollup: GraphQLResponse.Node.Rollup? }
+            let ref: Ref?
+        }
+        let fields = wanted.compactMap { index, pr -> String? in
+            let parts = pr.repository.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2, let base = pr.baseRef, let mergedAt = pr.mergedAt else { return nil }
+            return """
+            p\(index): repository(owner: \(Self.quoted(parts[0])), name: \(Self.quoted(parts[1]))) {
+              ref(qualifiedName: \(Self.quoted(Substring("refs/heads/" + base)))) { target { ... on Commit {
+                history(first: 15, since: \(Self.quoted(Substring(mergedAt.formatted(.iso8601))))) { nodes { oid statusCheckRollup { ...rollup } } }
+              } } }
+            }
+            """
+        }
+        let nodes: [String: Node?] = try await graphQL("{\n\(fields.joined(separator: "\n"))\n}\n" + Self.rollupFragment)
+        var result = merged
+        for (index, pr) in wanted {
+            let own = pr.mergeCommitURL?.lastPathComponent
+            let later = (nodes["p\(index)"]??.ref?.target?.history?.nodes ?? []).filter { $0.oid != own }
+            let checks = later.compactMap { $0.statusCheckRollup.map(GraphQLResponse.Node.checks) }.filter(\.hasDeploys)
+            if checks.contains(where: { !$0.deploysRunning && !$0.failing.contains { PullRequest.Checks.isDeploy($0.name) } }) {
+                result[index].shippedLater = true
+            } else if checks.contains(where: \.deploysRunning) {
+                result[index].laterDeploying = true
+            }
+        }
+        return result
     }
 
     // The workflow id in a CircleCI link: circleci.com/workflow-run/<id> or app.circleci.com/…/workflows/<id>.
@@ -617,6 +660,9 @@ actor GitHubClient {
       repository { nameWithOwner }
       commits(last: 1) { nodes { commit { committedDate statusCheckRollup { ...rollup } } } }
     }
+    """ + rollupFragment
+
+    private static let rollupFragment = """
     fragment rollup on StatusCheckRollup {
       state contexts(first: 50) {
         totalCount
@@ -791,7 +837,7 @@ actor GitHubClient {
                 return reviewed + requested
             }
 
-            private static func checks(_ rollup: Rollup) -> PullRequest.Checks {
+            fileprivate static func checks(_ rollup: Rollup) -> PullRequest.Checks {
                 let counts = rollup.contexts.checkRunCountsByState + rollup.contexts.statusContextCountsByState
                 func sum(_ states: Set<String>) -> Int {
                     counts.filter { states.contains($0.state) }.reduce(0) { $0 + $1.count }

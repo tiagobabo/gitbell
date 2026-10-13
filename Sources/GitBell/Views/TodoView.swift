@@ -157,7 +157,7 @@ private struct SummaryTile: View {
         }
         .buttonStyle(.plain)
         .disabled((count ?? 0) == 0)
-        .help(kind.subtitle)
+        .tooltip(kind.subtitle)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
     }
 }
@@ -303,6 +303,11 @@ struct TodoRow: View {
                     PullStatusLine(pr: pr, lifecycle: item.kind == .waiting || item.kind == .contributing)
                     ReviewersLine(pr: pr)
                     if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
+                    if pr.laterDeploying {
+                        Label("A later merge is deploying, which may carry this out too", systemImage: "hourglass")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
                 } else if let n = item.notification {
                     HStack(spacing: 6) {
                         ReasonTag(reason: n.reason)
@@ -345,6 +350,7 @@ struct TodoRow: View {
                 .padding(.trailing, 6)
                 .opacity(active ? 1 : 0)
                 .allowsHitTesting(active)
+                .environment(\.tooltipsShown, active)
         }
         .contentShape(Rectangle())
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
@@ -510,7 +516,7 @@ private struct ReviewerChip: View {
         .padding(.trailing, 7)
         .padding(.vertical, 1.5)
         .background(Color.primary.opacity(0.05), in: Capsule())
-        .help(help)
+        .tooltip(help)
     }
 
     @ViewBuilder private var stateIcon: some View {
@@ -577,7 +583,7 @@ struct CheckChip: View {
             .opacity(check.required == false ? 0.8 : 1)
         }
         .buttonStyle(.plain)
-        .help(help)
+        .tooltip(help)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering } }
     }
 
@@ -665,7 +671,7 @@ private struct CircleCIHint: View {
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
             .controlSize(.small)
-            .help("Don't show this again")
+            .tooltip("Don't show this again")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)

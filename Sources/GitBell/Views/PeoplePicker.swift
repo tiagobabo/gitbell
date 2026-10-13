@@ -64,7 +64,7 @@ struct PeoplePicker: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .help("Remove \(entry)")
+                            .tooltip("Remove \(entry)")
                         }
                         .padding(.vertical, 3)
                     }

@@ -15,7 +15,7 @@ struct LifecycleStrip: View {
             }
         }
         .padding(.vertical, 2)
-        .help(steps.map { "\($0.step.title): \(words($0.state))" }.joined(separator: "\n"))
+        .tooltip(steps.map { "\($0.step.title): \(words($0.state))" }.joined(separator: "\n"))
         .accessibilityElement()
         .accessibilityLabel(steps.map { "\($0.step.title) \(words($0.state))" }.joined(separator: ", "))
     }

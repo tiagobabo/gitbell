@@ -120,7 +120,7 @@ private struct StageTile: View {
         }
         .buttonStyle(.plain)
         .disabled(count == 0)
-        .help(stage.subtitle)
+        .tooltip(stage.subtitle)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
     }
 }

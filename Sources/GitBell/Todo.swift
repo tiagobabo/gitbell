@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, reReview, fix, onHold, reply, merge, mergeable, contributing, waiting
+        case review, reReview, fix, afterMerge, onHold, reply, merge, mergeable, contributing, waiting
 
         var id: String { rawValue }
     }
@@ -33,19 +33,20 @@ struct TodoItem: Identifiable {
 
 extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
-    static let yours: [TodoItem.Kind] = [.review, .reReview, .fix, .onHold, .reply, .merge, .mergeable]
+    static let yours: [TodoItem.Kind] = [.review, .reReview, .fix, .afterMerge, .onHold, .reply, .merge, .mergeable]
 
     // Shown in full but not counted: other people's pull requests you've pushed to.
     var counted: Bool { Self.yours.contains(self) }
 
     // Groups that are the exception rather than the rule only get a summary tile when they have something.
-    var tileOnlyWhenUsed: Bool { self == .onHold || self == .mergeable || self == .reReview }
+    var tileOnlyWhenUsed: Bool { [.onHold, .mergeable, .reReview, .afterMerge].contains(self) }
 
     var title: String {
         switch self {
         case .review: "Review"
         case .reReview: "Re-review"
         case .fix: "Fix"
+        case .afterMerge: "Failed after merge"
         case .onHold: "On hold"
         case .reply: "Reply"
         case .merge: "Merge"
@@ -60,6 +61,7 @@ extension TodoItem.Kind {
         case .review: "Someone is waiting on your review"
         case .reReview: "Pushed to since you reviewed"
         case .fix: "Failing checks, conflicts and requested changes"
+        case .afterMerge: "Merged, then a deploy or checks failed. A later merge may carry it out"
         case .onHold: "CircleCI jobs waiting for someone to approve them"
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
@@ -74,6 +76,7 @@ extension TodoItem.Kind {
         case .review: "eye"
         case .reReview: "arrow.triangle.2.circlepath"
         case .fix: "wrench.and.screwdriver"
+        case .afterMerge: "exclamationmark.triangle"
         case .onHold: "pause.circle"
         case .reply: "bubble.left.and.bubble.right"
         case .merge: "arrow.triangle.merge"
@@ -88,6 +91,7 @@ extension TodoItem.Kind {
         case .review: Palette.pending
         case .reReview: Palette.pending
         case .fix: Palette.danger
+        case .afterMerge: Palette.danger
         case .onHold: Palette.indigo
         case .reply: Palette.accent
         case .merge: Palette.open
@@ -123,6 +127,7 @@ extension InboxStore {
         switch kind {
         case .review: loadedPulls.contains(.reviews)
         case .contributing, .reReview: loadedPulls.contains(.contributing)
+        case .afterMerge: loadedPulls.contains(.merged)
         case .reply: todoLoaded
         case .fix, .onHold, .merge, .mergeable, .waiting: loadedPulls.contains(.yours)
         }
@@ -133,6 +138,7 @@ extension InboxStore {
         switch kind {
         case .review: pullErrors[.reviews]
         case .contributing, .reReview: pullErrors[.contributing]
+        case .afterMerge: pullErrors[.merged]
         case .reply: pullErrors[.reviews] ?? pullErrors[.yours] ?? pullErrors[.contributing] ?? (notificationsLoaded ? nil : statusError)
         case .fix, .onHold, .merge, .mergeable, .waiting: pullErrors[.yours]
         }
@@ -172,6 +178,10 @@ extension InboxStore {
             items.append(item(pr, unread.contains(where: asksForReply) ? .reply : .contributing, threads: unread))
         }
         for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
+        // Merged, then its checks or deploys failed, and no later merge has shipped it since.
+        for pr in pulls[.merged] ?? [] where pr.status == .failingAfterMerge {
+            items.append(item(pr, .afterMerge, threads: byURL[pr.url] ?? []))
+        }
         // A held CircleCI job on one of your pull requests, drafts included, is waiting on a click from you.
         // Anything that needs fixing comes first.
         func held(_ pr: PullRequest) -> Bool { pr.checks?.onHold.isEmpty == false }

@@ -229,7 +229,7 @@ private struct TreemapTile: View {
                 }
             }
             .contentShape(Rectangle())
-            .help(help)
+            .tooltip(help)
     }
 
     private var help: String {
@@ -350,7 +350,7 @@ private struct LanguageBreakdown: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Highlight \(share.name) on the map")
+                    .tooltip("Highlight \(share.name) on the map")
                 }
             }
         }
@@ -402,7 +402,7 @@ private struct BusiestList: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(metric.label(entry.value))
+                    .tooltip(metric.label(entry.value))
                 }
             }
         }

@@ -33,6 +33,8 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     var approvedAt: Date?
     // Someone else's pull request you reviewed, with commits pushed since, and nobody has asked you again yet.
     var needsReReview = false
+    // Merged, its own checks failed, and a later commit to the same branch is deploying, which may carry it out.
+    var laterDeploying = false
 
     struct Reviewer: Codable, Hashable, Sendable {
         enum State: String, Codable, Sendable { case requested, approved, changesRequested, commented, dismissed }

@@ -69,7 +69,7 @@ private struct RepoPageHeader: View {
                 } label: {
                     Label(pinned ? "Pinned" : "Pin", systemImage: pinned ? "pin.fill" : "pin")
                 }
-                .help(pinned ? "Unpin from the sidebar" : "Keep in the sidebar")
+                .tooltip(pinned ? "Unpin from the sidebar" : "Keep in the sidebar")
             }
             HStack(spacing: 6) {
                 LinkChip(title: "Code", symbol: "chevron.left.forwardslash.chevron.right", url: repo.url)
@@ -143,7 +143,7 @@ struct LinkChip: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(url.absoluteString)
+        .tooltip(url.absoluteString)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering } }
     }
 }
@@ -304,7 +304,7 @@ private struct ContributorsCard: View {
                             .background(Color.primary.opacity(0.05), in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .help("\(person.count) merged in the last 30 days")
+                        .tooltip("\(person.count) merged in the last 30 days")
                     }
                 }
             }

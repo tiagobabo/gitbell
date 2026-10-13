@@ -27,7 +27,7 @@ struct IconButton: View {
             .opacity(isEnabled ? 1 : 0.4)
         }
         .buttonStyle(.plain)
-        .help(help)
+        .tooltip(help)
         .accessibilityLabel(help)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering && isEnabled } }
     }
@@ -269,5 +269,34 @@ struct ActivityLine: View {
         .font(.system(size: 11.5))
         .foregroundStyle(Color.primary.opacity(0.85))
         .transition(.opacity)
+    }
+}
+
+// AppKit's own tooltip, behind the view. SwiftUI's .help loses its tooltip when the view redraws under the
+// pointer, which hover effects do on every move, so tooltips on rows and their buttons often never showed.
+private struct Tooltip: NSViewRepresentable {
+    let text: String
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        updateNSView(view, context: context)
+        return view
+    }
+
+    // A view that's hidden but still laid out, like the popover's other tab, would otherwise show its tooltips
+    // through the visible one.
+    func updateNSView(_ view: NSView, context: Context) {
+        let tip = context.environment.tooltipsShown ? text : nil
+        if view.toolTip != tip { view.toolTip = tip }
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var tooltipsShown = true
+}
+
+extension View {
+    func tooltip(_ text: String) -> some View {
+        background(Tooltip(text: text))
     }
 }
