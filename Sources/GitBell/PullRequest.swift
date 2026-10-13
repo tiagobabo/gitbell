@@ -26,6 +26,13 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     var reviewers: [Reviewer]?
     // On others' pull requests you've pushed to: how many of the latest commits are yours.
     var yourCommits = 0
+    // When things last moved, so a list can say how long a pull request has been waiting. Nil when not fetched.
+    var headOid: String?
+    var headCommittedAt: Date?
+    var reviewRequestedAt: Date?
+    var approvedAt: Date?
+    // Someone else's pull request you reviewed, with commits pushed since, and nobody has asked you again yet.
+    var needsReReview = false
 
     struct Reviewer: Codable, Hashable, Sendable {
         enum State: String, Codable, Sendable { case requested, approved, changesRequested, commented, dismissed }
@@ -181,7 +188,7 @@ enum PullStatus: Sendable {
          awaitingCI, awaitingApproval, needsUpdate, mergeable, readyToMerge,
          merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed, deployedLater
 
-    enum Tone: Sendable { case neutral, pending, danger, success, merged }
+    enum Tone: Sendable { case neutral, pending, danger, success, merged, held }
 
     var label: String {
         switch self {
@@ -223,13 +230,13 @@ enum PullSource: CaseIterable, Sendable {
 }
 
 enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
-    case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge, contributing, merged
+    case needsReview, teamReview, reReview, drafts, waiting, needsAction, readyToMerge, contributing, merged
 
     var source: PullSource {
         switch self {
         case .needsReview, .teamReview: .reviews
         case .drafts, .waiting, .needsAction, .readyToMerge: .yours
-        case .contributing: .contributing
+        case .contributing, .reReview: .contributing
         case .merged: .merged
         }
     }
@@ -240,6 +247,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .needsReview: "Needs your review"
         case .teamReview: "Needs your teams' review"
+        case .reReview: "Pushed to since you reviewed"
         case .drafts: "Your drafts"
         case .waiting: "Waiting for review or checks"
         case .needsAction: "Needs action"
@@ -253,6 +261,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .needsReview: "To review"
         case .teamReview: "Team"
+        case .reReview: "Re-review"
         case .drafts: "Drafts"
         case .waiting: "Waiting"
         case .needsAction: "To fix"
@@ -263,6 +272,9 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     var isReviewRequest: Bool { self == .needsReview || self == .teamReview }
+
+    // Lists of other people's pull requests say whose they are.
+    var showsAuthor: Bool { isReviewRequest || self == .reReview || self == .contributing }
 
     // Where one of your own open PRs belongs.
     static func classify(_ pr: PullRequest) -> PullSection {

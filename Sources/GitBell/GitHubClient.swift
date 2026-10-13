@@ -298,6 +298,7 @@ actor GitHubClient {
             .teamReview: "\(base) review-requested:@me -user-review-requested:@me",
             .waiting: "\(base) author:@me",
             .contributing: "\(base) involves:@me -author:@me",
+            .reReview: "\(base) -is:draft reviewed-by:@me -author:@me -user-review-requested:@me",
         ]
     }
 
@@ -332,10 +333,15 @@ actor GitHubClient {
             return PullInbox(sections: sections, totals: sections.mapValues(\.count))
         case .contributing:
             // GitHub can't search by committer, so look through the ones you're involved in for your commits.
-            guard let viewer else { return PullInbox(sections: [.contributing: []], totals: [.contributing: 0]) }
-            let found: Searches = try await graphQL(Self.contributingQuery, ["q": queries[.contributing]!])
+            guard let viewer else {
+                return PullInbox(sections: [.contributing: [], .reReview: []], totals: [.contributing: 0, .reReview: 0])
+            }
+            let found: Searches = try await graphQL(Self.contributingQuery, ["q": queries[.contributing]!, "r": queries[.reReview]!])
             let pulls = (found["contributing"]?.pulls(commitsBy: viewer) ?? []).filter { $0.yourCommits > 0 }
-            return PullInbox(sections: [.contributing: pulls], totals: [.contributing: pulls.count])
+            // The ones you reviewed that have moved on since, and nobody has asked you to look again.
+            let again = (found["reviewed"]?.pulls ?? []).filter(\.needsReReview)
+            return PullInbox(sections: [.contributing: pulls, .reReview: again],
+                             totals: [.contributing: pulls.count, .reReview: again.count])
         case .merged:
             let found: Searches = try await graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
             let merged = Self.markShippedLater((found["merged"]?.pulls ?? [])
@@ -414,6 +420,146 @@ actor GitHubClient {
         return required
     }
 
+    // A pull request's history for its timeline: the last hundred events, and its merge commit's deploys.
+    func timeline(for pr: PullRequest) async throws -> PullTimeline {
+        struct Result: Decodable { let node: Node? }
+        struct Actor: Decodable { let login: String; let avatarUrl: URL? }
+        struct Node: Decodable {
+            struct Items: Decodable { let nodes: [Item?] }
+            struct Item: Decodable {
+                struct Commit: Decodable {
+                    struct Author: Decodable { let user: Actor? }
+                    let committedDate: Date?
+                    let author: Author?
+                }
+                struct Reviewer: Decodable { let login: String?; let slug: String? }
+                let __typename: String
+                let createdAt: Date?
+                let submittedAt: Date?
+                let state: String?
+                let url: URL?
+                let author: Actor?
+                let actor: Actor?
+                let commit: Commit?
+                let requestedReviewer: Reviewer?
+            }
+            struct MergeCommit: Decodable { let statusCheckRollup: Rollup? }
+            struct Rollup: Decodable { let contexts: Contexts }
+            struct Contexts: Decodable { let nodes: [Context?] }
+            struct Context: Decodable {
+                let name: String?
+                let status: String?
+                let conclusion: String?
+                let startedAt: Date?
+                let completedAt: Date?
+                let detailsUrl: URL?
+                let context: String?
+                let state: String?
+                let createdAt: Date?
+                let targetUrl: URL?
+            }
+            let createdAt: Date
+            let mergedAt: Date?
+            let author: Actor?
+            let timelineItems: Items
+            let mergeCommit: MergeCommit?
+        }
+
+        let result: Result = try await graphQL("""
+        query($id: ID!) { node(id: $id) { ... on PullRequest {
+          createdAt mergedAt author { ...A }
+          timelineItems(last: 100, itemTypes: [READY_FOR_REVIEW_EVENT, CONVERT_TO_DRAFT_EVENT, REVIEW_REQUESTED_EVENT,
+            PULL_REQUEST_REVIEW, ISSUE_COMMENT, PULL_REQUEST_COMMIT, HEAD_REF_FORCE_PUSHED_EVENT, ADDED_TO_MERGE_QUEUE_EVENT,
+            MERGED_EVENT, CLOSED_EVENT, REOPENED_EVENT]) { nodes {
+            __typename
+            ... on ReadyForReviewEvent { createdAt actor { ...A } }
+            ... on ConvertToDraftEvent { createdAt actor { ...A } }
+            ... on ReviewRequestedEvent { createdAt actor { ...A } requestedReviewer { ... on User { login } ... on Team { slug } } }
+            ... on PullRequestReview { submittedAt createdAt state url author { ...A } }
+            ... on IssueComment { createdAt url author { ...A } }
+            ... on PullRequestCommit { url commit { committedDate author { user { ...A } } } }
+            ... on HeadRefForcePushedEvent { createdAt actor { ...A } }
+            ... on AddedToMergeQueueEvent { createdAt actor { ...A } }
+            ... on MergedEvent { createdAt actor { ...A } }
+            ... on ClosedEvent { createdAt actor { ...A } }
+            ... on ReopenedEvent { createdAt actor { ...A } }
+          } }
+          mergeCommit { statusCheckRollup { contexts(first: 50) { nodes {
+            ... on CheckRun { name status conclusion startedAt completedAt detailsUrl }
+            ... on StatusContext { context state createdAt targetUrl }
+          } } } }
+        } } }
+        fragment A on Actor { login avatarUrl }
+        """, ["id": pr.id])
+        guard let node = result.node else { throw APIError(status: 404, message: "Couldn't load this pull request's history") }
+
+        var events: [PullTimeline.Event] = []
+        func add(_ kind: PullTimeline.Event.Kind, _ who: Actor?, _ date: Date?, _ url: URL? = nil) {
+            guard let date else { return }
+            events.append(.init(id: events.count, kind: kind, actor: who?.login, avatar: who?.avatarUrl, date: date, url: url))
+        }
+        add(.opened, node.author, node.createdAt, pr.url)
+        for case let item? in node.timelineItems.nodes {
+            let who = item.author ?? item.actor ?? item.commit?.author?.user
+            let date = item.submittedAt ?? item.createdAt ?? item.commit?.committedDate
+            switch item.__typename {
+            case "ReadyForReviewEvent": add(.readyForReview, who, date)
+            case "ConvertToDraftEvent": add(.convertedToDraft, who, date)
+            case "ReviewRequestedEvent":
+                add(.reviewRequested(item.requestedReviewer?.login ?? item.requestedReviewer?.slug ?? "someone"), who, date)
+            case "PullRequestReview":
+                let kind: PullTimeline.Event.Kind = switch item.state {
+                case "APPROVED": .approved
+                case "CHANGES_REQUESTED": .changesRequested
+                default: .reviewed
+                }
+                add(kind, who, date, item.url)
+            case "IssueComment": add(.commented, who, date, item.url)
+            case "PullRequestCommit":
+                // A run of pushes by one person reads as one line.
+                if let last = events.last, case .pushed(let count) = last.kind, last.actor == who?.login {
+                    events[events.count - 1] = .init(id: last.id, kind: .pushed(count + 1), actor: last.actor, avatar: last.avatar,
+                                                     date: max(last.date, date ?? last.date), url: item.url)
+                } else {
+                    add(.pushed(1), who, date, item.url)
+                }
+            case "HeadRefForcePushedEvent": add(.forcePushed, who, date)
+            case "AddedToMergeQueueEvent": add(.queued, who, date)
+            case "MergedEvent": add(.merged, who, date, pr.mergeCommitURL)
+            case "ClosedEvent":
+                // GitHub records a close right after every merge; the merge says it.
+                if case .merged = events.last?.kind { continue }
+                add(.closed, who, date)
+            case "ReopenedEvent": add(.reopened, who, date)
+            default: break
+            }
+        }
+
+        // The merge commit's deploys, by job name.
+        let deploys = (node.mergeCommit?.statusCheckRollup?.contexts.nodes ?? []).compactMap { $0 }.filter {
+            ($0.name ?? $0.context).map { PullRequest.Checks.isDeploy(Self.checkName($0)) } ?? false
+        }
+        var done: [(String, Date)] = [], running: [(String, Date?)] = []
+        for deploy in deploys {
+            let name = Self.checkName(deploy.name ?? deploy.context ?? "deploy")
+            let outcome = deploy.conclusion ?? deploy.state
+            if deploy.status.map({ $0 != "COMPLETED" }) ?? (outcome == "PENDING") {
+                running.append((name, deploy.startedAt ?? deploy.createdAt))
+            } else if outcome == "SUCCESS" {
+                if let at = deploy.completedAt ?? deploy.createdAt { done.append((name, at)) }
+            } else if GraphQLResponse.Node.failedStates.contains(outcome ?? "") {
+                add(.deployFailed(name), nil, deploy.completedAt ?? deploy.createdAt, deploy.detailsUrl ?? deploy.targetUrl)
+            }
+        }
+        if let last = done.map(\.1).max() { add(.deployed(done.map(\.0)), nil, last) }
+        if !running.isEmpty {
+            add(.deploying(running.map(\.0)), nil, running.compactMap(\.1).min() ?? node.mergedAt ?? .now)
+        }
+
+        return PullTimeline(author: node.author?.login ?? pr.author, createdAt: node.createdAt, mergedAt: node.mergedAt,
+                            events: events.sorted { $0.date < $1.date })
+    }
+
     private static let reviewsQuery = """
     query($direct: String!, $team: String!) {
       direct: search(query: $direct, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
@@ -422,7 +568,13 @@ actor GitHubClient {
     """ + reviewersFragment + pullFragment
 
     private static let mineQuery = """
-    query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } } }
+    query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers ...requested } } }
+    fragment requested on PullRequest {
+      requestedAt: timelineItems(last: 1, itemTypes: [REVIEW_REQUESTED_EVENT, READY_FOR_REVIEW_EVENT]) { nodes {
+        ... on ReviewRequestedEvent { createdAt }
+        ... on ReadyForReviewEvent { createdAt }
+      } }
+    }
     """ + reviewersFragment + pullFragment
 
     // Who's been asked to review and what they've done: on your own pull requests, and on team review requests
@@ -435,16 +587,20 @@ actor GitHubClient {
         ... on Team { slug organization { avatarUrl } }
         ... on Mannequin { login avatarUrl }
       } } }
-      latestReviews(first: 10) { nodes { state author { login avatarUrl } } }
+      latestReviews(first: 10) { nodes { state submittedAt author { login avatarUrl } } }
     }
     """
 
     // Others' pull requests you're involved in, with who wrote their latest commits.
     private static let contributingQuery = """
-    query($q: String!) { contributing: search(query: $q, type: ISSUE, first: 30) { issueCount nodes { ...pr ...reviewers ...committers } } }
+    query($q: String!, $r: String!) {
+      contributing: search(query: $q, type: ISSUE, first: 30) { issueCount nodes { ...pr ...reviewers ...committers } }
+      reviewed: search(query: $r, type: ISSUE, first: 30) { issueCount nodes { ...pr ...reviewers ...yourReview } }
+    }
     fragment committers on PullRequest {
       yourCommits: commits(last: 50) { nodes { commit { authors(first: 3) { nodes { user { login } } } } } }
     }
+    fragment yourReview on PullRequest { viewerLatestReview { state commit { oid } } }
     """ + reviewersFragment + pullFragment
 
     private static let mergedPullsQuery = """
@@ -456,10 +612,10 @@ actor GitHubClient {
 
     private static let pullFragment = """
     fragment pr on PullRequest {
-      id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue
+      id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue headRefOid
       author { login avatarUrl }
       repository { nameWithOwner }
-      commits(last: 1) { nodes { commit { statusCheckRollup { ...rollup } } } }
+      commits(last: 1) { nodes { commit { committedDate statusCheckRollup { ...rollup } } } }
     }
     fragment rollup on StatusCheckRollup {
       state contexts(first: 50) {
@@ -516,6 +672,17 @@ actor GitHubClient {
             let reviewRequests: Requests?
             let latestReviews: Reviews?
             let yourCommits: Commits?
+            let headRefOid: String?
+            let requestedAt: Events?
+            let viewerLatestReview: YourReview?
+
+            struct Events: Decodable { let nodes: [Event?] }
+            struct Event: Decodable { let createdAt: Date? }
+            struct YourReview: Decodable {
+                struct Commit: Decodable { let oid: String }
+                let state: String
+                let commit: Commit?
+            }
 
             struct Requests: Decodable { let nodes: [Request?] }
             struct Request: Decodable { let requestedReviewer: Requested? }
@@ -527,13 +694,13 @@ actor GitHubClient {
                 let organization: Org?
             }
             struct Reviews: Decodable { let nodes: [Review?] }
-            struct Review: Decodable { let state: String; let author: Author? }
+            struct Review: Decodable { let state: String; let submittedAt: Date?; let author: Author? }
 
             struct Author: Decodable { let login: String; let avatarUrl: URL? }
             struct Repository: Decodable { let nameWithOwner: String }
             struct Commits: Decodable { let nodes: [CommitNode] }
             struct CommitNode: Decodable { let commit: Commit }
-            struct Commit: Decodable { let url: URL?; let statusCheckRollup: Rollup?; let authors: Authors? }
+            struct Commit: Decodable { let url: URL?; let committedDate: Date?; let statusCheckRollup: Rollup?; let authors: Authors? }
             struct Authors: Decodable { let nodes: [GitActor?] }
             struct GitActor: Decodable { let user: User? }
             struct User: Decodable { let login: String }
@@ -588,6 +755,15 @@ actor GitHubClient {
                 pr.baseRef = baseRefName
                 pr.mergeCommitURL = mergedAt == nil ? nil : mergeCommit?.url
                 pr.reviewers = reviewers(author: author?.login)
+                pr.headOid = headRefOid
+                pr.headCommittedAt = commits?.nodes.last?.commit.committedDate
+                pr.reviewRequestedAt = requestedAt?.nodes.compactMap { $0?.createdAt }.max()
+                pr.approvedAt = (latestReviews?.nodes ?? []).compactMap { $0?.state == "APPROVED" ? $0?.submittedAt : nil }.max()
+                // You left comments or asked for changes on an older commit than the one there now.
+                if let review = viewerLatestReview, ["COMMENTED", "CHANGES_REQUESTED"].contains(review.state),
+                   let reviewed = review.commit?.oid, let headRefOid, reviewed != headRefOid, isDraft != true {
+                    pr.needsReReview = true
+                }
                 return pr
             }
 

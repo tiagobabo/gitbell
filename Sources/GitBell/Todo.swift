@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, fix, onHold, reply, merge, mergeable, contributing, waiting
+        case review, reReview, fix, onHold, reply, merge, mergeable, contributing, waiting
 
         var id: String { rawValue }
     }
@@ -33,17 +33,18 @@ struct TodoItem: Identifiable {
 
 extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
-    static let yours: [TodoItem.Kind] = [.review, .fix, .onHold, .reply, .merge, .mergeable]
+    static let yours: [TodoItem.Kind] = [.review, .reReview, .fix, .onHold, .reply, .merge, .mergeable]
 
     // Shown in full but not counted: other people's pull requests you've pushed to.
     var counted: Bool { Self.yours.contains(self) }
 
     // Groups that are the exception rather than the rule only get a summary tile when they have something.
-    var tileOnlyWhenUsed: Bool { self == .onHold || self == .mergeable }
+    var tileOnlyWhenUsed: Bool { self == .onHold || self == .mergeable || self == .reReview }
 
     var title: String {
         switch self {
         case .review: "Review"
+        case .reReview: "Re-review"
         case .fix: "Fix"
         case .onHold: "On hold"
         case .reply: "Reply"
@@ -57,6 +58,7 @@ extension TodoItem.Kind {
     var subtitle: String {
         switch self {
         case .review: "Someone is waiting on your review"
+        case .reReview: "Pushed to since you reviewed"
         case .fix: "Failing checks, conflicts and requested changes"
         case .onHold: "CircleCI jobs waiting for someone to approve them"
         case .reply: "Mentions, assignments and comments on your threads"
@@ -70,6 +72,7 @@ extension TodoItem.Kind {
     var symbol: String {
         switch self {
         case .review: "eye"
+        case .reReview: "arrow.triangle.2.circlepath"
         case .fix: "wrench.and.screwdriver"
         case .onHold: "pause.circle"
         case .reply: "bubble.left.and.bubble.right"
@@ -83,6 +86,7 @@ extension TodoItem.Kind {
     var tint: Color {
         switch self {
         case .review: Palette.pending
+        case .reReview: Palette.pending
         case .fix: Palette.danger
         case .onHold: Palette.indigo
         case .reply: Palette.accent
@@ -118,7 +122,7 @@ extension InboxStore {
     func isReady(_ kind: TodoItem.Kind) -> Bool {
         switch kind {
         case .review: loadedPulls.contains(.reviews)
-        case .contributing: loadedPulls.contains(.contributing)
+        case .contributing, .reReview: loadedPulls.contains(.contributing)
         case .reply: todoLoaded
         case .fix, .onHold, .merge, .mergeable, .waiting: loadedPulls.contains(.yours)
         }
@@ -128,7 +132,7 @@ extension InboxStore {
     func loadError(for kind: TodoItem.Kind) -> String? {
         switch kind {
         case .review: pullErrors[.reviews]
-        case .contributing: pullErrors[.contributing]
+        case .contributing, .reReview: pullErrors[.contributing]
         case .reply: pullErrors[.reviews] ?? pullErrors[.yours] ?? pullErrors[.contributing] ?? (notificationsLoaded ? nil : statusError)
         case .fix, .onHold, .merge, .mergeable, .waiting: pullErrors[.yours]
         }
@@ -154,6 +158,11 @@ extension InboxStore {
         // Asked of one of your teams; the reviewers line says which. The people filter still applies.
         if teamReviewsInTodo {
             for pr in pulls[.teamReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
+        }
+        // Pushed to since you reviewed it, and you haven't been asked again (that would be a review request).
+        let asked = Set(items.map(\.id))
+        for pr in pulls[.reReview] ?? [] where !asked.contains("pr:\(pr.id)") {
+            items.append(item(pr, .reReview, threads: byURL[pr.url] ?? []))
         }
         // Someone else's pull request you've pushed to, unless it's already here as a review request.
         // A comment on it that wants an answer makes it yours to reply to.

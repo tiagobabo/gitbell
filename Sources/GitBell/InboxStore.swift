@@ -41,7 +41,8 @@ final class InboxStore {
     // The single PR section the window is showing; nil in the popover, which shows them all.
     var pullsFocus: PullSection?
 
-    enum Tab: String { case todo, pulls }
+    // Your turn, the PR lists, and the window's page of your own pull requests by stage.
+    enum Tab: String { case todo, pulls, yours }
     var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .todo {
         didSet {
             guard tab != oldValue else { return }
@@ -71,6 +72,11 @@ final class InboxStore {
     // First launch walks through setup in the window. Anyone who had signed in before it existed skips it.
     var onboarding = false
     var waitingExpanded = false
+    // Pull request histories, fetched when you open one's timeline, by pull request id.
+    var timelines: [String: PullTimeline] = [:]
+    var timelineErrors: [String: String] = [:]
+    // The timeline being shown, and which list asked: the popover keeps both its lists alive.
+    var timelineRequest: TimelineRequest?
 
     var pulls: [PullSection: [PullRequest]] = [:]
     var pullTotals: [PullSection: Int] = [:]
@@ -409,6 +415,12 @@ struct ApprovalPrompt: Equatable {
 
 enum ApprovalState { case none, approving, approved }
 
+// A pull request whose timeline is open, and which list opened it.
+struct TimelineRequest: Equatable {
+    let pr: PullRequest
+    var origin = ApprovalPrompt.Origin.todo
+}
+
 // One search's answer: its lists, or why it failed.
 private struct PullAnswer: Sendable {
     let source: PullSource
@@ -418,7 +430,41 @@ private struct PullAnswer: Sendable {
 
 extension InboxStore {
     var actionablePulls: Int {
-        [PullSection.needsReview, .needsAction, .readyToMerge].reduce(0) { $0 + (pullTotals[$1] ?? 0) }
+        [PullSection.needsReview, .reReview, .needsAction, .readyToMerge].reduce(0) { $0 + (pullTotals[$1] ?? 0) }
+    }
+
+    // Your pull requests by how far along they are, open and merged, until they've been live for a day.
+    var pipeline: [PipelineStage: [PullRequest]] {
+        let now = Date.now
+        let yours = [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged].flatMap { pulls(in: $0) }
+        return Dictionary(grouping: yours.compactMap { pr in PipelineStage.of(pr, now: now).map { ($0, pr) } }, by: \.0)
+            .mapValues { $0.map(\.1) }
+    }
+
+    var pipelineLoaded: Bool { loadedPulls.contains(.yours) && loadedPulls.contains(.merged) }
+
+    // MARK: Timelines
+
+    func showTimeline(_ pr: PullRequest, from origin: ApprovalPrompt.Origin) {
+        timelineRequest = TimelineRequest(pr: pr, origin: origin)
+        Task { await loadTimeline(pr) }
+    }
+
+    func loadTimeline(_ pr: PullRequest) async {
+        if Demo.isOn {
+            timelines[pr.id] = Demo.timeline(for: pr)
+            return
+        }
+        guard let client else { return }
+        do {
+            let timeline = try await client.timeline(for: pr)
+            withAnimation(.snappy) {
+                timelines[pr.id] = timeline
+                timelineErrors[pr.id] = nil
+            }
+        } catch {
+            if timelines[pr.id] == nil { timelineErrors[pr.id] = error.localizedDescription }
+        }
     }
 
     func isExpanded(_ section: PullSection) -> Bool {
@@ -483,7 +529,9 @@ extension InboxStore {
                                 .filter { $0.checks?.onHold.isEmpty == false },
                               failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
                               ready: pulls[.readyToMerge]?.filter { [.readyToMerge, .mergeable].contains($0.status) } ?? [])
-        case .contributing, .merged:
+        case .merged:
+            announceMerges(pulls[.merged] ?? [])
+        case .contributing:
             break
         }
     }
@@ -578,7 +626,7 @@ extension InboxStore {
                 .appending(queryItems: [URLQueryItem(name: "q", value: GitHubClient.mergedQuery())])
         }
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
-        guard section.isReviewRequest || section == .contributing,
+        guard section.showsAuthor,
               let query = GitHubClient.searchQueries(since: since)[section] else { return URL(string: "https://github.com/pulls/inbox")! }
         return URL(string: "https://github.com/search?type=pullrequests")!
             .appending(queryItems: [URLQueryItem(name: "q", value: query)])
@@ -607,7 +655,9 @@ extension InboxStore {
         // Renamed when merges joined in, so their first fetch only records what's already failing.
         let key = "seenYourPulls2"
         let defaults = UserDefaults.standard
+        let changes = ([PullSection.needsAction].flatMap { pulls[$0] ?? [] }).filter { $0.status == .changesRequested }
         let current = failing.map { "fail:\($0.id)" } + ready.map { "ready:\($0.id)" } + held.map { "hold:\($0.id)" }
+            + changes.map { "changes:\($0.id)" }
         if pullBanners, let seen = defaults.stringArray(forKey: key).map(Set.init) {
             for pr in failing where !seen.contains("fail:\(pr.id)") { Notifier.shared.checksFailed(pr) }
             for pr in ready where !seen.contains("ready:\(pr.id)") { Notifier.shared.readyToMerge(pr) }
@@ -615,9 +665,29 @@ extension InboxStore {
             if defaults.bool(forKey: "holdsTracked") {
                 for pr in held where !seen.contains("hold:\(pr.id)") { Notifier.shared.onHold(pr) }
             }
+            if defaults.bool(forKey: "changesTracked") {
+                for pr in changes where !seen.contains("changes:\(pr.id)") { Notifier.shared.changesRequested(pr) }
+            }
         }
         defaults.set(current, forKey: key)
         defaults.set(true, forKey: "holdsTracked")
+        defaults.set(true, forKey: "changesTracked")
+    }
+
+    // Banners as your merges go live, or their checks fail after merging. The first fetch only records them.
+    private func announceMerges(_ merged: [PullRequest]) {
+        let key = "seenMerges"
+        let defaults = UserDefaults.standard
+        let deployed = merged.filter { [.deployed, .deployedLater].contains($0.status) && $0.checks?.hasDeploys == true }
+        let failed = merged.filter { $0.status == .failingAfterMerge }
+        let current = deployed.map { "live:\($0.id)" } + failed.map { "broke:\($0.id)" }
+        if pullBanners, let seen = defaults.stringArray(forKey: key).map(Set.init) {
+            for pr in deployed where !seen.contains("live:\(pr.id)") { Notifier.shared.deployed(pr) }
+            for pr in failed where !seen.contains("broke:\(pr.id)") { Notifier.shared.failedAfterMerge(pr) }
+        }
+        // Keep what's gone out of the week's list too, so a merge dropping out and back in doesn't announce twice.
+        let kept = (defaults.stringArray(forKey: key) ?? []).suffix(200)
+        defaults.set(Array(Set(kept + current)), forKey: key)
     }
 }
 
@@ -639,7 +709,8 @@ extension InboxStore {
     // Each side gets back what it last showed, instantly rather than animating from the other's view.
     func enterPopover() {
         popoverOpen = true
-        withoutAnimation { setView(popoverView ?? tab, pullsFocus: nil) }
+        // The popover has no page of its own pull requests; their sections are in its PR list.
+        withoutAnimation { setView(popoverView ?? (tab == .yours ? .pulls : tab), pullsFocus: nil) }
     }
 
     func leavePopover() {
@@ -662,10 +733,13 @@ extension InboxStore {
     var navigableIDs: [String] {
         switch tab {
         case .todo:
-            todo.filter { $0.kind != .waiting || waitingExpanded }.map(\.id)
+            return todo.filter { $0.kind != .waiting || waitingExpanded }.map(\.id)
         case .pulls:
-            if let pullsFocus { pulls(in: pullsFocus).map(\.id) }
-            else { PullSection.windowOrder.filter(isExpanded).flatMap { (pulls[$0] ?? []).map(\.id) } }
+            if let pullsFocus { return pulls(in: pullsFocus).map(\.id) }
+            return PullSection.windowOrder.filter(isExpanded).flatMap { (pulls[$0] ?? []).map(\.id) }
+        case .yours:
+            let pipeline = pipeline
+            return PipelineStage.allCases.flatMap { (pipeline[$0] ?? []).map(\.id) }
         }
     }
 
@@ -680,7 +754,7 @@ extension InboxStore {
     }
 
     var selectedPull: PullRequest? {
-        guard tab == .pulls else { return nil }
+        guard tab == .pulls || tab == .yours else { return nil }
         return pulls.values.lazy.flatMap { $0 }.first { $0.id == self.selection }
     }
 
@@ -792,11 +866,17 @@ extension InboxStore {
         var sections = unfilteredPulls
         var totals = unfilteredTotals
         if let people {
-            for section in [PullSection.needsReview, .teamReview] {
+            for section in [PullSection.needsReview, .teamReview, .reReview] {
                 let kept = (sections[section] ?? []).filter { people.contains($0.author.lowercased()) }
                 sections[section] = kept
                 totals[section] = kept.count
             }
+        }
+        // Asked again counts as a review request, so it isn't a re-review as well.
+        let asked = Set([PullSection.needsReview, .teamReview].flatMap { sections[$0] ?? [] }.map(\.id))
+        if let again = sections[.reReview] {
+            sections[.reReview] = again.filter { !asked.contains($0.id) }
+            totals[.reReview] = sections[.reReview]?.count
         }
         withAnimation(.snappy) {
             pulls = sections

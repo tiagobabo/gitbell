@@ -97,7 +97,7 @@ struct SettingsMenu: View {
                 Text("↑ ↓ or J K  Move")
                 Text("⏎ or O  Open")
                 Text("E  Done   M  Read")
-                Text("C  Copy link")
+                Text("C  Copy link   T  Timeline")
                 Text("⇥  Switch tab")
             }
             Divider()
@@ -165,7 +165,7 @@ extension View {
     }
 }
 
-// Arrow keys / J K to move, Return or O to open, E done, M read, C copy link.
+// Arrow keys / J K to move, Return or O to open, E done, M read, C copy link, T timeline.
 // The popover also takes Tab to switch tabs; the window leaves that to the sidebar.
 struct InboxKeyboard: ViewModifier {
     let inPopover: Bool
@@ -188,7 +188,7 @@ struct InboxKeyboard: ViewModifier {
                 return .handled
             }
             .onKeyPress(.escape) { store.selection = nil; return .handled }
-            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemc"), phases: .down) { press in
+            .onKeyPress(characters: CharacterSet(charactersIn: "jkoemct"), phases: .down) { press in
                 handle(press.characters)
             }
     }
@@ -204,6 +204,10 @@ struct InboxKeyboard: ViewModifier {
         case "m":
             guard let n = store.selectedTodo?.notification else { return .ignored }
             Task { await store.markRead(n) }
+        case "t":
+            if let pr = store.selectedTodo?.pr { store.showTimeline(pr, from: .todo) }
+            else if let pr = store.selectedPull { store.showTimeline(pr, from: .pulls) }
+            else { return .ignored }
         case "c":
             if let item = store.selectedTodo { store.copyLink(item) }
             else if let pr = store.selectedPull { store.copyLink(pr) }

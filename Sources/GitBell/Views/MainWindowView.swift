@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SidebarItem: Hashable {
     case todo
+    case yours
     case pulls(PullSection)
     case repo(String)
     case repos
@@ -77,6 +78,8 @@ struct MainWindowView: View {
         switch selection {
         case .todo, nil:
             TodoView()
+        case .yours:
+            YourPullsView()
         case .pulls(let section):
             PullSectionList(section: section)
         case .repo(let fullName):
@@ -134,6 +137,7 @@ struct MainWindowView: View {
         guard store.phase == .ready, !store.onboarding else { return "GitBell" }
         return switch selection {
         case .pulls(let section): section.windowTitle
+        case .yours: "Your pull requests"
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
         case .org(let owner): owner
@@ -150,6 +154,12 @@ struct MainWindowView: View {
         case .pulls(let section):
             let count = store.pullTotals[section] ?? 0
             return count == 1 ? "1 pull request" : "\(count) pull requests"
+        case .yours:
+            guard store.pipelineLoaded else { return "Loading…" }
+            let pipeline = store.pipeline
+            let open = [PipelineStage.drafts, .inReview, .fix, .ready].reduce(0) { $0 + (pipeline[$1]?.count ?? 0) }
+            let shipping = pipeline[.shipping]?.count ?? 0
+            return shipping == 0 ? "\(open) open" : "\(open) open · \(shipping) shipping"
         case .repo(let fullName):
             return String(fullName.split(separator: "/").first ?? "")
         case .repos:
@@ -163,6 +173,7 @@ struct MainWindowView: View {
         switch selection {
         case .todo, nil: URL(string: "https://github.com/pulls/inbox")!
         case .pulls(let section): store.webURL(for: section)
+        case .yours: URL(string: "https://github.com/pulls")!
         case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
         case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
         case .org(let owner): URL(string: "https://github.com/\(owner)")!
@@ -175,6 +186,8 @@ struct MainWindowView: View {
             store.showInWindow(.todo, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
+        case .yours:
+            store.showInWindow(.yours, pullsFocus: nil)
         case .repo, .repos, .org, nil:
             break
         }
@@ -183,6 +196,7 @@ struct MainWindowView: View {
     private static func encode(_ item: SidebarItem) -> String {
         switch item {
         case .todo: "todo"
+        case .yours: "yours"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
         case .repos: "repos.all"
@@ -192,10 +206,14 @@ struct MainWindowView: View {
 
     private static func decode(_ raw: String) -> SidebarItem? {
         if raw == "todo" { return .todo }
+        if raw == "yours" { return .yours }
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
-        case "pulls": return PullSection(rawValue: parts[1]).map(SidebarItem.pulls)
+        case "pulls":
+            // Your own pull requests' sections became one page, by stage.
+            guard let section = PullSection(rawValue: parts[1]) else { return nil }
+            return section.source == .yours || section == .merged ? .yours : .pulls(section)
         case "repo": return .repo(parts[1])
         case "repos": return .repos
         case "org": return .org(parts[1])
@@ -214,8 +232,13 @@ private struct Sidebar: View {
                 SidebarRow(title: TodoItem.title, symbol: TodoItem.symbol, tint: Palette.accent, count: store.todoCount,
                            selected: selection == .todo)
                     .tag(SidebarItem.todo)
+                // Badged with what's yours to act on: fixes and merges.
+                SidebarRow(title: "Your pull requests", symbol: "arrow.triangle.pull", tint: Palette.accent,
+                           count: (store.pullTotals[.needsAction] ?? 0) + (store.pullTotals[.readyToMerge] ?? 0),
+                           selected: selection == .yours)
+                    .tag(SidebarItem.yours)
             }
-            ForEach(PullSection.windowGroups) { group in
+            ForEach(PullSection.sidebarGroups) { group in
                 Section(group.title) {
                     ForEach(group.sections) { section in
                         pullRow(section)
@@ -397,7 +420,7 @@ struct PullSectionList: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
                             if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
-                            PullRow(pr: pr, showAuthor: section.isReviewRequest || section == .contributing)
+                            PullRow(pr: pr, showAuthor: section.showsAuthor)
                         }
                         if total > items.count, store.searchText.isEmpty {
                             Divider().opacity(0.6)
@@ -431,6 +454,7 @@ extension PullSection {
         switch self {
         case .needsReview: "Asked of you"
         case .teamReview: "Asked of your team"
+        case .reReview: "Re-review"
         case .needsAction: "Needs fixing"
         case .readyToMerge: "Ready to merge"
         case .contributing: "Contributing"
@@ -444,6 +468,7 @@ extension PullSection {
         switch self {
         case .needsReview: "person.crop.circle"
         case .teamReview: "person.2.circle"
+        case .reReview: "arrow.triangle.2.circlepath.circle"
         case .needsAction: "exclamationmark.circle"
         case .readyToMerge: "checkmark.circle"
         case .contributing: "arrow.triangle.pull"
@@ -457,6 +482,7 @@ extension PullSection {
         switch self {
         case .needsReview: "No reviews waiting on you"
         case .teamReview: "Your teams are all caught up"
+        case .reReview: "Nothing to look at again"
         case .needsAction: "Nothing needs fixing"
         case .readyToMerge: "Nothing ready to merge"
         case .contributing: "Not contributing to anything"
@@ -469,6 +495,7 @@ extension PullSection {
     var emptySubtitle: String {
         switch self {
         case .needsReview, .teamReview: "New review requests show up here."
+        case .reReview: "Pull requests you commented on or asked changes of show up here once they've been pushed to."
         case .needsAction: "Changes requested and failing checks show up here."
         case .readyToMerge: "Approved pull requests whose required checks passed show up here."
         case .contributing: "Other people's open pull requests you've pushed commits to show up here."
@@ -482,6 +509,7 @@ extension PullSection {
         switch self {
         case .needsReview: Palette.pending
         case .teamReview: Palette.indigo
+        case .reReview: Palette.pending
         case .needsAction: Palette.danger
         case .readyToMerge: Palette.open
         case .contributing: Palette.accent
@@ -501,10 +529,15 @@ struct SectionGroup: Identifiable {
 extension PullSection {
     // How the window and popover group and order the sections, most urgent first.
     static let windowGroups = [
-        SectionGroup(title: "To Review", sections: [.needsReview, .teamReview]),
-        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts]),
+        SectionGroup(title: "To Review", sections: [.needsReview, .teamReview, .reReview]),
+        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts, .merged]),
         SectionGroup(title: "Others' Pull Requests", sections: [.contributing]),
-        SectionGroup(title: "Deploys", sections: [.merged]),
     ]
     static var windowOrder: [PullSection] { windowGroups.flatMap(\.sections) }
+
+    // The window's sidebar: your own pull requests are one page, by stage, so only the others are listed.
+    static let sidebarGroups = [
+        SectionGroup(title: "To Review", sections: [.needsReview, .teamReview, .reReview]),
+        SectionGroup(title: "Others' Pull Requests", sections: [.contributing]),
+    ]
 }

@@ -265,7 +265,7 @@ struct TodoRow: View {
     @State private var hovering = false
 
     var body: some View {
-        let prompting = item.pr != nil && store.approvalPrompt?.pr.id == item.pr?.id
+        let prompting = item.pr != nil && (store.approvalPrompt?.pr.id == item.pr?.id || store.timelineRequest?.pr.id == item.pr?.id)
         let active = hovering || store.selection == item.id || prompting
         let detail = item.notification.flatMap { store.details[$0.detailKey] }
 
@@ -300,8 +300,9 @@ struct TodoRow: View {
                 .lineLimit(1)
 
                 if let pr = item.pr {
-                    PullStatusLine(pr: pr)
+                    PullStatusLine(pr: pr, lifecycle: item.kind == .waiting || item.kind == .contributing)
                     ReviewersLine(pr: pr)
+                    if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
                 } else if let n = item.notification {
                     HStack(spacing: 6) {
                         ReasonTag(reason: n.reason)
@@ -321,8 +322,8 @@ struct TodoRow: View {
                     }
                 }
             }
-
-            Spacer(minLength: 4)
+            // Takes the row's width, so a short title never wraps to share it with a spacer.
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             TimelineView(.everyMinute) { context in
                 Text(RelativeTime.short(item.updatedAt, now: context.date))
@@ -339,6 +340,7 @@ struct TodoRow: View {
         .overlay(alignment: .topTrailing) {
             TodoRowActions(item: item)
                 .approvalPopover(for: item.pr, from: .todo)
+                .timelinePopover(for: item.pr, from: .todo)
                 .padding(.top, 6)
                 .padding(.trailing, 6)
                 .opacity(active ? 1 : 0)
@@ -350,6 +352,9 @@ struct TodoRow: View {
         .contextMenu {
             Button("Open on GitHub") { store.open(item) }
             Button("Copy Link") { store.copyLink(item) }
+            if let pr = item.pr {
+                Button("Show Timeline") { store.showTimeline(pr, from: .todo) }
+            }
             Button("Open Repository") { NSWorkspace.shared.open(URL(string: "https://github.com/\(item.repository)")!) }
             if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
                 Section("On hold") {
@@ -397,6 +402,8 @@ struct PullStatusLine: View {
     let pr: PullRequest
     // Where clicking a held job asks to approve it from.
     var origin = ApprovalPrompt.Origin.todo
+    // Shows where it is from opened to deployed in place of the status dot.
+    var lifecycle = false
     @Environment(InboxStore.self) private var store
 
     var body: some View {
@@ -414,7 +421,8 @@ struct PullStatusLine: View {
     private func line(_ status: PullStatus, maxFailing: Int) -> some View {
         HStack(spacing: 10) {
             HStack(spacing: 5) {
-                Circle().fill(Palette.color(for: status.tone)).frame(width: 6, height: 6)
+                if lifecycle { LifecycleStrip(pr: pr) }
+                else { Circle().fill(Palette.color(for: status.tone)).frame(width: 6, height: 6) }
                 Text(status.label)
             }
             .fixedSize()
@@ -612,6 +620,9 @@ private struct TodoRowActions: View {
                 IconButton(symbol: "doc.text.magnifyingglass", help: "Open \(check.name) logs", size: 24) {
                     NSWorkspace.shared.open(check.url!)
                 }
+            }
+            if let pr = item.pr {
+                IconButton(symbol: "clock.arrow.circlepath", help: "Show timeline (T)", size: 24) { store.showTimeline(pr, from: .todo) }
             }
             IconButton(symbol: "arrow.up.right.square", help: "Open on GitHub (O)", size: 24) { store.open(item) }
             IconButton(symbol: "link", help: "Copy link", size: 24) { store.copyLink(item) }

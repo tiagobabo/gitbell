@@ -14,6 +14,13 @@ enum Demo {
         .now.addingTimeInterval(-minutes * 60)
     }
 
+    // A pull request with a few more details set.
+    static func with(_ pr: PullRequest, _ change: (inout PullRequest) -> Void) -> PullRequest {
+        var pr = pr
+        change(&pr)
+        return pr
+    }
+
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
                    checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = [],
@@ -85,15 +92,19 @@ enum Demo {
                failing: ["rspec (3/8)", "rubocop"]),
         ],
         .readyToMerge: [
-            pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
-               review: "APPROVED", mergeState: "CLEAN", checks: ("SUCCESS", 14, 0, 14), reviewers: ["approved:carol"]),
+            with(pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
+               review: "APPROVED", mergeState: "CLEAN", checks: ("SUCCESS", 14, 0, 14), reviewers: ["approved:carol"])) {
+                $0.approvedAt = minutesAgo(26 * 60)
+            },
             pr(1206, "api", "Log slow queries to the warehouse", by: viewer, minutes: 70,
                review: "APPROVED", mergeState: "UNSTABLE", checks: ("PENDING", 7, 0, 8), optionalRunning: ["deploy/approve_staging"]),
         ],
         .waiting: [
-            pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9),
-               reviewers: ["approved:alice", "team:web-team"]),
-            pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
+            with(pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9),
+               reviewers: ["approved:alice", "team:web-team"])) { $0.headCommittedAt = minutesAgo(20) },
+            with(pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140, reviewers: ["carol"])) {
+                $0.reviewRequestedAt = minutesAgo(3 * 24 * 60 + 40)
+            },
             pr(1207, "api", "Move invoices to the new PDF service", by: viewer, minutes: 85, checks: ("PENDING", 11, 0, 12),
                held: ["build-and-deploy/approve_staging"]),
         ],
@@ -122,6 +133,11 @@ enum Demo {
                 return pr
             }(),
         ],
+        .reReview: [
+            with(pr(1195, "api", "Stream large CSV exports", by: "erin", minutes: 15, review: "CHANGES_REQUESTED")) {
+                $0.needsReReview = true
+            },
+        ],
         .drafts: [
             pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12),
                failing: ["cypress", "lighthouse"]),
@@ -129,8 +145,38 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1, .contributing: 2,
+        .needsReview: 2, .teamReview: 4, .reReview: 1, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1, .contributing: 2,
     ]
+
+    // A made-up history that fits what the pull request looks like now.
+    static func timeline(for pr: PullRequest) -> PullTimeline {
+        let end = pr.mergedAt ?? pr.updatedAt
+        let opened = end.addingTimeInterval(-26 * 3600)
+        var events: [PullTimeline.Event] = []
+        func add(_ kind: PullTimeline.Event.Kind, _ who: String?, hoursAfterOpening: Double) {
+            events.append(.init(id: events.count, kind: kind, actor: who, avatar: who.map(avatar),
+                                date: opened.addingTimeInterval(hoursAfterOpening * 3600), url: nil))
+        }
+        let reviewer = pr.reviewers?.first?.name ?? (pr.author == viewer ? "carol" : viewer)
+        add(.opened, pr.author, hoursAfterOpening: 0)
+        add(.reviewRequested(reviewer), pr.author, hoursAfterOpening: 0.05)
+        add(.pushed(2), pr.author, hoursAfterOpening: 1.5)
+        add(.reviewed, reviewer, hoursAfterOpening: 4)
+        add(.commented, pr.author, hoursAfterOpening: 5)
+        add(.pushed(3), pr.author, hoursAfterOpening: 7)
+        if pr.reviewDecision == "CHANGES_REQUESTED" { add(.changesRequested, reviewer, hoursAfterOpening: 20) }
+        if pr.reviewDecision == "APPROVED" || pr.mergedAt != nil { add(.approved, reviewer, hoursAfterOpening: 22) }
+        if pr.mergedAt != nil {
+            add(.merged, viewer, hoursAfterOpening: 26)
+            let deploys = pr.checks?.running.filter { PullRequest.Checks.isDeploy($0.name) }.map(\.name) ?? []
+            switch pr.status {
+            case .deploying: add(.deploying(deploys.isEmpty ? ["deploy"] : deploys), nil, hoursAfterOpening: 26.1)
+            case .failingAfterMerge: add(.deployFailed(pr.checks?.failing.first?.name ?? "tests"), nil, hoursAfterOpening: 26.3)
+            default: add(.deployed(["deploy_eu", "deploy_us"]), nil, hoursAfterOpening: 26.4)
+            }
+        }
+        return PullTimeline(author: pr.author, createdAt: opened, mergedAt: pr.mergedAt, events: events)
+    }
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,
                      stars: Int = 0, isPrivate: Bool = true) -> Repo {

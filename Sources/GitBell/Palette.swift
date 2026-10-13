@@ -21,6 +21,7 @@ enum Palette {
         case .danger: danger
         case .success: open
         case .merged: merged
+        case .held: indigo
         }
     }
 }

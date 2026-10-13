@@ -92,7 +92,7 @@ struct PullSectionView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
                         if index > 0 { Divider().padding(.leading, 38).opacity(0.6) }
-                        PullRow(pr: pr, showAuthor: section.isReviewRequest || section == .contributing)
+                        PullRow(pr: pr, showAuthor: section.showsAuthor)
                     }
                     if total > items.count {
                         Divider().opacity(0.6)
@@ -124,7 +124,7 @@ struct PullSectionView: View {
     private func badgeColor(_ total: Int) -> Color? {
         guard total > 0 else { return nil }
         switch section {
-        case .needsReview: return Palette.pending
+        case .needsReview, .reReview: return Palette.pending
         case .needsAction: return Palette.danger
         case .readyToMerge: return Palette.open
         case .teamReview, .drafts, .waiting, .contributing, .merged: return nil
@@ -139,6 +139,7 @@ struct PullRow: View {
     @State private var hovering = false
 
     var body: some View {
+        let active = hovering || store.selection == pr.id || store.timelineRequest?.pr.id == pr.id
         HStack(alignment: .top, spacing: 10) {
             OcticonView(icon, size: 14)
                 .foregroundStyle(iconColor)
@@ -168,11 +169,12 @@ struct PullRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-                PullStatusLine(pr: pr, origin: .pulls)
+                PullStatusLine(pr: pr, origin: .pulls, lifecycle: true)
                 ReviewersLine(pr: pr)
+                if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
             }
-
-            Spacer(minLength: 4)
+            // Takes the row's width, so a short title never wraps to share it with a spacer.
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             TimelineView(.everyMinute) { context in
                 Text(RelativeTime.short(pr.updatedAt, now: context.date))
@@ -180,7 +182,18 @@ struct PullRow: View {
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
             }
+            .opacity(active ? 0 : 1)
+            .overlay(alignment: .topTrailing) {
+                IconButton(symbol: "clock.arrow.circlepath", help: "Show timeline (T)", size: 24) {
+                    store.showTimeline(pr, from: .pulls)
+                }
+                .background(.regularMaterial, in: Circle())
+                .offset(x: 2, y: -4)
+                .opacity(active ? 1 : 0)
+                .allowsHitTesting(active)
+            }
             .approvalPopover(for: pr, from: .pulls)
+            .timelinePopover(for: pr, from: .pulls)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 9)
@@ -194,6 +207,7 @@ struct PullRow: View {
                 Button("Open Pull Request") { NSWorkspace.shared.open(pr.url) }
             }
             Button("Copy Link") { store.copyLink(pr) }
+            Button("Show Timeline") { store.showTimeline(pr, from: .pulls) }
             ForEach(pr.checks?.onHold ?? [], id: \.self) { check in
                 Button("Approve \(check.jobName)…") { store.requestApproval(check, on: pr, from: .pulls) }
                     .disabled(store.isApproving(check, on: pr))

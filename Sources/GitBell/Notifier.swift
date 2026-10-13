@@ -54,6 +54,23 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(id: "ready:\(pr.id)", title: "Ready to merge", subtitle: "\(pr.repository)#\(pr.number)", body: pr.title, url: pr.url)
     }
 
+    func changesRequested(_ pr: PullRequest) {
+        let who = pr.reviewers?.filter { $0.state == .changesRequested }.map(\.name).formatted(.list(type: .and))
+        post(id: "changes:\(pr.id)", title: "Changes requested", subtitle: "\(pr.repository)#\(pr.number)",
+             body: [pr.title, who.flatMap { $0.isEmpty ? nil : "By \($0)" }].compactMap { $0 }.joined(separator: "\n"), url: pr.url)
+    }
+
+    func deployed(_ pr: PullRequest) {
+        post(id: "live:\(pr.id)", title: "Deployed", subtitle: "\(pr.repository)#\(pr.number)", body: pr.title, url: pr.link)
+    }
+
+    func failedAfterMerge(_ pr: PullRequest) {
+        let names = pr.checks?.failing.filter { !$0.cancelled }.prefix(3).map(\.name).joined(separator: ", ")
+        post(id: "broke:\(pr.id)", title: "Checks failed after merging", subtitle: "\(pr.repository)#\(pr.number)",
+             body: [pr.title, names.map { "Failing: \($0)" }].compactMap { $0 }.joined(separator: "\n"),
+             url: pr.checks?.failing.first?.url ?? pr.link)
+    }
+
     private func post(id: String, title: String, subtitle: String, body: String, url: URL) {
         let content = UNMutableNotificationContent()
         content.title = title
