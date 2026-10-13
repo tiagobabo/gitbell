@@ -260,6 +260,7 @@ struct TodoRow: View {
 
                 if let pr = item.pr {
                     PullStatusLine(pr: pr)
+                    ReviewersLine(pr: pr)
                 } else if let n = item.notification {
                     HStack(spacing: 6) {
                         ReasonTag(reason: n.reason)
@@ -396,6 +397,86 @@ struct PullStatusLine: View {
                     }
                 }
             }
+        }
+    }
+}
+
+// Who's been asked to review one of your pull requests and where each of them is: "✓ alice  ◷ banjo".
+// Says so when nobody has been asked yet, unless it's a draft.
+struct ReviewersLine: View {
+    let pr: PullRequest
+
+    var body: some View {
+        if let reviewers = pr.reviewers, pr.mergedAt == nil {
+            if reviewers.isEmpty {
+                if !pr.isDraft {
+                    Label("No reviewers requested", systemImage: "person.crop.circle.badge.questionmark")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.pending)
+                }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    line(reviewers, max: 5)
+                    line(reviewers, max: 2)
+                    line(reviewers, max: 1)
+                }
+            }
+        }
+    }
+
+    private func line(_ reviewers: [PullRequest.Reviewer], max: Int) -> some View {
+        HStack(spacing: 4) {
+            ForEach(reviewers.prefix(max), id: \.self) { ReviewerChip(reviewer: $0) }
+            if reviewers.count > max {
+                Text("+\(reviewers.count - max)")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize()
+            }
+        }
+    }
+}
+
+private struct ReviewerChip: View {
+    let reviewer: PullRequest.Reviewer
+
+    var body: some View {
+        HStack(spacing: 4) {
+            stateIcon
+            if reviewer.isTeam {
+                Image(systemName: "person.2.fill").font(.system(size: 8.5)).foregroundStyle(.secondary)
+            } else {
+                Avatar(url: reviewer.avatar, size: 12)
+            }
+            Text(reviewer.name).lineLimit(1).fixedSize()
+        }
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundStyle(.secondary)
+        .padding(.leading, 5)
+        .padding(.trailing, 7)
+        .padding(.vertical, 1.5)
+        .background(Color.primary.opacity(0.05), in: Capsule())
+        .help(help)
+    }
+
+    @ViewBuilder private var stateIcon: some View {
+        switch reviewer.state {
+        case .approved: OcticonView(.check, size: 10).foregroundStyle(Palette.open)
+        case .changesRequested: OcticonView(.fileDiff, size: 10).foregroundStyle(Palette.danger)
+        case .commented: OcticonView(.comment, size: 10).foregroundStyle(Palette.accent)
+        case .dismissed: OcticonView(.skip, size: 10).foregroundStyle(Palette.neutral)
+        case .requested: OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
+        }
+    }
+
+    private var help: String {
+        let who = reviewer.isTeam ? "The \(reviewer.name) team" : reviewer.name
+        switch reviewer.state {
+        case .approved: return "\(who) approved"
+        case .changesRequested: return "\(who) requested changes"
+        case .commented: return "\(who) left comments"
+        case .dismissed: return "\(who)'s review was dismissed"
+        case .requested: return "Waiting on \(who) to review"
         }
     }
 }

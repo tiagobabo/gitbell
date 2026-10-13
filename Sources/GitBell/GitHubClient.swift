@@ -417,7 +417,16 @@ actor GitHubClient {
     """ + pullFragment
 
     private static let mineQuery = """
-    query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr } } }
+    query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } } }
+    fragment reviewers on PullRequest {
+      reviewRequests(first: 10) { nodes { requestedReviewer {
+        __typename
+        ... on User { login avatarUrl }
+        ... on Team { slug organization { avatarUrl } }
+        ... on Mannequin { login avatarUrl }
+      } } }
+      latestReviews(first: 10) { nodes { state author { login avatarUrl } } }
+    }
     """ + pullFragment
 
     private static let mergedPullsQuery = """
@@ -475,6 +484,20 @@ actor GitHubClient {
             let mergedAt: Date?
             let baseRefName: String?
             let mergeCommit: Commit?
+            let reviewRequests: Requests?
+            let latestReviews: Reviews?
+
+            struct Requests: Decodable { let nodes: [Request?] }
+            struct Request: Decodable { let requestedReviewer: Requested? }
+            struct Requested: Decodable {
+                struct Org: Decodable { let avatarUrl: URL? }
+                let login: String?
+                let slug: String?
+                let avatarUrl: URL?
+                let organization: Org?
+            }
+            struct Reviews: Decodable { let nodes: [Review?] }
+            struct Review: Decodable { let state: String; let author: Author? }
 
             struct Author: Decodable { let login: String; let avatarUrl: URL? }
             struct Repository: Decodable { let nameWithOwner: String }
@@ -531,7 +554,32 @@ actor GitHubClient {
                 pr.mergedAt = mergedAt
                 pr.baseRef = baseRefName
                 pr.mergeCommitURL = mergedAt == nil ? nil : mergeCommit?.url
+                pr.reviewers = reviewers(author: author?.login)
                 return pr
+            }
+
+            // Reviews first, then the requests still waiting. A re-requested reviewer counts as waiting again.
+            private func reviewers(author: String?) -> [PullRequest.Reviewer]? {
+                guard reviewRequests != nil || latestReviews != nil else { return nil }
+                let requested: [PullRequest.Reviewer] = (reviewRequests?.nodes ?? []).compactMap { node in
+                    guard let who = node?.requestedReviewer else { return nil }
+                    if let slug = who.slug {
+                        return .init(name: slug, avatar: who.organization?.avatarUrl, isTeam: true, state: .requested)
+                    }
+                    return who.login.map { .init(name: $0, avatar: who.avatarUrl, isTeam: false, state: .requested) }
+                }
+                let waiting = Set(requested.map(\.name))
+                let reviewed: [PullRequest.Reviewer] = (latestReviews?.nodes ?? []).compactMap { node in
+                    guard let node, let login = node.author?.login, login != author, !waiting.contains(login) else { return nil }
+                    let state: PullRequest.Reviewer.State = switch node.state {
+                    case "APPROVED": .approved
+                    case "CHANGES_REQUESTED": .changesRequested
+                    case "DISMISSED": .dismissed
+                    default: .commented
+                    }
+                    return .init(name: login, avatar: node.author?.avatarUrl, isTeam: false, state: state)
+                }
+                return reviewed + requested
             }
 
             private static func checks(_ rollup: Rollup) -> PullRequest.Checks {

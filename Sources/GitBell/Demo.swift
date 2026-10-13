@@ -17,7 +17,7 @@ enum Demo {
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
                    checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = [],
-                   optionalRunning: [String] = [], held: [String] = []) -> PullRequest {
+                   optionalRunning: [String] = [], held: [String] = [], reviewers: [String] = []) -> PullRequest {
         let failing = failing.map {
             PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"))
         }
@@ -29,13 +29,28 @@ enum Demo {
             check.workflowID = "demo-workflow"
             return check
         }
-        return PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
+        var pr = PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
                     url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
                     isDraft: draft, updatedAt: minutesAgo(minutes), repository: "acme/\(repo)",
                     author: author, authorAvatar: avatar(author), reviewDecision: review,
                     mergeable: "MERGEABLE", mergeStateStatus: mergeState, isInMergeQueue: false,
                     checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3,
                                                failing: failing, running: running))
+        // Your own pull requests know their reviewers: "approved:carol", "changes:bob", "team:web", or a login still to review.
+        if author == viewer {
+            pr.reviewers = reviewers.map { entry in
+                let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+                let (kind, name) = parts.count == 2 ? (parts[0], parts[1]) : ("requested", parts[0])
+                let state: PullRequest.Reviewer.State = switch kind {
+                case "approved": .approved
+                case "changes": .changesRequested
+                case "commented": .commented
+                default: .requested
+                }
+                return .init(name: name, avatar: kind == "team" ? avatar("acme") : avatar(name), isTeam: kind == "team", state: state)
+            }
+        }
+        return pr
     }
 
     // A pull request of yours merged `minutes` ago, with its merge commit's checks.
@@ -64,18 +79,20 @@ enum Demo {
             pr(91, "design-system", "Spacing tokens for compact layouts", by: "heidi", minutes: 190),
         ],
         .needsAction: [
-            pr(479, "web", "Cache search results for an hour", by: viewer, minutes: 12, review: "CHANGES_REQUESTED"),
+            pr(479, "web", "Cache search results for an hour", by: viewer, minutes: 12, review: "CHANGES_REQUESTED",
+               reviewers: ["changes:bob", "commented:carol"]),
             pr(484, "web", "Upgrade to Rails 8.1", by: viewer, minutes: 31, checks: ("FAILURE", 10, 2, 12),
                failing: ["rspec (3/8)", "rubocop"]),
         ],
         .readyToMerge: [
             pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
-               review: "APPROVED", mergeState: "CLEAN", checks: ("SUCCESS", 14, 0, 14)),
+               review: "APPROVED", mergeState: "CLEAN", checks: ("SUCCESS", 14, 0, 14), reviewers: ["approved:carol"]),
             pr(1206, "api", "Log slow queries to the warehouse", by: viewer, minutes: 70,
                review: "APPROVED", mergeState: "UNSTABLE", checks: ("PENDING", 7, 0, 8), optionalRunning: ["deploy/approve_staging"]),
         ],
         .waiting: [
-            pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9)),
+            pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9),
+               reviewers: ["approved:alice", "team:web-team"]),
             pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
             pr(1207, "api", "Move invoices to the new PDF service", by: viewer, minutes: 85, checks: ("PENDING", 11, 0, 12),
                held: ["build-and-deploy/approve_staging"]),

@@ -22,6 +22,16 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     var mergeCommitURL: URL?
     // A newer merge to the same branch deployed, and its commit carries this one's changes.
     var shippedLater = false
+    // Who was asked to review and what they've done, for your own pull requests. Nil when not fetched.
+    var reviewers: [Reviewer]?
+
+    struct Reviewer: Codable, Hashable, Sendable {
+        enum State: String, Codable, Sendable { case requested, approved, changesRequested, commented, dismissed }
+        let name: String
+        let avatar: URL?
+        let isTeam: Bool
+        let state: State
+    }
 
     // Where a row takes you: a merged pull request is about its merge commit.
     var link: URL { mergeCommitURL ?? url }

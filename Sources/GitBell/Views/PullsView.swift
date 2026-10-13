@@ -177,6 +177,7 @@ struct PullRow: View {
                 .lineLimit(1)
 
                 PullStatusLine(pr: pr)
+                ReviewersLine(pr: pr)
             }
 
             Spacer(minLength: 4)
