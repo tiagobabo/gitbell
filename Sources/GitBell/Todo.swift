@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, reReview, fix, afterMerge, onHold, reply, merge, mergeable, contributing, waiting
+        case review, reReview, fix, afterMerge, onHold, reply, merge, mergeable, waiting
 
         var id: String { rawValue }
     }
@@ -35,7 +35,6 @@ extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
     static let yours: [TodoItem.Kind] = [.review, .reReview, .fix, .afterMerge, .onHold, .reply, .merge, .mergeable]
 
-    // Shown in full but not counted: other people's pull requests you've pushed to.
     var counted: Bool { Self.yours.contains(self) }
 
     // Groups that are the exception rather than the rule only get a summary tile when they have something.
@@ -51,7 +50,6 @@ extension TodoItem.Kind {
         case .reply: "Reply"
         case .merge: "Merge"
         case .mergeable: "Mergeable"
-        case .contributing: "Contributing"
         case .waiting: "Waiting on others"
         }
     }
@@ -66,7 +64,6 @@ extension TodoItem.Kind {
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
         case .mergeable: "Approved, with optional checks still running or failing"
-        case .contributing: "Other people's pull requests you've pushed commits to"
         case .waiting: "Your pull requests waiting on reviewers or CI"
         }
     }
@@ -81,7 +78,6 @@ extension TodoItem.Kind {
         case .reply: "bubble.left.and.bubble.right"
         case .merge: "arrow.triangle.merge"
         case .mergeable: "clock.badge.checkmark"
-        case .contributing: "arrow.triangle.pull"
         case .waiting: "hourglass"
         }
     }
@@ -96,7 +92,6 @@ extension TodoItem.Kind {
         case .reply: Palette.accent
         case .merge: Palette.open
         case .mergeable: Palette.teal
-        case .contributing: Palette.accent
         case .waiting: Palette.neutral
         }
     }
@@ -126,7 +121,7 @@ extension InboxStore {
     func isReady(_ kind: TodoItem.Kind) -> Bool {
         switch kind {
         case .review: loadedPulls.contains(.reviews)
-        case .contributing, .reReview: loadedPulls.contains(.contributing)
+        case .reReview: loadedPulls.contains(.contributing)
         case .afterMerge: loadedPulls.contains(.merged)
         case .reply: todoLoaded
         case .fix, .onHold, .merge, .mergeable, .waiting: loadedPulls.contains(.yours)
@@ -137,7 +132,7 @@ extension InboxStore {
     func loadError(for kind: TodoItem.Kind) -> String? {
         switch kind {
         case .review: pullErrors[.reviews]
-        case .contributing, .reReview: pullErrors[.contributing]
+        case .reReview: pullErrors[.contributing]
         case .afterMerge: pullErrors[.merged]
         case .reply: pullErrors[.reviews] ?? pullErrors[.yours] ?? pullErrors[.contributing] ?? (notificationsLoaded ? nil : statusError)
         case .fix, .onHold, .merge, .mergeable, .waiting: pullErrors[.yours]
@@ -170,12 +165,20 @@ extension InboxStore {
         for pr in pulls[.reReview] ?? [] where !asked.contains("pr:\(pr.id)") {
             items.append(item(pr, .reReview, threads: byURL[pr.url] ?? []))
         }
-        // Someone else's pull request you've pushed to, unless it's already here as a review request.
-        // A comment on it that wants an answer makes it yours to reply to.
+        // Someone else's pull request you've pushed to makes you a co-owner, so it joins your own groups when it
+        // needs you: a comment on it that wants an answer, failing checks, or ready to merge. Its row says whose it
+        // is. Unless it's already here as a review request; the rest stay on the Contributing page.
         let listed = Set(items.map(\.id))
         for pr in pulls[.contributing] ?? [] where !listed.contains("pr:\(pr.id)") {
             let unread = byURL[pr.url] ?? []
-            items.append(item(pr, unread.contains(where: asksForReply) ? .reply : .contributing, threads: unread))
+            let kind: TodoItem.Kind? = switch pr.status {
+            case _ where unread.contains(where: asksForReply): .reply
+            case .checksFailing: .fix
+            case .readyToMerge: .merge
+            case .mergeable: .mergeable
+            default: nil
+            }
+            if let kind { items.append(item(pr, kind, threads: unread)) }
         }
         for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
         // Merged, then its checks or deploys failed, and no later merge has shipped it since.

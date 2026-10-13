@@ -9,7 +9,6 @@ struct TodoView: View {
         let items = store.todo
         let yours = items.filter(\.kind.counted)
         let pending = yours.filter { !$0.hidden }
-        let contributing = items.filter { $0.kind == .contributing }
         let waiting = items.filter { $0.kind == .waiting }
 
         // Groups fill in as their searches answer; only a first load that got nowhere takes the whole page.
@@ -44,15 +43,6 @@ struct TodoView: View {
                             } else if !store.isReady(kind), !kind.tileOnlyWhenUsed, kind != .merge {
                                 placeholder(kind)
                             }
-                        }
-                        if !contributing.isEmpty {
-                            Section {
-                                TodoCard(items: contributing)
-                            } header: {
-                                TodoGroupHeader(kind: .contributing, count: contributing.count, compact: compact)
-                            }
-                        } else if !store.isReady(.contributing) {
-                            placeholder(.contributing)
                         }
                         if !waiting.isEmpty {
                             WaitingHeader(count: waiting.count, compact: compact)
@@ -289,10 +279,7 @@ struct TodoRow: View {
                         Text("·").foregroundStyle(.tertiary)
                         Avatar(url: pr.authorAvatar, size: 12)
                         Text(pr.author)
-                        if pr.yourCommits > 0 {
-                            Text("·").foregroundStyle(.tertiary)
-                            Text(pr.yourCommits == 1 ? "1 commit by you" : "\(pr.yourCommits)\(pr.yourCommits >= 50 ? "+" : "") commits by you")
-                        }
+                        if pr.yourCommits > 0 { ContributingTag(pr: pr) }
                     }
                 }
                 .font(.system(size: 11))
@@ -300,7 +287,7 @@ struct TodoRow: View {
                 .lineLimit(1)
 
                 if let pr = item.pr {
-                    PullStatusLine(pr: pr, lifecycle: item.kind == .waiting || item.kind == .contributing)
+                    PullStatusLine(pr: pr, lifecycle: item.kind == .waiting)
                     ReviewersLine(pr: pr)
                     if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
                     if pr.laterDeploying {
@@ -805,5 +792,25 @@ private struct SkeletonRow: View {
 
     private func bar(_ width: CGFloat, height: CGFloat) -> some View {
         Capsule().frame(width: width, height: height)
+    }
+}
+
+// Marks someone else's pull request you've pushed to, among your own: you're a co-owner of it now.
+struct ContributingTag: View {
+    let pr: PullRequest
+
+    var body: some View {
+        let commits = pr.yourCommits == 1 ? "1 commit" : "\(pr.yourCommits)\(pr.yourCommits >= 50 ? "+" : "") commits"
+        HStack(spacing: 3) {
+            Image(systemName: "arrow.triangle.pull").font(.system(size: 8.5, weight: .semibold))
+            Text("Contributing · \(commits)")
+        }
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundStyle(Palette.accent)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 1)
+        .background(Palette.accent.opacity(0.1), in: Capsule())
+        .fixedSize()
+        .tooltip("\(pr.author)'s pull request, with \(commits) by you, so it's partly yours")
     }
 }
