@@ -31,6 +31,11 @@ struct TodoView: View {
                             if !group.isEmpty {
                                 TodoGroupHeader(kind: kind, count: group.count, compact: compact)
                                     .id(kind)
+                                if kind == .onHold, store.circleCISource == nil, !store.circleCIHintDismissed {
+                                    CircleCIHint()
+                                        .padding(.bottom, 6)
+                                        .transition(.opacity)
+                                }
                                 TodoCard(items: group)
                             }
                         }
@@ -471,6 +476,41 @@ private struct TodoRowActions: View {
     private var doneHelp: String {
         if item.hidden { return "Unhide (E)" }
         return item.pr == nil ? "Mark as done (E)" : "Hide until it changes (E)"
+    }
+}
+
+// Without a CircleCI token, Approve can only open the job in CircleCI. Says so once, until dismissed.
+private struct CircleCIHint: View {
+    @Environment(InboxStore.self) private var store
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "key.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(Palette.indigo)
+            Text("Add a CircleCI token to approve held jobs from here.")
+                .font(.system(size: 11.5))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            Button("Add Token…") { AppController.shared?.settingsItem() }
+                .controlSize(.small)
+            Button {
+                withAnimation(.snappy) { store.circleCIHintDismissed = true }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Don't show this again")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Palette.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Palette.indigo.opacity(0.2)))
     }
 }
 

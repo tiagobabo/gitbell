@@ -81,6 +81,19 @@ enum TokenStore {
 
     enum CircleCISource { case keychain, cli }
 
+    // Where the CircleCI token would come from, without reading it: asking only for the item's attributes
+    // never needs the Keychain to decrypt anything, so it can't prompt.
+    static func circleCISource() -> CircleCISource? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: circleCIAccount,
+            kSecReturnAttributes as String: true,
+        ]
+        if SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess { return .keychain }
+        return circleCICLIToken() == nil ? nil : .cli
+    }
+
     // A personal API token for approving held jobs: the one pasted into Settings, else the CircleCI CLI's.
     static func circleCIToken() -> (token: String, source: CircleCISource)? {
         if let token = keychainToken(account: circleCIAccount), !token.isEmpty { return (token, .keychain) }

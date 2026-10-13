@@ -57,6 +57,11 @@ final class InboxStore {
     private var popoverOpen = false
 
     var hiddenTodos = HiddenTodos()
+    // Whether held CircleCI jobs can be approved from here. Settings updates it when you add or remove a token.
+    var circleCISource = TokenStore.circleCISource()
+    var circleCIHintDismissed = UserDefaults.standard.bool(forKey: "circleCIHintDismissed") {
+        didSet { UserDefaults.standard.set(circleCIHintDismissed, forKey: "circleCIHintDismissed") }
+    }
     var showHiddenTodos = false
     var waitingExpanded = false
 

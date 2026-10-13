@@ -7,7 +7,6 @@ struct SettingsView: View {
     @AppStorage(Appearance.key) private var appearance = Appearance.system
     @State private var showMenuBarIcon = MenuBarIcon.isShown
     @State private var badgesAllowed = true
-    @State private var circleCI = TokenStore.circleCIToken()?.source
     @State private var circleCIToken = ""
     @State private var circleCIStatus: String?
 
@@ -76,7 +75,7 @@ struct SettingsView: View {
             }
 
             Section {
-                switch circleCI {
+                switch store.circleCISource {
                 case .cli:
                     LabeledContent("Token", value: "From the CircleCI CLI")
                 case .keychain:
@@ -85,7 +84,7 @@ struct SettingsView: View {
                             Text("Saved in your Keychain").foregroundStyle(.secondary)
                             Button("Remove") {
                                 TokenStore.deleteToken(account: TokenStore.circleCIAccount)
-                                circleCI = TokenStore.circleCIToken()?.source
+                                store.circleCISource = TokenStore.circleCISource()
                                 circleCIStatus = nil
                             }
                         }
@@ -150,7 +149,7 @@ struct SettingsView: View {
                 let login = try await CircleCIClient(token: token).me()
                 TokenStore.saveToken(token, account: TokenStore.circleCIAccount)
                 circleCIToken = ""
-                circleCI = .keychain
+                store.circleCISource = .keychain
                 circleCIStatus = "Signed in to CircleCI as \(login)"
             } catch {
                 circleCIStatus = error.localizedDescription
