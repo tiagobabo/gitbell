@@ -7,8 +7,7 @@ struct InboxView: View {
         VStack(spacing: 0) {
             switch store.phase {
             case .launching:
-                ProgressView().controlSize(.small)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LoadingView(lines: LoadingLines.launch)
             case .signedOut:
                 SignInView()
             case .ready:
@@ -67,55 +66,24 @@ struct HeaderView: View {
     }
 }
 
+// A native segmented control; counts ride in the labels.
 struct TabSwitcher: View {
     @Environment(InboxStore.self) private var store
-    @Namespace private var namespace
 
     var body: some View {
-        HStack(spacing: 2) {
-            tab(.todo, title: TodoItem.title, count: store.todoCount)
-            tab(.notifications, title: "Inbox", count: store.unreadCount)
-            tab(.pulls, title: "PRs", count: store.actionablePulls)
+        @Bindable var store = store
+        Picker("View", selection: $store.tab) {
+            Text(label(TodoItem.title, store.todoCount)).tag(InboxStore.Tab.todo)
+            Text(label("Inbox", store.unreadCount)).tag(InboxStore.Tab.notifications)
+            Text(label("PRs", store.actionablePulls)).tag(InboxStore.Tab.pulls)
         }
-        .padding(2)
-        .background(Color.primary.opacity(0.06), in: Capsule())
-        // Only the pill slides; the content underneath swaps instantly.
-        .animation(.snappy(duration: 0.25), value: store.tab)
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
     }
 
-    private func tab(_ tab: InboxStore.Tab, title: String, count: Int) -> some View {
-        let selected = store.tab == tab
-        return Button {
-            store.tab = tab
-        } label: {
-            HStack(spacing: 5) {
-                Text(title)
-                if count > 0 {
-                    Text(count > 999 ? "999+" : "\(count)")
-                        .font(.system(size: 10, weight: .semibold))
-                        .monospacedDigit()
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(selected ? Palette.accent : Color.primary.opacity(0.08), in: Capsule())
-                        .foregroundStyle(selected ? Color.white : Color.secondary)
-                        .contentTransition(.numericText())
-                }
-            }
-            .font(.system(size: 12, weight: selected ? .semibold : .medium))
-            .foregroundStyle(selected ? Color.primary : Color.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background {
-                if selected {
-                    Capsule()
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-                        .matchedGeometryEffect(id: "tab", in: namespace)
-                }
-            }
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
+    private func label(_ title: String, _ count: Int) -> String {
+        count > 0 ? "\(title) \(count > 999 ? "999+" : "\(count)")" : title
     }
 }
 
@@ -230,7 +198,7 @@ struct FooterView: View {
                 Circle().fill(Palette.open).frame(width: 6, height: 6)
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     Text(context.date.timeIntervalSince(updated) < 60
-                         ? "Updated just now"
+                         ? "Updated now"
                          : "Updated \(RelativeTime.short(updated, now: context.date)) ago")
                 }
             }

@@ -26,11 +26,13 @@ GitBell isn't notarised yet, so macOS blocks it the first time. Open System Sett
 xattr -dr com.apple.quarantine /Applications/GitBell.app
 ```
 
-GitBell asks to send notifications on first launch. Allow it, with badges on, so the Dock icon can show how many things are waiting on you; you can change this later in System Settings → Notifications → GitBell.
+GitBell asks to send notifications during setup. Allow it, with badges on, so the Dock icon can show how many things are waiting on you; you can change this later in System Settings → Notifications → GitBell.
 
 GitBell updates itself with [Sparkle](https://sparkle-project.org): it checks for a new release once a day and asks before installing. If you're on 0.3.0, install the latest release by hand once.
 
 ## Sign in
+
+The first launch walks you through setup: GitHub, an optional CircleCI token, notifications, and appearance. You can change all of it later in Settings.
 
 GitBell uses your [GitHub CLI](https://cli.github.com) login if you have one. Otherwise paste a [classic personal access token](https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&description=GitBell) with the `notifications` and `repo` scopes (plus `read:org` to filter by team). It's stored in your Keychain. After an update macOS may ask once whether GitBell can read it; click "Always Allow".
 

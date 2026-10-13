@@ -25,8 +25,7 @@ struct RepoPage: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 40)
                 } else {
-                    ProgressView().controlSize(.small)
-                        .frame(maxWidth: .infinity)
+                    LoadingView(lines: LoadingLines.repo)
                         .padding(.top, 40)
                 }
             }
@@ -155,13 +154,12 @@ private struct StatTiles: View {
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
             StatTile(value: "\(detail.openPullCount)", title: "Open pull requests",
-                     note: detail.awaitingReview > 0 ? "\(detail.awaitingReview) awaiting review" : nil, tint: Palette.open)
+                     note: detail.awaitingReview > 0 ? "\(detail.awaitingReview) awaiting review" : nil)
             StatTile(value: "\(detail.mergedCount)", title: "Merged in 30 days",
-                     note: detail.mergedCount > 0 ? String(format: "%.1f a day", Double(detail.mergedCount) / 30) : nil,
-                     tint: Palette.merged)
+                     note: detail.mergedCount > 0 ? String(format: "%.1f a day", Double(detail.mergedCount) / 30) : nil)
             StatTile(value: detail.medianTimeToMerge?.shortDuration ?? "–", title: "Time to merge",
-                     note: detail.merged.isEmpty ? nil : "median, last 30 days", tint: Palette.teal)
-            StatTile(value: "\(detail.openIssueCount)", title: "Open issues", note: nil, tint: Palette.pending)
+                     note: detail.merged.isEmpty ? nil : "median, last 30 days")
+            StatTile(value: "\(detail.openIssueCount)", title: "Open issues", note: nil)
         }
     }
 }
@@ -170,14 +168,12 @@ struct StatTile: View {
     let value: String
     let title: String
     let note: String?
-    let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
                 .font(.system(size: 26, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(tint)
                 .contentTransition(.numericText())
             Text(title)
                 .font(.system(size: 12, weight: .medium))
@@ -500,8 +496,10 @@ struct RepoMenu: View {
 }
 
 extension View {
+    // The one card: a system fill and a hairline, the same in every list and page.
     func card() -> some View {
-        background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
+        background(.fill.quinary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor)))
     }
 }

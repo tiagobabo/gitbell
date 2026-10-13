@@ -106,7 +106,7 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     @objc private func statusItemClicked() {
         if NSApp.currentEvent?.type == .rightMouseUp {
             showMenu()
-        } else if Presentation.current == .window {
+        } else if Presentation.current == .window || store.onboarding {
             showWindow()
         } else {
             togglePopover()
@@ -119,6 +119,9 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
             popover.performClose(nil)
         } else {
             store.enterPopover()
+            // The popover's window doesn't follow NSApp.appearance on its own, so a Light or Dark choice
+            // wouldn't reach it while macOS is in the other mode.
+            popover.appearance = NSApp.appearance
             NSApp.activate()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
@@ -160,11 +163,12 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         window.isRestorable = false
         window.delegate = self
         // Where and how big you left it; the first time, most of the screen up to a comfortable size.
-        // Earlier names saved the shrunken frame, so this one starts afresh.
+        // Until 0.7.5 the loading spinner squeezed the window to its minimum and that got saved, so a frame
+        // that small counts as never saved.
         let name = "GitBellMainWindow"
-        if !window.setFrameUsingName(name) {
+        if !window.setFrameUsingName(name) || (window.frame.width <= 780 && window.frame.height <= 560) {
             let screen = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
-            window.setContentSize(NSSize(width: min(1320, screen.width * 0.85), height: min(900, screen.height * 0.85)))
+            window.setContentSize(NSSize(width: min(1440, screen.width * 0.9), height: min(960, screen.height * 0.9)))
             window.center()
         }
         window.setFrameAutosaveName(name)
@@ -204,9 +208,12 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
     @objc private func openPopoverItem() { togglePopover() }
     @objc private func refreshItem() { Task { await store.refreshAll() } }
 
-    // Settings is a page in the main window rather than a window of its own.
+    // Opens the Settings window through the app menu's own Settings… item, which SwiftUI's Settings scene owns.
     @objc func settingsItem() {
-        store.windowRequest = .settings
-        showWindow()
+        popover.performClose(nil)
+        NSApp.activate()
+        guard let menu = NSApp.mainMenu?.items.first?.submenu,
+              let index = menu.items.firstIndex(where: { $0.keyEquivalent == "," }) else { return }
+        menu.performActionForItem(at: index)
     }
 }

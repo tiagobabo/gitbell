@@ -65,6 +65,8 @@ final class InboxStore {
         didSet { UserDefaults.standard.set(circleCIHintDismissed, forKey: "circleCIHintDismissed") }
     }
     var showHiddenTodos = false
+    // First launch walks through setup in the window. Anyone who had signed in before it existed skips it.
+    var onboarding = false
     var waitingExpanded = false
 
     var pulls: [PullSection: [PullRequest]] = [:]
@@ -119,11 +121,19 @@ final class InboxStore {
             UserDefaults.standard.set(Tab.todo.rawValue, forKey: "tab")
             tab = .todo
         }
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "onboarded") == nil { defaults.set(TokenStore.mode != nil, forKey: "onboarded") }
+        onboarding = !defaults.bool(forKey: "onboarded") && !Demo.isOn
         Notifier.shared.setUp()
+        // Onboarding asks on its Notifications step, where the prompt makes sense.
+        if !onboarding { Task { await Notifier.shared.requestPermission() } }
         Task { await bootstrap() }
     }
 
     var unreadCount: Int { shownNotifications.count }
+
+    // Why nothing has loaded yet, once a first attempt has failed.
+    var firstLoadError: String? { lastUpdated == nil || !pullsLoaded ? statusError : nil }
 
     // Notifications after the people filter. A thread counts if its author or latest actor is one of them;
     // threads with neither known (CI runs, releases) are left out while the filter is on.
@@ -211,6 +221,19 @@ final class InboxStore {
         TokenStore.deleteToken()
         TokenStore.mode = .signedOut
         phase = .signedOut
+    }
+
+    func finishOnboarding() {
+        UserDefaults.standard.set(true, forKey: "onboarded")
+        onboarding = false
+    }
+
+    // Checks a pasted CircleCI token and keeps it in the Keychain. Returns the CircleCI login it belongs to.
+    func saveCircleCIToken(_ token: String) async throws -> String {
+        let login = try await CircleCIClient(token: token).me()
+        TokenStore.saveToken(token, account: TokenStore.circleCIAccount)
+        circleCISource = .keychain
+        return login
     }
 
     private func bootstrap() async {

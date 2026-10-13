@@ -29,7 +29,7 @@ struct NotificationList: View {
             }
             .onChange(of: store.selection) { _, id in
                 guard let id else { return }
-                withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                proxy.scrollTo(id)
             }
             }
         }
@@ -141,14 +141,13 @@ struct NotificationRow: View {
                 .padding(.top, 6)
                 .padding(.trailing, 6)
                 .opacity(active ? 1 : 0)
-                .scaleEffect(active ? 1 : 0.92, anchor: .trailing)
                 .allowsHitTesting(active)
         }
         .contentShape(Rectangle())
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
         .onTapGesture { store.open(n) }
         .contextMenu {
-            Button("Open in Browser") { store.open(n) }
+            Button("Open on GitHub") { store.open(n) }
             Button("Copy Link") { store.copyLink(n) }
             Button("Open Repository") { NSWorkspace.shared.open(n.repository.htmlUrl) }
             Divider()
@@ -178,7 +177,6 @@ struct RowActions: View {
         .padding(2)
         .background(.regularMaterial, in: Capsule())
         .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
-        .shadow(color: .black.opacity(0.12), radius: 5, y: 1)
     }
 }
 
@@ -207,7 +205,7 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 10) {
             if loading {
-                ProgressView().controlSize(.small)
+                LoadingView(lines: LoadingLines.inbox)
             } else if !search.isEmpty {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 40))
@@ -219,8 +217,7 @@ struct EmptyStateView: View {
             } else {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 44))
-                    .foregroundStyle(LinearGradient(colors: [Palette.open, Palette.teal], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .symbolEffect(.bounce, value: filter)
+                    .foregroundStyle(Palette.open)
                 VStack(spacing: 3) {
                     Text(title).font(.system(size: 14, weight: .semibold))
                     Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -245,10 +242,12 @@ struct EmptyStateView: View {
 }
 
 extension View {
+    // The system's selection and hover fills, shared by every list so they all select alike.
     func rowHighlight(hovering: Bool, selected: Bool) -> some View {
         background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(selected ? Palette.accent.opacity(0.16) : Color.primary.opacity(hovering ? 0.06 : 0))
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
+                .fill(selected ? AnyShapeStyle(Color(nsColor: .unemphasizedSelectedContentBackgroundColor))
+                               : hovering ? AnyShapeStyle(.fill.quaternary) : AnyShapeStyle(Color.clear))
         )
     }
 }

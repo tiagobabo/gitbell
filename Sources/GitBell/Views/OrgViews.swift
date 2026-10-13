@@ -148,13 +148,13 @@ private struct OrgStats: View {
         let pulls = pulses.reduce(0) { $0 + $1.openPulls }
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
             StatTile(value: "\(repos.count)", title: "Repositories",
-                     note: "\(repos.filter { ($0.pushedAt ?? .distantPast) > weekAgo }.count) pushed this week", tint: Palette.accent)
+                     note: "\(repos.filter { ($0.pushedAt ?? .distantPast) > weekAgo }.count) pushed this week")
             StatTile(value: "\(repos.filter { ($0.pushedAt ?? .distantPast) > monthAgo }.count)", title: "Active this month",
-                     note: "pushed in 30 days", tint: Palette.teal)
+                     note: "pushed in 30 days")
             StatTile(value: pulses.isEmpty ? "–" : "\(commits)", title: "Commits in 30 days",
-                     note: pulses.isEmpty ? nil : String(format: "%.0f a day", Double(commits) / 30), tint: Palette.merged)
+                     note: pulses.isEmpty ? nil : String(format: "%.0f a day", Double(commits) / 30))
             StatTile(value: pulses.isEmpty ? "–" : "\(pulls)", title: "Open pull requests",
-                     note: "in active repositories", tint: Palette.open)
+                     note: "in active repositories")
         }
     }
 }
@@ -186,7 +186,7 @@ private struct Treemap: View {
                         .contextMenu { if let repo = entry.repo { RepoMenu(repo: repo) } }
                 }
             }
-            .animation(.snappy(duration: 0.35), value: metric)
+            .animation(.snappy(duration: 0.25), value: metric)
         }
     }
 }
@@ -346,7 +346,7 @@ private struct LanguageBreakdown: View {
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(selection == share.name ? Color.primary.opacity(0.07) : .clear))
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selection == share.name ? Color.primary.opacity(0.07) : .clear))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

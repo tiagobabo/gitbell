@@ -12,8 +12,7 @@ struct TodoView: View {
         let waiting = items.filter { $0.kind == .waiting }
 
         if !store.pullsLoaded || store.lastUpdated == nil {
-            ProgressView().controlSize(.small)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LoadingView(lines: LoadingLines.todo)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -55,7 +54,7 @@ struct TodoView: View {
                 }
                 .onChange(of: store.selection) { _, id in
                     guard let id else { return }
-                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                    proxy.scrollTo(id)
                 }
             }
         }
@@ -119,14 +118,10 @@ private struct SummaryTile: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, compact ? 9 : 12)
             .padding(.vertical, compact ? 7 : 10)
-            .background(
-                RoundedRectangle(cornerRadius: compact ? 9 : 11, style: .continuous)
-                    .fill(count > 0 ? kind.tint.opacity(hovering ? 0.16 : 0.1) : Color.primary.opacity(0.035))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: compact ? 9 : 11, style: .continuous)
-                    .strokeBorder(count > 0 ? kind.tint.opacity(0.25) : Color.primary.opacity(0.06))
-            )
+            .background(hovering ? AnyShapeStyle(.fill.quaternary) : AnyShapeStyle(.fill.quinary),
+                        in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -218,8 +213,7 @@ private struct TodoCard: View {
             }
         }
         .padding(3)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.03)))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
+        .card()
     }
 }
 
@@ -299,14 +293,13 @@ struct TodoRow: View {
                 .padding(.top, 6)
                 .padding(.trailing, 6)
                 .opacity(active ? 1 : 0)
-                .scaleEffect(active ? 1 : 0.92, anchor: .trailing)
                 .allowsHitTesting(active)
         }
         .contentShape(Rectangle())
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
         .onTapGesture { store.open(item) }
         .contextMenu {
-            Button("Open in Browser") { store.open(item) }
+            Button("Open on GitHub") { store.open(item) }
             Button("Copy Link") { store.copyLink(item) }
             Button("Open Repository") { NSWorkspace.shared.open(URL(string: "https://github.com/\(item.repository)")!) }
             if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
@@ -461,11 +454,11 @@ private struct ReviewerChip: View {
 
     @ViewBuilder private var stateIcon: some View {
         switch reviewer.state {
-        case .approved: OcticonView(.check, size: 10).foregroundStyle(Palette.open)
-        case .changesRequested: OcticonView(.fileDiff, size: 10).foregroundStyle(Palette.danger)
-        case .commented: OcticonView(.comment, size: 10).foregroundStyle(Palette.accent)
-        case .dismissed: OcticonView(.skip, size: 10).foregroundStyle(Palette.neutral)
-        case .requested: OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
+        case .approved: StateSymbol("checkmark.circle.fill", Palette.open)
+        case .changesRequested: StateSymbol("exclamationmark.circle.fill", Palette.danger)
+        case .commented: StateSymbol("text.bubble.fill", Palette.accent)
+        case .dismissed: StateSymbol("minus.circle.fill", Palette.neutral)
+        case .requested: StateSymbol("clock.fill", Palette.pending)
         }
     }
 
@@ -497,11 +490,11 @@ struct CheckChip: View {
                 if approving {
                     ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10)
                 } else if check.onHold {
-                    Image(systemName: "pause.circle.fill").font(.system(size: 10)).foregroundStyle(tint)
+                    StateSymbol("pause.circle.fill", tint)
                 } else if running {
-                    OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
+                    StateSymbol("clock.fill", Palette.pending)
                 } else {
-                    OcticonView(check.cancelled ? .skip : .xCircleFill, size: 10).foregroundStyle(tint)
+                    StateSymbol(check.cancelled ? "minus.circle.fill" : "xmark.circle.fill", tint)
                 }
                 Text(approving ? "\(check.jobName) · approving" : check.onHold ? check.jobName : check.name)
                     .lineLimit(1)
@@ -560,7 +553,6 @@ private struct TodoRowActions: View {
         .padding(2)
         .background(.regularMaterial, in: Capsule())
         .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
-        .shadow(color: .black.opacity(0.12), radius: 5, y: 1)
     }
 
     private var doneHelp: String {
@@ -577,7 +569,7 @@ private struct CircleCIHint: View {
         HStack(spacing: 8) {
             Image(systemName: "key.fill")
                 .font(.system(size: 11))
-                .foregroundStyle(Palette.indigo)
+                .foregroundStyle(Palette.accent)
             Text("Add a CircleCI token to approve held jobs from here.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
@@ -588,19 +580,16 @@ private struct CircleCIHint: View {
             Button {
                 withAnimation(.snappy) { store.circleCIHintDismissed = true }
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+                Label("Don't Show Again", systemImage: "xmark")
             }
-            .buttonStyle(.plain)
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .controlSize(.small)
             .help("Don't show this again")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(Palette.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Palette.indigo.opacity(0.2)))
+        .card()
     }
 }
 
@@ -640,7 +629,7 @@ private struct CaughtUp: View {
             Image(systemName: search.isEmpty ? "checkmark.seal.fill" : "magnifyingglass")
                 .font(.system(size: 40))
                 .foregroundStyle(search.isEmpty
-                                 ? AnyShapeStyle(LinearGradient(colors: [Palette.open, Palette.teal], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                 ? AnyShapeStyle(Palette.open)
                                  : AnyShapeStyle(.tertiary))
             VStack(spacing: 3) {
                 Text(search.isEmpty ? "You're all caught up" : "No matches")

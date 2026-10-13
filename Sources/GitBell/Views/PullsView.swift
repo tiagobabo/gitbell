@@ -5,8 +5,7 @@ struct PullsView: View {
 
     var body: some View {
         if !store.pullsLoaded {
-            ProgressView().controlSize(.small)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LoadingView(lines: LoadingLines.pulls)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -28,7 +27,7 @@ struct PullsView: View {
                 }
                 .onChange(of: store.selection) { _, id in
                     guard let id else { return }
-                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                    proxy.scrollTo(id)
                 }
             }
         }
@@ -114,14 +113,7 @@ struct PullSectionView: View {
                     }
                 }
                 .padding(3)
-                .background(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(Color.primary.opacity(0.03))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08))
-                )
+                .card()
                 .padding(.bottom, 8)
                 .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
             }
@@ -196,7 +188,7 @@ struct PullRow: View {
         .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
         .onTapGesture { store.open(pr) }
         .contextMenu {
-            Button(pr.mergeCommitURL == nil ? "Open in Browser" : "Open Merge Commit") { store.open(pr) }
+            Button(pr.mergeCommitURL == nil ? "Open on GitHub" : "Open Merge Commit") { store.open(pr) }
             if pr.mergeCommitURL != nil {
                 Button("Open Pull Request") { NSWorkspace.shared.open(pr.url) }
             }
@@ -233,9 +225,9 @@ struct ChecksBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             if checks.failed > 0 {
-                OcticonView(.xCircleFill, size: 10).foregroundStyle(Palette.danger)
+                StateSymbol("xmark.circle.fill", Palette.danger)
             } else if checks.passed == checks.total {
-                OcticonView(.check, size: 11).foregroundStyle(Palette.open)
+                StateSymbol("checkmark.circle.fill", Palette.open)
             } else {
                 Circle().fill(Palette.pending).frame(width: 6, height: 6)
             }

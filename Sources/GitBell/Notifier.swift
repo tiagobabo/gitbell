@@ -11,8 +11,14 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func setUp() {
         center?.delegate = self
-        // Badge permission is what lets macOS show the count on the Dock icon.
-        center?.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
+
+    // Asks once; later calls return the answer you gave. Badge permission is what lets macOS show the count
+    // on the Dock icon.
+    @discardableResult
+    func requestPermission() async -> Bool {
+        guard let center else { return true }
+        return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
     func reviewRequested(_ pr: PullRequest, team: Bool) {

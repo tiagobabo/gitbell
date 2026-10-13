@@ -24,3 +24,10 @@ enum Palette {
         }
     }
 }
+
+// One corner scale: list rows, cards, floating panels. Chips and pills are capsules.
+enum Radius {
+    static let row: CGFloat = 8
+    static let card: CGFloat = 12
+    static let panel: CGFloat = 14
+}

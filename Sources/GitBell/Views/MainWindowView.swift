@@ -7,7 +7,6 @@ enum SidebarItem: Hashable {
     case repo(String)
     case repos
     case org(String)
-    case settings
 }
 
 // The full window: inbox filters and PR sections in a sidebar, the chosen list on the right.
@@ -20,8 +19,10 @@ struct MainWindowView: View {
         @Bindable var store = store
         Group {
             switch store.phase {
+            case _ where store.onboarding:
+                OnboardingView()
             case .launching:
-                ProgressView().controlSize(.small)
+                LoadingView(lines: LoadingLines.launch)
             case .signedOut:
                 SignInView().frame(maxWidth: 420)
             case .ready:
@@ -46,7 +47,9 @@ struct MainWindowView: View {
                 }
             }
         }
-        .frame(minWidth: 760, minHeight: 480)
+        // Every phase fills the window. A fixed-size one (a spinner, the sign-in column) would otherwise become
+        // the window's maximum size and squeeze it, and the shrunken frame would be saved.
+        .frame(minWidth: 760, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity)
         .onAppear {
             selection = store.windowRequest ?? Self.decode(savedSelection) ?? .todo
             store.windowRequest = nil
@@ -88,15 +91,12 @@ struct MainWindowView: View {
                 store.repos.visited(repo.fullName)
                 selection = .repo(repo.fullName)
             }
-        case .settings:
-            SettingsView()
         }
     }
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            if selection != .settings {
             if selection == .todo || selection == nil {
                 @Bindable var store = store
                 Toggle(isOn: $store.showHiddenTodos.animation(.snappy)) {
@@ -135,18 +135,18 @@ struct MainWindowView: View {
                 Label("Open on GitHub", systemImage: "arrow.up.right.square")
             }
             .help("Open on GitHub")
-            }
         }
     }
 
     private var title: String {
-        switch selection {
+        // Setup and sign-in aren't any page yet.
+        guard store.phase == .ready, !store.onboarding else { return "GitBell" }
+        return switch selection {
         case .inbox(let filter): filter.windowTitle
         case .pulls(let section): section.windowTitle
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
         case .org(let owner): owner
-        case .settings: "Settings"
         case .todo, nil: TodoItem.title
         }
     }
@@ -154,6 +154,7 @@ struct MainWindowView: View {
     private var subtitle: String {
         switch selection {
         case .todo, nil:
+            guard store.pullsLoaded, store.lastUpdated != nil else { return "" }
             let count = store.todoCount
             return count == 0 ? "All caught up" : count == 1 ? "1 waiting on you" : "\(count) waiting on you"
         case .inbox:
@@ -168,8 +169,6 @@ struct MainWindowView: View {
             return "\(store.repos.all.count) in your organizations"
         case .org(let owner):
             return "\(store.repos.repos(of: owner).count) repositories"
-        case .settings:
-            return store.viewer.map { "Signed in as \($0.login)" } ?? ""
         }
     }
 
@@ -192,7 +191,7 @@ struct MainWindowView: View {
             store.showInWindow(.notifications, filter: filter, pullsFocus: nil)
         case .pulls(let section):
             store.showInWindow(.pulls, pullsFocus: section)
-        case .repo, .repos, .org, .settings, nil:
+        case .repo, .repos, .org, nil:
             break
         }
     }
@@ -200,7 +199,6 @@ struct MainWindowView: View {
     private static func encode(_ item: SidebarItem) -> String {
         switch item {
         case .todo: "todo"
-        case .settings: "settings"
         case .inbox(let filter): "inbox.\(filter.rawValue)"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
@@ -211,7 +209,6 @@ struct MainWindowView: View {
 
     private static func decode(_ raw: String) -> SidebarItem? {
         if raw == "todo" { return .todo }
-        if raw == "settings" { return .settings }
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
@@ -285,7 +282,7 @@ private struct Sidebar: View {
             VStack(alignment: .leading, spacing: 0) {
             if store.people != nil {
                 Button {
-                    selection = .settings
+                    AppController.shared?.settingsItem()
                 } label: {
                     // Same columns as the row below: the icon over the avatar, the names over the login.
                     HStack(spacing: 8) {
@@ -312,17 +309,6 @@ private struct Sidebar: View {
                     .truncationMode(.tail)
                 Spacer(minLength: 4)
                 FooterStatus()
-                Button {
-                    selection = .settings
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 13))
-                        .foregroundStyle(selection == .settings ? Palette.accent : Color.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Settings (⌘,)")
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -334,7 +320,7 @@ private struct Sidebar: View {
     }
 
     private func pullRow(_ section: PullSection) -> some View {
-        SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: section.tint,
+        SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: Palette.accent,
                    // Recent merges are for reference, so they don't get a badge.
                    count: section == .merged ? 0 : store.pullTotals[section] ?? 0,
                    selected: selection == .pulls(section))
@@ -394,6 +380,7 @@ private struct FooterStatus: View {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     Text(context.date.timeIntervalSince(updated) < 60 ? "Updated now" : "Updated \(RelativeTime.short(updated, now: context.date)) ago")
                         .font(.system(size: 11))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .fixedSize()
@@ -413,14 +400,12 @@ struct PullSectionList: View {
         let items = store.pulls(in: section)
         let total = store.pullTotals[section] ?? items.count
         if !store.pullsLoaded {
-            ProgressView().controlSize(.small)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LoadingView(lines: LoadingLines.pulls)
         } else if items.isEmpty {
             VStack(spacing: 10) {
                 Image(systemName: store.searchText.isEmpty ? section.symbol : "magnifyingglass")
                     .font(.system(size: 40))
                     .foregroundStyle(section.tint.opacity(0.7))
-                    .symbolEffect(.bounce, value: section)
                 VStack(spacing: 3) {
                     Text(store.searchText.isEmpty ? section.emptyTitle : "No matches")
                         .font(.system(size: 14, weight: .semibold))
@@ -453,13 +438,12 @@ struct PullSectionList: View {
                         }
                     }
                     .padding(4)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.03)))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
+                    .card()
                     .padding(16)
                 }
                 .onChange(of: store.selection) { _, id in
                     guard let id else { return }
-                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                    proxy.scrollTo(id)
                 }
             }
         }

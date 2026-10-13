@@ -5,16 +5,20 @@ struct GitBellApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        // SwiftUI needs a scene; the real Settings window is AppController's, so ⌘, points there.
-        Settings { EmptyView() }
+        Settings {
+            SettingsView()
+                .environment(delegate.controller.store)
+                .environment(delegate.controller.updater)
+        }
             .commands {
                 CommandGroup(after: .appInfo) {
                     Button("Check for Updates…") { delegate.controller.updater.checkForUpdates() }
                         .disabled(!delegate.controller.updater.canCheck)
                 }
-                CommandGroup(replacing: .appSettings) {
-                    Button("Settings…") { delegate.controller.settingsItem() }
-                        .keyboardShortcut(",")
+                CommandGroup(before: .toolbar) {
+                    Button("Go to Repository…") { delegate.controller.showQuickOpen() }
+                        .keyboardShortcut("k")
+                    Divider()
                 }
             }
     }

@@ -145,7 +145,7 @@ private struct QuickOpenRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? Palette.accent.opacity(0.18) : .clear))
+        .rowHighlight(hovering: false, selected: selected)
         .contentShape(Rectangle())
     }
 }
@@ -160,7 +160,7 @@ private struct Hint: View {
                 .font(.system(size: 10.5, weight: .semibold))
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
-                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
             Text(action).font(.system(size: 11))
         }
         .foregroundStyle(.secondary)

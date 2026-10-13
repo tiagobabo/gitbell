@@ -38,8 +38,7 @@ struct PeoplePicker: View {
                             PersonRow(person: suggestion)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 4)
-                                .background(index == highlighted ? Color.accentColor.opacity(0.15) : .clear,
-                                            in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                                .rowHighlight(hovering: false, selected: index == highlighted)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
