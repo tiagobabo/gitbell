@@ -5,7 +5,7 @@ import SwiftUI
 // Notifications about a pull request fold into its item rather than showing up twice.
 struct TodoItem: Identifiable {
     enum Kind: String, CaseIterable, Identifiable {
-        case review, fix, reply, merge, waiting
+        case review, fix, reply, merge, mergeable, waiting
 
         var id: String { rawValue }
     }
@@ -33,7 +33,7 @@ struct TodoItem: Identifiable {
 
 extension TodoItem.Kind {
     // Waiting on others is shown, but it isn't your work, so it isn't counted.
-    static let yours: [TodoItem.Kind] = [.review, .fix, .reply, .merge]
+    static let yours: [TodoItem.Kind] = [.review, .fix, .reply, .merge, .mergeable]
 
     var title: String {
         switch self {
@@ -41,6 +41,7 @@ extension TodoItem.Kind {
         case .fix: "Fix"
         case .reply: "Reply"
         case .merge: "Merge"
+        case .mergeable: "Mergeable"
         case .waiting: "Waiting on others"
         }
     }
@@ -48,9 +49,10 @@ extension TodoItem.Kind {
     var subtitle: String {
         switch self {
         case .review: "Someone is waiting on your review"
-        case .fix: "Failing checks, conflicts and requested changes"
+        case .fix: "Failing checks, conflicts, requested changes and merges that broke"
         case .reply: "Mentions, assignments and comments on your threads"
         case .merge: "Approved and green"
+        case .mergeable: "Approved, with optional checks still running or failing"
         case .waiting: "Your pull requests waiting on reviewers or CI"
         }
     }
@@ -61,6 +63,7 @@ extension TodoItem.Kind {
         case .fix: "wrench.and.screwdriver"
         case .reply: "bubble.left.and.bubble.right"
         case .merge: "arrow.triangle.merge"
+        case .mergeable: "clock.badge.checkmark"
         case .waiting: "hourglass"
         }
     }
@@ -71,6 +74,7 @@ extension TodoItem.Kind {
         case .fix: Palette.danger
         case .reply: Palette.accent
         case .merge: Palette.open
+        case .mergeable: Palette.teal
         case .waiting: Palette.neutral
         }
     }
@@ -102,8 +106,10 @@ extension InboxStore {
 
         var items: [TodoItem] = []
         for pr in pulls[.needsReview] ?? [] { items.append(item(pr, .review, threads: byURL[pr.url] ?? [])) }
-        for pr in pulls[.needsAction] ?? [] { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
-        for pr in pulls[.readyToMerge] ?? [] { items.append(item(pr, .merge, threads: byURL[pr.url] ?? [])) }
+        for pr in (pulls[.needsAction] ?? []) + recentFailingMerges { items.append(item(pr, .fix, threads: byURL[pr.url] ?? [])) }
+        for pr in pulls[.readyToMerge] ?? [] {
+            items.append(item(pr, pr.status == .mergeable ? .mergeable : .merge, threads: byURL[pr.url] ?? []))
+        }
         // A comment on a pull request that's otherwise waiting on others is yours to answer.
         for pr in (pulls[.waiting] ?? []) + (pulls[.drafts] ?? []) {
             let unread = byURL[pr.url] ?? []

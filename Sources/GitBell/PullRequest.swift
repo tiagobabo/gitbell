@@ -14,7 +14,11 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     let mergeable: String?
     let mergeStateStatus: String?
     let isInMergeQueue: Bool
-    let checks: Checks?
+    // For open pull requests, the head commit's checks; for merged ones, the merge commit's.
+    var checks: Checks?
+    // Set on merged pull requests.
+    var mergedAt: Date?
+    var baseRef: String?
 
     struct Checks: Codable, Hashable, Sendable {
         let state: String
@@ -25,7 +29,9 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         var failing: [Check] = []
         var running: [Check] = []
 
-        init(state: String, passed: Int, failed: Int, total: Int, failing: [Check] = [], running: [Check] = []) {
+        init(state: String, passed: Int, failed: Int, total: Int, failing: [Check] = [], running: [Check] = [],
+             deployCount: Int = 0) {
+            self.deployCount = deployCount
             self.state = state
             self.passed = passed
             self.failed = failed
@@ -34,12 +40,56 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
             self.running = running
         }
 
-        var isRunning: Bool { failed == 0 && passed < total }
+        // Whether each failing and running check is required is only looked up for your own pull requests.
+        // Until then, any failing or running check counts as blocking.
+        var knowsRequired: Bool { (failing + running).contains { $0.required != nil } }
+
+        var requiredFailing: Bool {
+            knowsRequired ? failing.contains { $0.required == true } : failed > 0 || ["FAILURE", "ERROR"].contains(state)
+        }
+
+        var requiredRunning: Bool {
+            // EXPECTED means a required status hasn't reported at all, so it isn't in the list.
+            if state == "EXPECTED" { return true }
+            return knowsRequired ? running.contains { $0.required == true } : state == "PENDING"
+        }
+
+        // Checks that haven't passed but don't stop the merge.
+        var optionalPending: [Check] { knowsRequired ? (failing + running).filter { $0.required == false } : [] }
+
+        // Deploy jobs, going by name: CircleCI's deploy_uk, deploy_app-de and the like. A workflow prefix
+        // such as "build-and-deploy/approve_de" is skipped, since that's a manual hold, not a deploy.
+        static func isDeploy(_ name: String) -> Bool {
+            (name.split(separator: "/").last.map(String.init) ?? name).localizedCaseInsensitiveContains("deploy")
+        }
+
+        var hasDeploys: Bool { deployCount > 0 }
+        // How many of the checks are deploys.
+        var deployCount = 0
+        var deploysRunning: Bool { running.contains { Self.isDeploy($0.name) } }
+
+        func markingRequired(_ names: Set<String>) -> Checks {
+            var copy = self
+            copy.failing = failing.map { $0.marking(names) }
+            copy.running = running.map { $0.marking(names) }
+            return copy
+        }
     }
 
     struct Check: Codable, Hashable, Sendable {
         let name: String
         let url: URL?
+        // Nil until looked up; branch protection decides it.
+        var required: Bool?
+        // Cancelled rather than failed. CircleCI reports a cancelled job as an ERROR status, which is what
+        // happens to a merge's pipeline when the next merge supersedes it.
+        var cancelled = false
+
+        func marking(_ requiredNames: Set<String>) -> Check {
+            var copy = self
+            copy.required = requiredNames.contains(name)
+            return copy
+        }
     }
 
     init(id: String, number: Int, title: String, url: URL, isDraft: Bool, updatedAt: Date,
@@ -66,21 +116,37 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     }
 
     var status: PullStatus {
+        if mergedAt != nil { return mergedStatus }
         if isDraft { return .notReady }
         if isInMergeQueue { return .inMergeQueue }
         if mergeable == "CONFLICTING" || mergeStateStatus == "DIRTY" { return .mergeConflicts }
-        if let checks, checks.failed > 0 || ["FAILURE", "ERROR"].contains(checks.state) { return .checksFailing }
+        if let checks, checks.requiredFailing { return .checksFailing }
         if reviewDecision == "CHANGES_REQUESTED" { return .changesRequested }
-        if let checks, ["PENDING", "EXPECTED"].contains(checks.state) { return .awaitingCI }
+        if let checks, checks.requiredRunning { return .awaitingCI }
         if reviewDecision == "REVIEW_REQUIRED" { return .awaitingApproval }
         if mergeStateStatus == "BEHIND" { return .needsUpdate }
+        // UNSTABLE is GitHub's "you can merge, but some checks that aren't required haven't passed".
+        if mergeStateStatus == "UNSTABLE" || checks?.optionalPending.isEmpty == false { return .mergeable }
         return .readyToMerge
+    }
+}
+
+extension PullRequest {
+    // How a merged pull request's merge commit is doing: its checks, and its deploys where there are any.
+    private var mergedStatus: PullStatus {
+        guard let checks, checks.total > 0 else { return .merged }
+        if checks.failing.contains(where: { !$0.cancelled }) { return .failingAfterMerge }
+        if !checks.failing.isEmpty { return .cancelledAfterMerge }
+        // Other jobs can stay pending for good (manual holds), so the deploys alone say whether it shipped.
+        if checks.hasDeploys { return checks.deploysRunning ? .deploying : .deployed }
+        return checks.passed < checks.total ? .runningAfterMerge : .passedAfterMerge
     }
 }
 
 enum PullStatus: Sendable {
     case notReady, inMergeQueue, mergeConflicts, checksFailing, changesRequested,
-         awaitingCI, awaitingApproval, needsUpdate, readyToMerge
+         awaitingCI, awaitingApproval, needsUpdate, mergeable, readyToMerge,
+         merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed
 
     enum Tone: Sendable { case neutral, pending, danger, success, merged }
 
@@ -94,23 +160,31 @@ enum PullStatus: Sendable {
         case .awaitingCI: "Awaiting CI"
         case .awaitingApproval: "Awaiting approval"
         case .needsUpdate: "Update branch"
+        case .mergeable: "Can merge"
+        case .merged: "Merged"
+        case .failingAfterMerge: "Failing after merge"
+        case .cancelledAfterMerge: "Checks cancelled"
+        case .runningAfterMerge: "Checks running after merge"
+        case .passedAfterMerge: "Checks passed after merge"
+        case .deploying: "Deploying"
+        case .deployed: "Deployed"
         case .readyToMerge: "Ready to merge"
         }
     }
 
     var tone: Tone {
         switch self {
-        case .notReady: .neutral
-        case .awaitingCI, .awaitingApproval: .pending
-        case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate: .danger
-        case .readyToMerge: .success
-        case .inMergeQueue: .merged
+        case .notReady, .cancelledAfterMerge: .neutral
+        case .awaitingCI, .awaitingApproval, .runningAfterMerge, .deploying: .pending
+        case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate, .failingAfterMerge: .danger
+        case .readyToMerge, .mergeable, .passedAfterMerge, .deployed: .success
+        case .inMergeQueue, .merged: .merged
         }
     }
 }
 
 enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
-    case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge
+    case needsReview, teamReview, drafts, waiting, needsAction, readyToMerge, merged
 
     var id: String { rawValue }
 
@@ -122,6 +196,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         case .waiting: "Waiting for review or checks"
         case .needsAction: "Needs action"
         case .readyToMerge: "Ready to merge"
+        case .merged: "Merged this week"
         }
     }
 
@@ -133,6 +208,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         case .waiting: "Waiting"
         case .needsAction: "To fix"
         case .readyToMerge: "To merge"
+        case .merged: "Merged"
         }
     }
 
@@ -143,7 +219,7 @@ enum PullSection: String, Codable, CaseIterable, Identifiable, Sendable {
         if pr.isDraft { return .drafts }
         switch pr.status {
         case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate: return .needsAction
-        case .readyToMerge, .inMergeQueue: return .readyToMerge
+        case .readyToMerge, .mergeable, .inMergeQueue: return .readyToMerge
         default: return .waiting
         }
     }

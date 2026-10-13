@@ -135,6 +135,7 @@ struct PullSectionView: View {
         case .needsReview: return Palette.pending
         case .needsAction: return Palette.danger
         case .readyToMerge: return Palette.open
+        case .merged: return store.failingMerges.isEmpty ? nil : Palette.danger
         case .teamReview, .drafts, .waiting: return nil
         }
     }
@@ -201,12 +202,14 @@ struct PullRow: View {
     }
 
     private var icon: Octicon {
+        if pr.mergedAt != nil { return .gitMerge }
         if pr.isDraft { return .gitPullRequestDraft }
         if pr.isInMergeQueue { return .gitMerge }
         return .gitPullRequest
     }
 
     private var iconColor: Color {
+        if pr.mergedAt != nil { return Palette.merged }
         if pr.isDraft { return Palette.neutral }
         if pr.isInMergeQueue { return Palette.merged }
         return Palette.open

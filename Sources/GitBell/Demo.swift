@@ -16,16 +16,36 @@ enum Demo {
 
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
-                   checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = []) -> PullRequest {
+                   checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = [],
+                   optionalRunning: [String] = []) -> PullRequest {
         let failing = failing.map {
             PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"))
+        }
+        let running = optionalRunning.map {
+            PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"), required: false)
         }
         return PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
                     url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
                     isDraft: draft, updatedAt: minutesAgo(minutes), repository: "acme/\(repo)",
                     author: author, authorAvatar: avatar(author), reviewDecision: review,
                     mergeable: "MERGEABLE", mergeStateStatus: mergeState, isInMergeQueue: false,
-                    checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3, failing: failing))
+                    checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3,
+                                               failing: failing, running: running))
+    }
+
+    // A pull request of yours merged `minutes` ago, with its merge commit's checks.
+    static func merged(_ number: Int, _ repo: String, _ title: String, minutes: Double, checks: (String, Int, Int, Int),
+                       failing: [String] = [], deploying: [String] = [], deploys: Int = 3) -> PullRequest {
+        var pr = pr(number, repo, title, by: viewer, minutes: minutes, review: "APPROVED", mergeState: "CLEAN",
+                    checks: checks, failing: failing)
+        let running = deploying.map { PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions")) }
+        pr.checks = pr.checks.map {
+            PullRequest.Checks(state: $0.state, passed: $0.passed, failed: $0.failed, total: $0.total,
+                               failing: $0.failing, running: running, deployCount: deploys)
+        }
+        pr.mergedAt = minutesAgo(minutes)
+        pr.baseRef = "main"
+        return pr
     }
 
     static let pulls: [PullSection: [PullRequest]] = [
@@ -45,10 +65,19 @@ enum Demo {
         .readyToMerge: [
             pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
                review: "APPROVED", mergeState: "CLEAN", checks: ("SUCCESS", 14, 0, 14)),
+            pr(1206, "api", "Log slow queries to the warehouse", by: viewer, minutes: 70,
+               review: "APPROVED", mergeState: "UNSTABLE", checks: ("PENDING", 7, 0, 8), optionalRunning: ["deploy/approve_staging"]),
         ],
         .waiting: [
             pr(480, "web", "Paginate the audit log", by: viewer, minutes: 20, checks: ("PENDING", 6, 0, 9)),
             pr(1203, "api", "Return 404 for unknown webhook ids", by: viewer, minutes: 140),
+        ],
+        .merged: [
+            merged(1204, "api", "Retry webhook deliveries with backoff", minutes: 18, checks: ("PENDING", 14, 0, 16),
+                   deploying: ["deploy_eu", "deploy_us"]),
+            merged(475, "web", "Lazy-load product images", minutes: 140, checks: ("FAILURE", 15, 1, 16), failing: ["tests_uk"]),
+            merged(88, "design-system", "Dark mode colour tokens", minutes: 400, checks: ("SUCCESS", 12, 0, 12)),
+            merged(1199, "api", "Drop the legacy v1 endpoints", minutes: 1500, checks: ("SUCCESS", 16, 0, 16)),
         ],
         .drafts: [
             pr(481, "web", "Try a new onboarding flow", by: viewer, minutes: 300, draft: true, checks: ("FAILURE", 10, 2, 12),
@@ -57,7 +86,7 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 1, .waiting: 2, .drafts: 1,
+        .needsReview: 2, .teamReview: 4, .needsAction: 2, .readyToMerge: 2, .merged: 4, .waiting: 2, .drafts: 1,
     ]
 
     static func repo(_ name: String, _ description: String?, _ language: String?, _ color: String?, pushed minutes: Double,

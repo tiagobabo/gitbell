@@ -452,8 +452,8 @@ extension InboxStore {
             unfilteredTotals = inbox.totals
             applyPeopleToPulls()
             announceReviewRequests(direct: pulls[.needsReview] ?? [], team: pulls[.teamReview] ?? [])
-            announceYourPulls(failing: pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? [],
-                              ready: pulls[.readyToMerge]?.filter { $0.status == .readyToMerge } ?? [])
+            announceYourPulls(failing: (pulls[.needsAction]?.filter { $0.status == .checksFailing } ?? []) + recentFailingMerges,
+                              ready: pulls[.readyToMerge]?.filter { [.readyToMerge, .mergeable].contains($0.status) } ?? [])
             pullsLoaded = true
         } catch let error as APIError where error.isUnauthorized {
             show("Your GitHub session expired.")
@@ -473,7 +473,21 @@ extension InboxStore {
         show("Link copied")
     }
 
+    // Your merged pull requests whose merge commit is failing checks.
+    var failingMerges: [PullRequest] { (pulls[.merged] ?? []).filter { $0.status == .failingAfterMerge } }
+
+    // The ones recent enough to be yours to fix. A merge commit stays red after someone fixes the branch in a
+    // later commit, so older failures stay in the Merged list rather than in Your turn.
+    var recentFailingMerges: [PullRequest] {
+        let cutoff = Date.now.addingTimeInterval(-2 * 86400)
+        return failingMerges.filter { ($0.mergedAt ?? .distantPast) > cutoff }
+    }
+
     func webURL(for section: PullSection) -> URL {
+        if section == .merged {
+            return URL(string: "https://github.com/search?type=pullrequests")!
+                .appending(queryItems: [URLQueryItem(name: "q", value: GitHubClient.mergedQuery())])
+        }
         guard section.isReviewRequest else { return URL(string: "https://github.com/pulls/inbox")! }
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
         let query = GitHubClient.searchQueries(since: since)[section] ?? ""
@@ -501,7 +515,8 @@ extension InboxStore {
     // Banners when checks start failing on one of your pull requests, or it becomes ready to merge.
     // Keyed by head state, so a fix that fails again announces again.
     private func announceYourPulls(failing: [PullRequest], ready: [PullRequest]) {
-        let key = "seenYourPulls"
+        // Renamed when merges joined in, so their first fetch only records what's already failing.
+        let key = "seenYourPulls2"
         let defaults = UserDefaults.standard
         let current = failing.map { "fail:\($0.id)" } + ready.map { "ready:\($0.id)" }
         if pullBanners, let seen = defaults.stringArray(forKey: key).map(Set.init) {

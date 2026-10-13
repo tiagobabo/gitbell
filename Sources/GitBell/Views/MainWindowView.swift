@@ -335,7 +335,9 @@ private struct Sidebar: View {
 
     private func pullRow(_ section: PullSection) -> some View {
         SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: section.tint,
-                   count: store.pullTotals[section] ?? 0, selected: selection == .pulls(section))
+                   // Merged pull requests only count when they broke something.
+                   count: section == .merged ? store.failingMerges.count : store.pullTotals[section] ?? 0,
+                   selected: selection == .pulls(section))
             .tag(SidebarItem.pulls(section))
     }
 }
@@ -494,6 +496,7 @@ extension PullSection {
         case .readyToMerge: "Ready to merge"
         case .waiting: "In review"
         case .drafts: "Drafts"
+        case .merged: "Merged"
         }
     }
 
@@ -505,6 +508,7 @@ extension PullSection {
         case .readyToMerge: "checkmark.circle"
         case .waiting: "clock"
         case .drafts: "pencil.circle"
+        case .merged: "shippingbox.circle"
         }
     }
 
@@ -516,6 +520,7 @@ extension PullSection {
         case .readyToMerge: "Nothing ready to merge"
         case .waiting: "Nothing in review"
         case .drafts: "No drafts"
+        case .merged: "Nothing merged this week"
         }
     }
 
@@ -523,9 +528,10 @@ extension PullSection {
         switch self {
         case .needsReview, .teamReview: "New review requests show up here."
         case .needsAction: "Changes requested and failing checks show up here."
-        case .readyToMerge: "Approved pull requests with passing checks show up here."
+        case .readyToMerge: "Approved pull requests whose required checks passed show up here."
         case .waiting: "Your open pull requests waiting on reviewers show up here."
         case .drafts: "Your draft pull requests show up here."
+        case .merged: "Your pull requests merged in the last 7 days show up here, with how their checks and deploys went."
         }
     }
 
@@ -537,6 +543,7 @@ extension PullSection {
         case .readyToMerge: Palette.open
         case .waiting: Palette.teal
         case .drafts: Palette.neutral
+        case .merged: Palette.merged
         }
     }
 }
@@ -551,7 +558,7 @@ extension PullSection {
     // How the window and popover group and order the sections, most urgent first.
     static let windowGroups = [
         SectionGroup(title: "To Review", sections: [.needsReview, .teamReview]),
-        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts]),
+        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts, .merged]),
     ]
     static var windowOrder: [PullSection] { windowGroups.flatMap(\.sections) }
 }

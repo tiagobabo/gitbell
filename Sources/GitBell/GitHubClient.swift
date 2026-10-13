@@ -300,44 +300,106 @@ actor GitHubClient {
         ]
     }
 
+    // Your pull requests merged in the last week, whose merge commits are still worth watching.
+    static func mergedQuery() -> String {
+        let since = (Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now).formatted(.iso8601.year().month().day())
+        return "is:pr is:merged archived:false author:@me merged:>=\(since) sort:updated-desc"
+    }
+
     func pullInbox(since: Date) async throws -> PullInbox {
         let queries = Self.searchQueries(since: since)
-        let body: [String: Any] = [
-            "query": Self.pullInboxQuery,
-            "variables": [
-                "direct": queries[.needsReview]!,
-                "team": queries[.teamReview]!,
-                "mine": queries[.waiting]!,
-            ],
-        ]
-        let (data, _) = try await send(makeRequest(base.appending(path: "graphql"), method: "POST", body: body))
-        let response = try Self.decoder.decode(GraphQLResponse.self, from: data)
-        guard let result = response.data else {
-            throw APIError(status: 200, message: response.errors?.first?.message ?? "GitHub GraphQL error")
-        }
+        typealias Searches = [String: GraphQLResponse.Search]
+        // Three requests side by side: together they took GitHub long enough to time out now and then.
+        async let reviews: Searches = graphQL(Self.reviewsQuery, ["direct": queries[.needsReview]!, "team": queries[.teamReview]!])
+        async let mine: Searches = graphQL(Self.mineQuery, ["q": queries[.waiting]!])
+        async let merged: Searches = graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
+        let (review, yours, done) = try await (reviews, mine, merged)
+        let direct = review["direct"], team = review["team"], open = yours["mine"]?.pulls ?? []
 
         var sections: [PullSection: [PullRequest]] = [
-            .needsReview: result.direct.pulls,
-            .teamReview: result.team.pulls,
+            .needsReview: direct?.pulls ?? [],
+            .teamReview: team?.pulls ?? [],
         ]
         var totals: [PullSection: Int] = [
-            .needsReview: result.direct.issueCount,
-            .teamReview: result.team.issueCount,
+            .needsReview: direct?.issueCount ?? 0,
+            .teamReview: team?.issueCount ?? 0,
         ]
-        for pr in result.mine.pulls {
+        // Optional checks shouldn't hold your pull requests back, so find out which ones are required.
+        // Best effort: without it, every check counts.
+        let required = (try? await requiredChecks(for: open)) ?? [:]
+        for var pr in open {
+            if let names = required[pr.id] { pr.checks = pr.checks?.markingRequired(names) }
             sections[PullSection.classify(pr), default: []].append(pr)
         }
-        for section in [PullSection.drafts, .waiting, .needsAction, .readyToMerge] {
+        sections[.merged] = (done["merged"]?.pulls ?? []).sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) }
+        for section in [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged] {
             totals[section] = sections[section]?.count ?? 0
         }
         return PullInbox(sections: sections, totals: totals)
     }
 
-    private static let pullInboxQuery = """
-    query($direct: String!, $team: String!, $mine: String!) {
+    // CircleCI names every status "ci/circleci: job"; the job is the useful part.
+    nonisolated static func checkName(_ name: String) -> String {
+        name.hasPrefix("ci/circleci: ") ? String(name.dropFirst(13)) : name
+    }
+
+    // The names of the required checks on each pull request whose checks haven't all passed, by pull request id.
+    // Branch protection decides this per pull request, so it can't come from the search itself.
+    func requiredChecks(for pulls: [PullRequest]) async throws -> [String: Set<String>] {
+        let wanted = pulls.filter { pr in
+            guard let checks = pr.checks else { return false }
+            return !checks.failing.isEmpty || !checks.running.isEmpty
+        }
+        guard !wanted.isEmpty else { return [:] }
+
+        struct Node: Decodable {
+            struct PR: Decodable { let commits: Commits }
+            struct Commits: Decodable { let nodes: [CommitNode] }
+            struct CommitNode: Decodable { let commit: Commit }
+            struct Commit: Decodable { let statusCheckRollup: Rollup? }
+            struct Rollup: Decodable { let contexts: Contexts }
+            struct Contexts: Decodable { let nodes: [Context?] }
+            struct Context: Decodable { let name: String?; let context: String?; let isRequired: Bool? }
+            let pullRequest: PR?
+        }
+        let fields = wanted.enumerated().compactMap { index, pr -> String? in
+            let parts = pr.repository.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2 else { return nil }
+            let n = pr.number
+            return """
+            p\(index): repository(owner: \(Self.quoted(parts[0])), name: \(Self.quoted(parts[1]))) { pullRequest(number: \(n)) {
+              commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 50) { nodes {
+                ... on CheckRun { name isRequired(pullRequestNumber: \(n)) }
+                ... on StatusContext { context isRequired(pullRequestNumber: \(n)) }
+              } } } } } }
+            } }
+            """
+        }
+        let nodes: [String: Node?] = try await graphQL("{\n\(fields.joined(separator: "\n"))\n}")
+        var required: [String: Set<String>] = [:]
+        for (index, pr) in wanted.enumerated() {
+            guard let node = nodes["p\(index)"] ?? nil, let commit = node.pullRequest?.commits.nodes.last?.commit else { continue }
+            let contexts = (commit.statusCheckRollup?.contexts.nodes ?? []).compactMap { $0 }
+            required[pr.id] = Set(contexts.filter { $0.isRequired == true }.compactMap { ($0.name ?? $0.context).map(Self.checkName) })
+        }
+        return required
+    }
+
+    private static let reviewsQuery = """
+    query($direct: String!, $team: String!) {
       direct: search(query: $direct, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
       team: search(query: $team, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
-      mine: search(query: $mine, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
+    }
+    """ + pullFragment
+
+    private static let mineQuery = """
+    query($q: String!) { mine: search(query: $q, type: ISSUE, first: 50) { issueCount nodes { ...pr } } }
+    """ + pullFragment
+
+    private static let mergedPullsQuery = """
+    query($q: String!) { merged: search(query: $q, type: ISSUE, first: 20) { issueCount nodes { ...pr ...merged } } }
+    fragment merged on PullRequest {
+      mergedAt baseRefName mergeCommit { statusCheckRollup { ...rollup } }
     }
     """ + pullFragment
 
@@ -346,7 +408,10 @@ actor GitHubClient {
       id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue
       author { login avatarUrl }
       repository { nameWithOwner }
-      commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 50) {
+      commits(last: 1) { nodes { commit { statusCheckRollup { ...rollup } } } }
+    }
+    fragment rollup on StatusCheckRollup {
+      state contexts(first: 50) {
         totalCount
         checkRunCountsByState { state count }
         statusContextCountsByState { state count }
@@ -355,21 +420,12 @@ actor GitHubClient {
           ... on CheckRun { name status conclusion detailsUrl }
           ... on StatusContext { context state targetUrl }
         }
-      } } } } }
+      }
     }
     """
 
-    private struct GraphQLResponse: Decodable {
-        let data: Result?
-        let errors: [Message]?
-
-        struct Message: Decodable { let message: String }
-
-        struct Result: Decodable {
-            let direct: Search
-            let team: Search
-            let mine: Search
-        }
+    // The pull request search results and how they decode.
+    private enum GraphQLResponse {
 
         struct Search: Decodable {
             let issueCount: Int
@@ -392,6 +448,9 @@ actor GitHubClient {
             let author: Author?
             let repository: Repository?
             let commits: Commits?
+            let mergedAt: Date?
+            let baseRefName: String?
+            let mergeCommit: Commit?
 
             struct Author: Decodable { let login: String; let avatarUrl: URL? }
             struct Repository: Decodable { let nameWithOwner: String }
@@ -418,9 +477,9 @@ actor GitHubClient {
 
                 var check: PullRequest.Check? {
                     guard let name = name ?? context else { return nil }
-                    // CircleCI names every status "ci/circleci: job"; the job is the useful part.
-                    let short = name.hasPrefix("ci/circleci: ") ? String(name.dropFirst(13)) : name
-                    return PullRequest.Check(name: short, url: detailsUrl ?? targetUrl)
+                    var check = PullRequest.Check(name: GitHubClient.checkName(name), url: detailsUrl ?? targetUrl)
+                    check.cancelled = conclusion == "CANCELLED" || state == "ERROR"
+                    return check
                 }
                 var isFailing: Bool { Node.failedStates.contains(conclusion ?? state ?? "") }
                 var isRunning: Bool {
@@ -433,16 +492,20 @@ actor GitHubClient {
 
             var pullRequest: PullRequest? {
                 guard let id, let number, let title, let url, let updatedAt, let repository else { return nil }
-                return PullRequest(
-                    id: id, number: number, title: title, url: url, isDraft: isDraft ?? false, updatedAt: updatedAt,
+                // A merged pull request is about its merge commit, and when it merged.
+                let rollup = mergedAt == nil ? commits?.nodes.last?.commit.statusCheckRollup : mergeCommit?.statusCheckRollup
+                var pr = PullRequest(
+                    id: id, number: number, title: title, url: url, isDraft: isDraft ?? false, updatedAt: mergedAt ?? updatedAt,
                     repository: repository.nameWithOwner, author: author?.login ?? "ghost", authorAvatar: author?.avatarUrl,
                     reviewDecision: reviewDecision, mergeable: mergeable, mergeStateStatus: mergeStateStatus,
-                    isInMergeQueue: isInMergeQueue ?? false, checks: checks
+                    isInMergeQueue: isInMergeQueue ?? false, checks: rollup.map(Self.checks)
                 )
+                pr.mergedAt = mergedAt
+                pr.baseRef = baseRefName
+                return pr
             }
 
-            private var checks: PullRequest.Checks? {
-                guard let rollup = commits?.nodes.last?.commit.statusCheckRollup else { return nil }
+            private static func checks(_ rollup: Rollup) -> PullRequest.Checks {
                 let counts = rollup.contexts.checkRunCountsByState + rollup.contexts.statusContextCountsByState
                 func sum(_ states: Set<String>) -> Int {
                     counts.filter { states.contains($0.state) }.reduce(0) { $0 + $1.count }
@@ -454,7 +517,8 @@ actor GitHubClient {
                     failed: sum(Self.failedStates),
                     total: rollup.contexts.totalCount,
                     failing: contexts.filter(\.isFailing).compactMap(\.check),
-                    running: contexts.filter(\.isRunning).compactMap(\.check)
+                    running: contexts.filter(\.isRunning).compactMap(\.check),
+                    deployCount: contexts.compactMap(\.check).filter { PullRequest.Checks.isDeploy($0.name) }.count
                 )
             }
         }

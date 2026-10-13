@@ -64,19 +64,30 @@ private struct TodoSummary: View {
     let jump: (TodoItem.Kind) -> Void
 
     var body: some View {
+        // Mergeable is the exception rather than the rule, so its tile only shows when it has something.
+        let kinds = TodoItem.Kind.yours.filter { $0 != .mergeable || count($0) > 0 }
+        ViewThatFits(in: .horizontal) {
+            tiles(kinds, labelled: true)
+            tiles(kinds, labelled: false)
+        }
+    }
+
+    private func tiles(_ kinds: [TodoItem.Kind], labelled: Bool) -> some View {
         HStack(spacing: compact ? 6 : 10) {
-            ForEach(TodoItem.Kind.yours) { kind in
-                let count = items.filter { $0.kind == kind }.count
-                SummaryTile(kind: kind, count: count, compact: compact) { jump(kind) }
+            ForEach(kinds) { kind in
+                SummaryTile(kind: kind, count: count(kind), compact: compact, labelled: labelled) { jump(kind) }
             }
         }
     }
+
+    private func count(_ kind: TodoItem.Kind) -> Int { items.filter { $0.kind == kind }.count }
 }
 
 private struct SummaryTile: View {
     let kind: TodoItem.Kind
     let count: Int
     let compact: Bool
+    var labelled = true
     let action: () -> Void
     @State private var hovering = false
 
@@ -87,10 +98,13 @@ private struct SummaryTile: View {
                     Image(systemName: kind.symbol)
                         .font(.system(size: compact ? 10 : 11, weight: .semibold))
                         .foregroundStyle(count > 0 ? kind.tint : Color.secondary)
-                    Text(kind.title)
-                        .font(.system(size: compact ? 10.5 : 11.5, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if labelled {
+                        Text(kind.title)
+                            .font(.system(size: compact ? 10.5 : 11.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
                 }
                 Text("\(count)")
                     .font(.system(size: compact ? 17 : 24, weight: .semibold, design: .rounded))
@@ -308,6 +322,7 @@ struct TodoRow: View {
 
     private func icon(_ detail: SubjectDetail?) -> Octicon {
         guard let pr = item.pr else { return item.notification.map { SubjectStyle($0, detail: detail).icon } ?? .bell }
+        if pr.mergedAt != nil { return .gitMerge }
         if pr.isDraft { return .gitPullRequestDraft }
         if pr.isInMergeQueue { return .gitMerge }
         return .gitPullRequest
@@ -315,6 +330,7 @@ struct TodoRow: View {
 
     private func iconColor(_ detail: SubjectDetail?) -> Color {
         guard let pr = item.pr else { return item.notification.map { SubjectStyle($0, detail: detail).color } ?? Palette.neutral }
+        if pr.mergedAt != nil { return Palette.merged }
         if pr.isDraft { return Palette.neutral }
         if pr.isInMergeQueue { return Palette.merged }
         return Palette.open
@@ -345,15 +361,21 @@ struct PullStatusLine: View {
             }
             .fixedSize()
             if let checks = pr.checks, checks.total > 0 {
-                if checks.failing.isEmpty || maxFailing == 0 {
+                // Failing checks, then optional ones still running (the required ones are just "Awaiting CI"),
+                // or the deploys still going after a merge.
+                let running = status == .deploying
+                    ? checks.running.filter { PullRequest.Checks.isDeploy($0.name) }
+                    : checks.running.filter { $0.required == false }
+                let chips = checks.failing + running
+                if chips.isEmpty || maxFailing == 0 {
                     ChecksBadge(checks: checks).fixedSize()
                 } else {
                     HStack(spacing: 4) {
-                        ForEach(checks.failing.prefix(maxFailing), id: \.self) { check in
-                            CheckChip(check: check)
+                        ForEach(chips.prefix(maxFailing), id: \.self) { check in
+                            CheckChip(check: check, running: checks.running.contains(check))
                         }
-                        if checks.failing.count > maxFailing {
-                            Text("+\(checks.failing.count - maxFailing)")
+                        if chips.count > maxFailing {
+                            Text("+\(chips.count - maxFailing)")
                                 .foregroundStyle(.tertiary)
                                 .fixedSize()
                         }
@@ -364,9 +386,10 @@ struct PullStatusLine: View {
     }
 }
 
-// A failing check by name; click it for its logs.
+// A failing or still-running check by name; click it for its logs. Optional checks are marked as such.
 struct CheckChip: View {
     let check: PullRequest.Check
+    var running = false
     @State private var hovering = false
 
     var body: some View {
@@ -374,7 +397,11 @@ struct CheckChip: View {
             if let url = check.url { NSWorkspace.shared.open(url) }
         } label: {
             HStack(spacing: 3) {
-                OcticonView(.xCircleFill, size: 10).foregroundStyle(Palette.danger)
+                if running {
+                    OcticonView(.clock, size: 10).foregroundStyle(Palette.pending)
+                } else {
+                    OcticonView(check.cancelled ? .skip : .xCircleFill, size: 10).foregroundStyle(tint)
+                }
                 Text(check.name)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -385,11 +412,20 @@ struct CheckChip: View {
             .foregroundStyle(hovering ? Color.primary : Color.secondary)
             .padding(.horizontal, 6)
             .padding(.vertical, 1.5)
-            .background(Palette.danger.opacity(hovering ? 0.16 : 0.09), in: Capsule())
+            .background(tint.opacity(hovering ? 0.16 : 0.09), in: Capsule())
+            .opacity(check.required == false ? 0.8 : 1)
         }
         .buttonStyle(.plain)
-        .help(check.url == nil ? "\(check.name) failed" : "\(check.name) failed. Open its logs.")
+        .help(help)
         .onHover { hovering in withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering } }
+    }
+
+    private var tint: Color { running ? Palette.pending : check.cancelled ? Palette.neutral : Palette.danger }
+
+    private var help: String {
+        let what = running ? "\(check.name) is still running" : check.cancelled ? "\(check.name) was cancelled" : "\(check.name) failed"
+        let optional = check.required == false ? " It's optional and doesn't block merging." : ""
+        return what + "." + optional + (check.url == nil ? "" : " Click for its logs.")
     }
 }
 
