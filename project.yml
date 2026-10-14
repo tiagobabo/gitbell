@@ -8,6 +8,12 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: "2.10.0"
+  TelemetryDeck:
+    url: https://github.com/TelemetryDeck/SwiftSDK
+    from: "2.14.2"
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: "9.30.1"
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -33,3 +39,5 @@ targets:
         INFOPLIST_FILE: Resources/Info.plist
     dependencies:
       - package: Sparkle
+      - package: TelemetryDeck
+      - package: Sentry

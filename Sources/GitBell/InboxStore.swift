@@ -132,6 +132,7 @@ final class InboxStore {
             do {
                 if launchAtLogin { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             } catch {
+                Telemetry.report(error, while: "changing launch at login")
                 show(error.localizedDescription)
             }
         }
@@ -233,6 +234,7 @@ final class InboxStore {
     func finishOnboarding() {
         UserDefaults.standard.set(true, forKey: "onboarded")
         onboarding = false
+        Telemetry.signal("Onboarding.finished")
     }
 
     // Checks a pasted CircleCI token and keeps it in the Keychain. Returns the CircleCI login it belongs to.
@@ -268,6 +270,14 @@ final class InboxStore {
         self.client = client
         phase = .ready
         startPolling()
+        Telemetry.signal("Ready", [
+            "signIn": TokenStore.mode == .githubCLI ? "gh" : "token",
+            "circleCI": circleCISource.map { "\($0)" } ?? "none",
+            "menuBarIcon": "\(MenuBarIcon.isShown)",
+            "presentation": Presentation.current.rawValue,
+            "appearance": Appearance.current.rawValue,
+            "peopleFilter": "\(peopleFilterOn)",
+        ])
         return true
     }
 
@@ -332,6 +342,7 @@ final class InboxStore {
         } catch let error as URLError {
             statusError = error.code == .notConnectedToInternet ? "Offline" : error.localizedDescription
         } catch {
+            Telemetry.report(error, while: "loading notifications")
             statusError = error.localizedDescription
         }
     }
@@ -406,6 +417,7 @@ final class InboxStore {
         do {
             try await action(client)
         } catch {
+            Telemetry.report(error, while: "updating notifications")
             for id in ids { dismissed[id] = nil }
             withAnimation(.snappy) {
                 notifications = (notifications + items).sorted { $0.updatedAt > $1.updatedAt }
@@ -517,6 +529,7 @@ extension InboxStore {
                 timelineErrors[pr.id] = nil
             }
         } catch {
+            Telemetry.report(error, while: "loading a timeline")
             if timelines[pr.id] == nil { timelineErrors[pr.id] = error.localizedDescription }
         }
     }
@@ -563,6 +576,7 @@ extension InboxStore {
                     signOut()
                     return
                 } else if let error = answer.error {
+                    Telemetry.report(error, while: "loading \(answer.source) pull requests")
                     statusError = error.localizedDescription
                     withAnimation(.snappy) { pullErrors[answer.source] = error.localizedDescription }
                 }
@@ -651,6 +665,7 @@ extension InboxStore {
                 if !isStillHeld(check, on: pr) { break }
             }
         } catch {
+            Telemetry.report(error, while: "approving a CircleCI job")
             show(error.localizedDescription)
         }
         withAnimation(.snappy) {

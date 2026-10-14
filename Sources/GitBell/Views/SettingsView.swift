@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage(Presentation.key) private var presentation = Presentation.window
     @AppStorage(Appearance.key) private var appearance = Appearance.system
     @State private var showMenuBarIcon = MenuBarIcon.isShown
+    @State private var shareUsage = Telemetry.isOn
     @State private var badgesAllowed = true
     @State private var circleCIToken = ""
     @State private var circleCIStatus: String?
@@ -42,6 +43,18 @@ struct SettingsView: View {
                     Text("Menu Bar")
                 } footer: {
                     Text("The Dock icon always opens the window. Right-click the menu bar icon for both.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section {
+                    Toggle("Share anonymous usage and crash reports", isOn: $shareUsage)
+                        .onChange(of: shareUsage) { _, on in Telemetry.isOn = on }
+                        .disabled(Demo.isOn)
+                } header: {
+                    Text("Privacy")
+                } footer: {
+                    Text("Counts of which pages and settings are used, and what went wrong when something fails. Never your token, names, repositories or organizations.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

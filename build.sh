@@ -11,10 +11,14 @@ version="${VERSION:-$( (git describe --tags --abbrev=0 --match 'v*' 2>/dev/null 
 version="${version:-0.0.0}"
 build_number="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 
+# Usage and crash reporting only happen when these are set, which the release does from ~/.gitbell-telemetry.
+[[ -f ~/.gitbell-telemetry ]] && source ~/.gitbell-telemetry
+
 xcodegen generate --quiet
 xcodebuild -project GitBell.xcodeproj -scheme GitBell -configuration Release \
   -derivedDataPath build/DerivedData -quiet build \
-  MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build_number"
+  MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build_number" \
+  TELEMETRYDECK_APP_ID="${TELEMETRYDECK_APP_ID:-}" SENTRY_DSN="${SENTRY_DSN:-}"
 
 app=build/GitBell.app
 rm -rf "$app"

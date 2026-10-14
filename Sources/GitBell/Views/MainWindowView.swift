@@ -8,6 +8,19 @@ enum SidebarItem: Hashable {
     case repo(String)
     case repos
     case org(String)
+
+    // For usage counts: which kind of page, never which repository or organization.
+    var kind: String {
+        switch self {
+        case .todo: "todo"
+        case .yours: "yours"
+        case .stats: "stats"
+        case .pulls(let section): "pulls.\(section.rawValue)"
+        case .repo: "repo"
+        case .repos: "repos"
+        case .org: "org"
+        }
+    }
 }
 
 // The full window: Your turn and PR sections in a sidebar, the chosen list on the right.
@@ -63,7 +76,10 @@ struct MainWindowView: View {
         }
         .onChange(of: selection) { _, item in
             apply(item)
-            if let item { savedSelection = Self.encode(item) }
+            if let item {
+                savedSelection = Self.encode(item)
+                Telemetry.signal("Page.viewed", ["page": item.kind])
+            }
         }
         // The hosting window doesn't always pick up navigationTitle and shows "Untitled", so set it directly.
         .onChange(of: title, initial: true) { _, title in

@@ -276,6 +276,7 @@ private struct AppearanceStep: View {
     @AppStorage(Presentation.key) private var presentation = Presentation.window
     @AppStorage(Appearance.key) private var appearance = Appearance.system
     @State private var showMenuBarIcon = MenuBarIcon.isShown
+    @State private var shareUsage = Telemetry.isOn
 
     var body: some View {
         @Bindable var store = store
@@ -305,6 +306,9 @@ private struct AppearanceStep: View {
                 .disabled(!showMenuBarIcon)
                 Divider()
                 Toggle("Launch at login", isOn: $store.launchAtLogin)
+                Toggle("Share anonymous usage and crash reports", isOn: $shareUsage)
+                    .onChange(of: shareUsage) { _, on in Telemetry.isOn = on }
+                    .help("Which pages and settings are used, and what went wrong when something fails. Never your token, names or repositories.")
             }
             .toggleStyle(RowSwitch())
         }

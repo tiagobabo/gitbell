@@ -40,6 +40,10 @@ The first launch walks you through setup: GitHub, an optional CircleCI token, no
 
 GitBell uses your [GitHub CLI](https://cli.github.com) login if you have one. Otherwise paste a [classic personal access token](https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&description=GitBell) with the `notifications` and `repo` scopes (plus `read:org` to filter by team). It's stored in your Keychain. After an update macOS may ask once whether GitBell can read it; click "Always Allow".
 
+## Privacy
+
+Release builds send anonymous usage counts to [TelemetryDeck](https://telemetrydeck.com) (which pages and settings are used) and crash and error reports to [Sentry](https://sentry.io) (what GitBell was doing when something failed, and the status code). Neither ever includes your token, your name, or the names of people, repositories or organizations. Turn it off during setup or in Settings → General → Privacy. Builds from source send nothing.
+
 ## Build from source
 
 Needs Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
