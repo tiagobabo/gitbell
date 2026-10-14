@@ -10,7 +10,7 @@ enum Palette {
     static let pending = Color(nsColor: .systemOrange)
     static let neutral = Color(nsColor: .systemGray)
     static let accent = Color.accentColor
-    static let teal = Color(nsColor: .systemTeal)
+    static let mint = Color(nsColor: .systemMint)
     static let rose = Color(nsColor: .systemPink)
     static let indigo = Color(nsColor: .systemIndigo)
 

@@ -29,6 +29,10 @@ struct TodoItem: Identifiable {
 
     var repositoryName: String { repository.split(separator: "/").last.map(String.init) ?? repository }
     var notification: GHNotification? { threads.first }
+
+    // E's action, the same in the Item menu and the row's context menu.
+    var hideTitle: String { hidden ? "Unhide" : pr == nil ? "Mark as Done" : Self.defaultHideTitle }
+    static let defaultHideTitle = "Hide Until It Changes"
 }
 
 extension TodoItem.Kind {
@@ -91,7 +95,7 @@ extension TodoItem.Kind {
         case .onHold: Palette.indigo
         case .reply: Palette.accent
         case .merge: Palette.open
-        case .mergeable: Palette.teal
+        case .mergeable: Palette.mint
         case .waiting: Palette.neutral
         }
     }
@@ -105,10 +109,6 @@ extension InboxStore {
     }
 
     var todoCount: Int { allTodos.filter { $0.kind.counted && !$0.hidden }.count }
-
-    func todoCount(in repository: String) -> Int {
-        allTodos.filter { $0.kind.counted && !$0.hidden && $0.repository == repository }.count
-    }
 
     // Everything Your turn is built from has arrived at least once.
     var todoLoaded: Bool {
@@ -139,9 +139,14 @@ extension InboxStore {
         }
     }
 
-    var hiddenTodoCount: Int { allTodos.filter(\.hidden).count }
+    var hiddenTodoCount: Int { hiddenTodoCount(of: nil) }
 
-    private var allTodos: [TodoItem] {
+    // Hidden in one group, or anywhere in Your turn.
+    func hiddenTodoCount(of kind: TodoItem.Kind?) -> Int {
+        allTodos.filter { $0.hidden && (kind == nil || $0.kind == kind) }.count
+    }
+
+    var allTodos: [TodoItem] {
         let threads = shownNotifications
         var byURL: [URL: [GHNotification]] = [:]
         for n in threads where n.subject.type == "PullRequest" { byURL[n.fallbackURL, default: []].append(n) }

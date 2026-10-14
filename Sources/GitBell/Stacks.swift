@@ -66,10 +66,10 @@ struct StackTag: View {
             Text("\(label) · \(stack.position(of: pr) ?? 0) of \(stack.members.count)")
         }
         .font(.system(size: 10.5, weight: .medium))
-        .foregroundStyle(Palette.teal)
+        .foregroundStyle(Palette.mint)
         .padding(.horizontal, 6)
         .padding(.vertical, 1)
-        .background(Palette.teal.opacity(0.12), in: Capsule())
+        .background(Palette.mint.opacity(0.12), in: Capsule())
         .fixedSize()
         .tooltip("\(label), merging bottom first:\n" + stack.members.enumerated().map { index, member in
             "\(index + 1). #\(member.number) \(member.title): \(member.status.label)\(member.id == pr.id ? " (this one)" : "")"

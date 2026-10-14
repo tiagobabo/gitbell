@@ -1,33 +1,116 @@
 import SwiftUI
 
-enum SidebarItem: Hashable {
+// The window's pages, which the View and Dock menus switch between too.
+enum WindowPage: String, CaseIterable, Identifiable {
     case todo
     case yours
-    case stats
-    case pulls(PullSection)
-    case repo(String)
-    case repos
-    case org(String)
 
-    // For usage counts: which kind of page, never which repository or organization.
-    var kind: String {
+    var id: Self { self }
+
+    var title: String {
         switch self {
-        case .todo: "todo"
-        case .yours: "yours"
-        case .stats: "stats"
-        case .pulls(let section): "pulls.\(section.rawValue)"
-        case .repo: "repo"
-        case .repos: "repos"
-        case .org: "org"
+        case .todo: TodoItem.title
+        case .yours: "Your pull requests"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .todo: TodoItem.symbol
+        case .yours: "arrow.triangle.pull"
+        }
+    }
+
+    // ⌘1 and ⌘2.
+    var shortcut: KeyEquivalent {
+        KeyEquivalent(Character("\((Self.allCases.firstIndex(of: self) ?? 0) + 1)"))
+    }
+}
+
+// A place in the sidebar's tree: a page, or one of its groups, the way Mail lists All Inboxes and each inbox.
+enum SidebarItem: Hashable {
+    case page(WindowPage)
+    case kind(TodoItem.Kind)
+    case stage(PipelineStage)
+
+    var page: WindowPage {
+        switch self {
+        case .page(let page): page
+        case .kind: .todo
+        case .stage: .yours
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .page(let page): page.title
+        case .kind(let kind): kind.title
+        case .stage(let stage): stage.title
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .page(let page): page.symbol
+        case .kind(let kind): kind.symbol
+        case .stage(let stage): stage.symbol
+        }
+    }
+
+    var children: [SidebarItem] {
+        switch self {
+        // The same groups, in the same order, as the tiles across the top of Your turn.
+        case .page(.todo): TodoItem.Kind.yours.map(SidebarItem.kind)
+        case .page(.yours): PipelineStage.allCases.map(SidebarItem.stage)
+        default: []
+        }
+    }
+
+    // Saved as "todo", "todo.fix", "yours.drafts".
+    var rawValue: String {
+        switch self {
+        case .page(let page): page.rawValue
+        case .kind(let kind): "todo.\(kind.rawValue)"
+        case .stage(let stage): "yours.\(stage.rawValue)"
+        }
+    }
+
+    // Also reads what earlier versions saved. Review pages open the Review groups of Your turn, waiting on
+    // others opens In review, and pages that have since gone (stats, repositories, organizations, contributing)
+    // open Your turn.
+    init(rawValue raw: String) {
+        if let page = WindowPage(rawValue: raw) { self = .page(page); return }
+        let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { self = .page(.todo); return }
+        switch parts[0] {
+        case "todo" where parts[1] == TodoItem.Kind.waiting.rawValue: self = .stage(.inReview)
+        case "todo": self = TodoItem.Kind(rawValue: parts[1]).map(SidebarItem.kind) ?? .page(.todo)
+        case "yours": self = PipelineStage(rawValue: parts[1]).map(SidebarItem.stage) ?? .page(.yours)
+        case "reviews", "pulls":
+            switch PullSection(rawValue: parts[1]) {
+            case .needsReview?, .teamReview?: self = .kind(.review)
+            case .reReview?: self = .kind(.reReview)
+            case let section? where section.source == .yours || section == .merged: self = .page(.yours)
+            default: self = .page(.todo)
+            }
+        default: self = .page(.todo)
         }
     }
 }
 
-// The full window: Your turn and PR sections in a sidebar, the chosen list on the right.
+// Searching from the toolbar looks across everything by default, as Mail's All Mailboxes does, or just here.
+enum SearchScope: Hashable {
+    case everywhere, here
+}
+
+// The full window, laid out like Mail and Maps: a sidebar with search on top and each page and its groups as a
+// tree below, the chosen list beside it, and your account in the toolbar's corner.
 struct MainWindowView: View {
     @Environment(InboxStore.self) private var store
+    // Shared with the View and Dock menus, which switch pages too.
     @AppStorage("windowSelection") private var savedSelection = "todo"
-    @State private var selection: SidebarItem? = .todo
+    @State private var selection: SidebarItem? = .page(.todo)
+    @State private var scope = SearchScope.everywhere
 
     var body: some View {
         @Bindable var store = store
@@ -42,46 +125,44 @@ struct MainWindowView: View {
             case .ready:
                 NavigationSplitView {
                     Sidebar(selection: $selection)
-                        .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 320)
+                        // Wide enough for every name and its count.
+                        .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 360)
                 } detail: {
                     detail
-                        .searchable(text: $store.searchText, placement: .toolbar, prompt: "Filter by title or repository")
                         .toolbar { toolbar }
                         .navigationTitle(title)
                         .navigationSubtitle(subtitle)
                 }
+                // At the top of the sidebar, above everything it searches, as in Maps.
+                .searchable(text: $store.searchText, placement: .sidebar, prompt: "Search")
+                .searchScopes($scope) {
+                    Text("Everywhere").tag(SearchScope.everywhere)
+                    Text(current.title).tag(SearchScope.here)
+                }
+                .modifier(SearchShortcut(request: store.searchRequest))
                 .inboxKeyboard(inPopover: false)
                 .toastOverlay(bottomPadding: 20)
-                // Outside the keyboard handling, so typing in it doesn't move the list selection.
-                .overlay {
-                    if store.quickOpenShown {
-                        QuickOpen { repo in selection = .repo(repo.fullName) }
-                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                    }
-                }
             }
         }
         // Every phase fills the window. A fixed-size one (a spinner, the sign-in column) would otherwise become
         // the window's maximum size and squeeze it, and the shrunken frame would be saved.
-        .frame(minWidth: 760, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity)
+        .frame(minWidth: 820, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity)
         .onAppear {
-            selection = store.windowRequest ?? Self.decode(savedSelection) ?? .todo
-            store.windowRequest = nil
-            apply(selection)
-        }
-        .onChange(of: store.windowRequest) { _, request in
-            guard let request else { return }
-            selection = request
-            store.windowRequest = nil
+            selection = SidebarItem(rawValue: savedSelection)
+            apply()
         }
         .onChange(of: selection) { _, item in
-            apply(item)
-            if let item {
-                savedSelection = Self.encode(item)
-                Telemetry.signal("Page.viewed", ["page": item.kind])
-                Telemetry.breadcrumb("Showed the \(item.kind) page")
-            }
+            guard let item else { return }
+            if savedSelection != item.rawValue { savedSelection = item.rawValue }
+            apply()
+            Telemetry.signal("Page.viewed", ["page": item.page.rawValue])
+            Telemetry.breadcrumb("Showed the \(item.page.rawValue) page")
         }
+        // The View and Dock menus switch pages by saving one.
+        .onChange(of: savedSelection) { _, raw in
+            if selection?.rawValue != raw { selection = SidebarItem(rawValue: raw) }
+        }
+        .onChange(of: searchingEverywhere) { apply() }
         // The hosting window doesn't always pick up navigationTitle and shows "Untitled", so set it directly.
         .onChange(of: title, initial: true) { _, title in
             NSApp.windows.first { $0.identifier == AppController.windowID }?.title = title
@@ -91,34 +172,31 @@ struct MainWindowView: View {
         }
     }
 
+    private var current: SidebarItem { selection ?? .page(.todo) }
+
+    private var searchingEverywhere: Bool { scope == .everywhere && !store.searchText.isEmpty }
+
     @ViewBuilder
     private var detail: some View {
-        switch selection {
-        case .todo, nil:
-            TodoView()
-        case .yours:
-            YourPullsView()
-        case .stats:
-            StatsPage()
-        case .pulls(let section):
-            PullSectionList(section: section)
-        case .repo(let fullName):
-            RepoPage(fullName: fullName)
-        case .org(let owner):
-            OrgPage(owner: owner) { repo in
-                store.repos.visited(repo.fullName)
-                selection = .repo(repo.fullName)
-            }
-        case .repos:
-            RepoBrowser { repo in
-                store.repos.visited(repo.fullName)
-                selection = .repo(repo.fullName)
+        if searchingEverywhere {
+            SearchPage()
+        } else {
+            switch current.page {
+            case .todo: TodoView()
+            case .yours: YourPullsView()
             }
         }
     }
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        if store.statusError != nil {
+            ToolbarItem(placement: .primaryAction) {
+                Label("Couldn't Refresh", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Palette.pending)
+                    .help(store.statusError ?? "")
+            }
+        }
         ToolbarItemGroup(placement: .primaryAction) {
             if store.people != nil {
                 Button {
@@ -129,30 +207,14 @@ struct MainWindowView: View {
                 }
                 .help("Only showing activity from \(store.peopleFilter). Click to change.")
             }
-            if selection == .todo || selection == nil {
-                @Bindable var store = store
-                Toggle(isOn: $store.showHiddenTodos.animation(.snappy)) {
-                    Label("Show Hidden", systemImage: store.showHiddenTodos ? "eye" : "eye.slash")
-                }
-                .help(store.showHiddenTodos ? "Showing hidden items" : "Show items you hid")
-                .disabled(store.hiddenTodoCount == 0 && !store.showHiddenTodos)
-            }
             Button {
-                Task {
-                    switch selection {
-                    case .repo(let fullName): await store.refreshRepo(fullName)
-                    case .repos: await store.refreshRepos(force: true)
-                    case .org(let owner): await store.loadPulse(owner, force: true)
-                    case .stats: await store.loadStats(force: true)
-                    default: await store.refreshAll()
-                    }
-                }
+                Task { await store.refreshAll() }
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
-            .keyboardShortcut("r")
+            // ⌘R is the View menu's.
             .help("Refresh (⌘R)")
-            .disabled(store.isRefreshing || store.isRefreshingPulls || store.statsLoading)
+            .disabled(store.isRefreshing || store.isRefreshingPulls)
             Button {
                 NSWorkspace.shared.open(webURL)
             } label: {
@@ -160,334 +222,247 @@ struct MainWindowView: View {
             }
             .help("Open on GitHub")
         }
+        // On its own in the corner, as in Maps, rather than in the buttons' glass.
+        if #available(macOS 26, *) {
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
+                AccountMenu()
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .primaryAction) {
+                AccountMenu()
+            }
+        }
     }
 
     private var title: String {
         // Setup and sign-in aren't any page yet.
         guard store.phase == .ready, !store.onboarding else { return "GitBell" }
-        return switch selection {
-        case .pulls(let section): section.windowTitle
-        case .yours: "Your pull requests"
-        case .stats: "Your stats"
-        case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
-        case .repos: "Repositories"
-        case .org(let owner): owner
-        case .todo, nil: TodoItem.title
-        }
+        return searchingEverywhere ? "Search" : current.title
     }
 
     private var subtitle: String {
-        switch selection {
-        case .todo, nil:
+        if searchingEverywhere { return "“\(store.searchText)” everywhere" }
+        switch current {
+        case .page(.todo):
             guard store.todoLoaded else { return "Loading…" }
             let count = store.todoCount
             return count == 0 ? "All caught up" : count == 1 ? "1 waiting on you" : "\(count) waiting on you"
-        case .pulls(let section):
-            let count = store.pullTotals[section] ?? 0
-            return count == 1 ? "1 pull request" : "\(count) pull requests"
-        case .yours:
+        case .page(.yours):
             guard store.pipelineLoaded else { return "Loading…" }
             let pipeline = store.pipeline
             let open = [PipelineStage.drafts, .inReview, .fix, .ready].reduce(0) { $0 + (pipeline[$1]?.count ?? 0) }
             let shipping = pipeline[.shipping]?.count ?? 0
             return shipping == 0 ? "\(open) open" : "\(open) open · \(shipping) shipping"
-        case .stats:
-            return "The last 12 months"
-        case .repo(let fullName):
-            return String(fullName.split(separator: "/").first ?? "")
-        case .repos:
-            return "\(store.repos.all.count) in your organizations"
-        case .org(let owner):
-            return "\(store.repos.repos(of: owner).count) repositories"
+        case .kind(let kind):
+            return Self.pullRequests(store.todo.filter { $0.kind == kind }.count, noun: "item")
+        case .stage(let stage):
+            return Self.pullRequests(store.pipeline[stage]?.count ?? 0)
         }
+    }
+
+    private static func pullRequests(_ count: Int, noun: String = "pull request") -> String {
+        count == 1 ? "1 \(noun)" : "\(count) \(noun)s"
     }
 
     private var webURL: URL {
-        switch selection {
-        case .todo, nil: URL(string: "https://github.com/pulls/inbox")!
-        case .pulls(let section): store.webURL(for: section)
-        case .yours: URL(string: "https://github.com/pulls")!
-        case .stats: URL(string: "https://github.com/\(store.viewer?.login ?? "")")!
-        case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
-        case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
-        case .org(let owner): URL(string: "https://github.com/\(owner)")!
+        switch current {
+        case .kind(.review), .kind(.reReview): URL(string: "https://github.com/pulls/review-requested")!
+        case .page(.todo), .kind: URL(string: "https://github.com/pulls/inbox")!
+        case .page(.yours), .stage: URL(string: "https://github.com/pulls")!
         }
     }
 
-    private func apply(_ item: SidebarItem?) {
-        switch item {
-        case .todo:
-            store.showInWindow(.todo, pullsFocus: nil)
-        case .pulls(let section):
-            store.showInWindow(.pulls, pullsFocus: section)
-        case .yours:
-            store.showInWindow(.yours, pullsFocus: nil)
-        case .stats, .repo, .repos, .org, nil:
-            break
-        }
-    }
-
-    private static func encode(_ item: SidebarItem) -> String {
-        switch item {
-        case .todo: "todo"
-        case .yours: "yours"
-        case .stats: "stats"
-        case .pulls(let section): "pulls.\(section.rawValue)"
-        case .repo(let fullName): "repo.\(fullName)"
-        case .repos: "repos.all"
-        case .org(let owner): "org.\(owner)"
-        }
-    }
-
-    private static func decode(_ raw: String) -> SidebarItem? {
-        if raw == "todo" { return .todo }
-        if raw == "yours" { return .yours }
-        if raw == "stats" { return .stats }
-        let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
-        guard parts.count == 2 else { return nil }
-        switch parts[0] {
-        case "pulls":
-            // Your own pull requests' sections became one page, by stage.
-            guard let section = PullSection(rawValue: parts[1]) else { return nil }
-            return section.source == .yours || section == .merged ? .yours : .pulls(section)
-        case "repo": return .repo(parts[1])
-        case "repos": return .repos
-        case "org": return .org(parts[1])
-        default: return nil
+    private func apply() {
+        typealias Focus = InboxStore.Focus
+        // Searching everywhere lists Your turn's matches first, and the keys move through them.
+        if searchingEverywhere { store.showInWindow(.todo); return }
+        switch current {
+        case .page(.todo): store.showInWindow(.todo)
+        case .kind(let kind): store.showInWindow(.todo, focus: Focus(kind: kind))
+        case .page(.yours): store.showInWindow(.yours)
+        case .stage(let stage): store.showInWindow(.yours, focus: Focus(stage: stage))
         }
     }
 }
 
+// ⌘F, from the View menu, puts you in the search field.
+private struct SearchShortcut: ViewModifier {
+    let request: Int
+    @FocusState private var focused: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content
+                .searchFocused($focused)
+                .onChange(of: request) { focused = true }
+        } else {
+            content
+        }
+    }
+}
+
+// Each page with its groups beneath it, folding away like Mail's mailboxes, under headings as in Maps.
 private struct Sidebar: View {
     @Binding var selection: SidebarItem?
     @Environment(InboxStore.self) private var store
+    @AppStorage("sidebarCollapsed") private var collapsed = ""
 
     var body: some View {
-        List(selection: $selection) {
-            Section {
-                SidebarRow(title: TodoItem.title, symbol: TodoItem.symbol, tint: Palette.accent, count: store.todoCount,
-                           selected: selection == .todo)
-                    .tag(SidebarItem.todo)
-                // Badged with what's yours to act on: fixes and merges.
-                SidebarRow(title: "Your pull requests", symbol: "arrow.triangle.pull", tint: Palette.accent,
-                           count: (store.pullTotals[.needsAction] ?? 0) + (store.pullTotals[.readyToMerge] ?? 0),
-                           selected: selection == .yours)
-                    .tag(SidebarItem.yours)
+        // Always something selected, as in Mail: the list can let go of its row while rows redraw.
+        List(selection: Binding(get: { selection }, set: { if let item = $0 { selection = item } })) {
+            Section("Inbox") {
+                group(.todo)
             }
-            ForEach(PullSection.sidebarGroups) { group in
-                Section(group.title) {
-                    ForEach(group.sections) { section in
-                        pullRow(section)
-                    }
-                }
-            }
-            let orgs = store.repos.owners(viewer: store.viewer?.login).filter { $0 != store.viewer?.login }
-            if !orgs.isEmpty {
-                Section("Organizations") {
-                    ForEach(orgs, id: \.self) { owner in
-                        Label {
-                            Text(owner).lineLimit(1)
-                        } icon: {
-                            Avatar(url: URL(string: "https://github.com/\(owner).png"), size: 16, cornerRadius: 4)
-                                .frame(width: 18)
-                        }
-                        .tag(SidebarItem.org(owner))
-                    }
-                }
-            }
-            Section("Repositories") {
-                ForEach(store.yourRepos) { repo in
-                    RepoSidebarRow(repo: repo, count: store.todoCount(in: repo.fullName))
-                        .tag(SidebarItem.repo(repo.fullName))
-                        .contextMenu { RepoMenu(repo: repo) }
-                }
-                Label {
-                    Text("All Repositories")
-                } icon: {
-                    Image(systemName: "square.grid.2x2")
-                        .foregroundStyle(Palette.neutral)
-                        .frame(width: 18)
-                }
-                .tag(SidebarItem.repos)
+            Section("Pull Requests") {
+                group(.yours)
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                // A treat rather than a task, so it sits down here with you, below everything you work through.
-                FooterStatsRow(selected: selection == .stats) { selection = .stats }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 6)
-                HStack(spacing: 8) {
-                    Avatar(url: store.viewer?.avatarUrl, size: 22)
-                    Text(store.viewer?.login ?? "")
-                        .font(.system(size: 12, weight: .medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer(minLength: 4)
-                    FooterStatus()
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
+    }
+
+    private func group(_ page: WindowPage) -> some View {
+        let item = SidebarItem.page(page)
+        return DisclosureGroup(isExpanded: expanded(page)) {
+            ForEach(item.children, id: \.self) { child in
+                row(child)
             }
-            // Opaque, so the list doesn't show through when it scrolls under the footer in a short window.
-            .background(.bar)
-            .overlay(alignment: .top) { Divider() }
+        } label: {
+            row(item)
         }
     }
 
-    private func pullRow(_ section: PullSection) -> some View {
-        SidebarRow(title: section.windowTitle, symbol: section.symbol, tint: Palette.accent,
-                   // Recent merges are for reference, so they don't get a badge.
-                   count: section == .merged ? 0 : store.pullTotals[section] ?? 0,
-                   selected: selection == .pulls(section))
-            .tag(SidebarItem.pulls(section))
+    private func row(_ item: SidebarItem) -> some View {
+        Label(item.title, systemImage: item.symbol)
+            .lineLimit(1)
+            .badge(store.sidebarCount(item))
+            .tag(item)
+    }
+
+    // Open unless you've folded it away, remembered between launches.
+    private func expanded(_ page: WindowPage) -> Binding<Bool> {
+        Binding {
+            !collapsed.split(separator: ",").contains(Substring(page.rawValue))
+        } set: { open in
+            var pages = Set(collapsed.split(separator: ",").map(String.init))
+            if open { pages.remove(page.rawValue) } else { pages.insert(page.rawValue) }
+            collapsed = pages.sorted().joined(separator: ",")
+        }
     }
 }
 
-// Fixed-width icons keep the titles lined up. On a selected row the coloured icon would vanish
-// into the accent highlight, so it switches to the row's text colour there, as Finder does.
-// The row is told it's selected: backgroundProminence doesn't reach every row reliably.
-private struct SidebarRow: View {
-    let title: String
+// Your avatar in the toolbar's corner, as in Maps: who you're signed in as, when GitBell last heard from GitHub,
+// and your account's settings.
+private struct AccountMenu: View {
+    @Environment(InboxStore.self) private var store
+
+    var body: some View {
+        Menu {
+            if let login = store.viewer?.login {
+                Text("Signed in as \(login)")
+            }
+            if let updated = store.lastUpdated {
+                Text(Date.now.timeIntervalSince(updated) < 60 ? "Updated just now"
+                     : "Updated \(RelativeTime.short(updated, now: .now)) ago")
+            }
+            Divider()
+            Button("Account Settings…") { AppController.shared?.openSettings(on: .accounts) }
+        } label: {
+            Label {
+                Text(store.viewer?.login ?? "Account")
+            } icon: {
+                Avatar(url: store.viewer?.avatarUrl, size: 22)
+            }
+        }
+        .menuIndicator(.hidden)
+        .help(store.viewer?.login ?? "Account")
+    }
+}
+
+extension InboxStore {
+    // The sidebar's counts. A page counts what's waiting on you there, as Mail counts unread mail; each group
+    // counts what's in it, as each mailbox does.
+    func sidebarCount(_ item: SidebarItem) -> Int {
+        switch item {
+        case .page(.todo): todoCount
+        case .kind(let kind): allTodos.filter { $0.kind == kind && !$0.hidden }.count
+        // Yours to act on: fixes and merges.
+        case .page(.yours): (pipeline[.fix]?.count ?? 0) + (pipeline[.ready]?.count ?? 0)
+        case .stage(let stage): pipeline[stage]?.count ?? 0
+        }
+    }
+}
+
+// A list section's title, as Your turn's groups have them: icon, name and count.
+struct ListSectionTitle: View {
     let symbol: String
     let tint: Color
+    let title: String
     let count: Int
-    let selected: Bool
 
     var body: some View {
-        Label {
-            Text(title)
-        } icon: {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
             Image(systemName: symbol)
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(tint))
-                .frame(width: 18, alignment: .center)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 16)
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+            Text("\(count)")
+                .font(.system(size: 11, weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
-        .badge(count)
+        .padding(.horizontal, 4)
     }
 }
 
-private struct RepoSidebarRow: View {
-    let repo: Repo
-    // What's waiting on you there.
-    let count: Int
-
-    var body: some View {
-        Label {
-            Text(repo.name).lineLimit(1).truncationMode(.middle)
-        } icon: {
-            Avatar(url: repo.ownerAvatar, size: 16, cornerRadius: 4)
-                .frame(width: 18)
-        }
-        .badge(count)
-        .tooltip(repo.fullName)
-    }
-}
-
-// Your stats, in the footer beside you. Drawn like a selectable sidebar row, since it isn't in the list.
-private struct FooterStatsRow: View {
-    let selected: Bool
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Label {
-                Text("Your stats")
-            } icon: {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(Palette.accent))
-                    .frame(width: 18)
-            }
-            .font(.system(size: 13))
-            .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(hovering ? 0.06 : 0))))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-}
-
-// A compact "updated" dot for the sidebar footer.
-private struct FooterStatus: View {
+// Search across all three pages: what's in Your turn, then every other pull request of yours or for you.
+struct SearchPage: View {
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        Group {
-            if store.statusError != nil {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Palette.pending)
-                    .tooltip(store.statusError ?? "")
-            } else if let updated = store.lastUpdated {
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(context.date.timeIntervalSince(updated) < 60 ? "Updated now" : "Updated \(RelativeTime.short(updated, now: context.date)) ago")
-                        .font(.system(size: 11))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .tooltip("Last updated")
-                }
-            }
-        }
-    }
-}
-
-// One PR section, full width.
-struct PullSectionList: View {
-    let section: PullSection
-    @Environment(InboxStore.self) private var store
-
-    var body: some View {
-        let items = store.pulls(in: section)
-        let total = store.pullTotals[section] ?? items.count
-        if !store.loadedPulls.contains(section.source) {
-            LoadingView(lines: LoadingLines.pulls)
-        } else if items.isEmpty {
-            VStack(spacing: 10) {
-                Image(systemName: store.searchText.isEmpty ? section.symbol : "magnifyingglass")
-                    .font(.system(size: 40))
-                    .foregroundStyle(section.tint.opacity(0.7))
-                VStack(spacing: 3) {
-                    Text(store.searchText.isEmpty ? section.emptyTitle : "No matches")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(store.searchText.isEmpty ? section.emptySubtitle : "Nothing matches “\(store.searchText)”.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        let query = store.searchText.trimmingCharacters(in: .whitespaces)
+        let todos = query.isEmpty ? [] : store.todo
+        var seen = Set(todos.compactMap { $0.pr?.id })
+        let pulls = query.isEmpty ? [] : PullSection.allCases.flatMap { store.pulls(in: $0) }.filter { seen.insert($0.id).inserted }
+        if query.isEmpty {
+            ContentUnavailableView("Search GitBell", systemImage: "magnifyingglass",
+                                   description: Text("Find pull requests and notifications by title or repository."))
+        } else if todos.isEmpty && pulls.isEmpty {
+            ContentUnavailableView.search(text: query)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
-                            if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
-                            PullRow(pr: pr, showAuthor: section.showsAuthor)
-                        }
-                        if total > items.count, store.searchText.isEmpty {
-                            Divider().opacity(0.6)
-                            Button {
-                                NSWorkspace.shared.open(store.webURL(for: section))
-                            } label: {
-                                Label("View all \(total) on GitHub", systemImage: "arrow.up.right")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Palette.accent)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
+                    VStack(alignment: .leading, spacing: 18) {
+                        if !todos.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ListSectionTitle(symbol: TodoItem.symbol, tint: Palette.accent, title: TodoItem.title, count: todos.count)
+                                LazyVStack(spacing: 0) {
+                                    ForEach(Array(todos.enumerated()), id: \.element.id) { index, item in
+                                        if index > 0 { Divider().padding(.leading, 46).opacity(0.6) }
+                                        TodoRow(item: item)
+                                    }
+                                }
+                                .padding(3)
+                                .card()
                             }
-                            .buttonStyle(.plain)
+                        }
+                        if !pulls.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ListSectionTitle(symbol: WindowPage.yours.symbol, tint: Palette.accent, title: "Pull requests", count: pulls.count)
+                                LazyVStack(spacing: 0) {
+                                    ForEach(Array(pulls.enumerated()), id: \.element.id) { index, pr in
+                                        if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
+                                        PullRow(pr: pr, showAuthor: true)
+                                    }
+                                }
+                                .padding(4)
+                                .card()
+                            }
                         }
                     }
-                    .padding(4)
-                    .card()
                     .padding(16)
                 }
                 .onChange(of: store.selection) { _, id in
@@ -563,31 +538,10 @@ extension PullSection {
         case .needsAction: Palette.danger
         case .readyToMerge: Palette.open
         case .contributing: Palette.accent
-        case .waiting: Palette.teal
+        case .waiting: Palette.mint
         case .drafts: Palette.neutral
         case .merged: Palette.merged
         }
     }
 }
 
-struct SectionGroup: Identifiable {
-    let title: String
-    let sections: [PullSection]
-    var id: String { title }
-}
-
-extension PullSection {
-    // How the window and popover group and order the sections, most urgent first.
-    static let windowGroups = [
-        SectionGroup(title: "To Review", sections: [.needsReview, .teamReview, .reReview]),
-        SectionGroup(title: "Your Pull Requests", sections: [.needsAction, .readyToMerge, .waiting, .drafts, .merged]),
-        SectionGroup(title: "Others' Pull Requests", sections: [.contributing]),
-    ]
-    static var windowOrder: [PullSection] { windowGroups.flatMap(\.sections) }
-
-    // The window's sidebar: your own pull requests are one page, by stage, so only the others are listed.
-    static let sidebarGroups = [
-        SectionGroup(title: "To Review", sections: [.needsReview, .teamReview, .reReview]),
-        SectionGroup(title: "Others' Pull Requests", sections: [.contributing]),
-    ]
-}

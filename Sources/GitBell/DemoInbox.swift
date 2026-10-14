@@ -45,7 +45,6 @@ extension InboxStore {
                  minutes: 75, author: "grace", .approved, by: "heidi"),
         ]
 
-        repos.loadDemo()
         phase = .ready
         // GITBELL_DEMO_SLOW=1 lands each search a little after the last, to see Your turn fill in.
         let slow = ProcessInfo.processInfo.environment["GITBELL_DEMO_SLOW"] != nil

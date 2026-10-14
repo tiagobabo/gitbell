@@ -63,7 +63,7 @@ struct ApprovalConfirmation: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Approve") { Task { await store.approve(prompt) } }
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
+                    .prominentButtonStyle()
             }
             .controlSize(.regular)
         }

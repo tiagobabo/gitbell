@@ -179,7 +179,7 @@ enum Reason {
         switch reason {
         case "review_requested", "approval_requested": Palette.pending
         case "mention", "team_mention": Palette.accent
-        case "assign": Palette.teal
+        case "assign": Palette.mint
         case "author", "comment", "state_change": Palette.merged
         case "security_alert": Palette.danger
         default: Palette.neutral
@@ -207,7 +207,7 @@ struct SubjectStyle {
         case "Release":
             (icon, color, label) = (.tag, Palette.accent, nil)
         case "Discussion":
-            (icon, color, label) = (.commentDiscussion, Palette.teal, nil)
+            (icon, color, label) = (.commentDiscussion, Palette.mint, nil)
         case "Commit":
             (icon, color, label) = (.gitCommit, Palette.neutral, nil)
         case "CheckSuite", "WorkflowRun":

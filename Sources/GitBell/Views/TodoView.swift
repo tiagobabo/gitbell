@@ -6,28 +6,61 @@ struct TodoView: View {
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let items = store.todo
-        let yours = items.filter(\.kind.counted)
+        // Narrowed to one group when it's picked in the window's sidebar.
+        let only = compact ? nil : store.focus.kind
+        // Only what's on you: your pull requests waiting on others are under Your pull requests → In review.
+        let items = store.todo.filter { $0.kind.counted && (only == nil || $0.kind == only) }
+        let yours = items
         let pending = yours.filter { !$0.hidden }
-        let waiting = items.filter { $0.kind == .waiting }
 
         // Groups fill in as their searches answer; only a first load that got nowhere takes the whole page.
         if store.nothingLoaded, store.firstLoadError != nil {
             LoadingView(lines: LoadingLines.todo)
+        } else if !compact, store.todoLoaded, items.isEmpty {
+            // Nothing else on the page, so the empty state takes all of it, centred like every other, offering
+            // what you hid there.
+            let hidden = store.hiddenTodoCount(of: only)
+            if let only, store.searchText.isEmpty {
+                ContentUnavailableView {
+                    Label("All Clear", systemImage: only.symbol)
+                } description: {
+                    Text(only.subtitle)
+                } actions: {
+                    ShowHiddenButton(count: hidden)
+                }
+            } else {
+                CaughtUp(search: store.searchText, hidden: hidden)
+            }
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
                     // The window pins each group's header while you scroll through it. The popover is too short to need it.
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: compact ? [] : .sectionHeaders) {
-                        TodoSummary(items: pending, compact: compact) { kind in
-                            withAnimation(.snappy) { proxy.scrollTo(kind, anchor: .top) }
+                        if let only {
+                            GroupPageHeader(symbol: only.symbol, tint: only.tint, title: only.title,
+                                            count: items.filter { !$0.hidden }.count, description: only.subtitle)
+                        } else {
+                            TodoSummary(items: pending, compact: compact) { kind in
+                                withAnimation(.snappy) { proxy.scrollTo(kind, anchor: .top) }
+                            }
+                            .padding(.bottom, compact ? 4 : 8)
                         }
-                        .padding(.bottom, compact ? 4 : 8)
 
-                        if store.todoLoaded, yours.isEmpty {
-                            CaughtUp(search: store.searchText, waiting: waiting.count)
+                        if let only, store.isReady(only), items.isEmpty {
+                            if store.searchText.isEmpty {
+                                ContentUnavailableView("All Clear", systemImage: only.symbol, description: Text(only.subtitle))
+                                    .padding(.vertical, 20)
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                ContentUnavailableView.search(text: store.searchText)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        } else if only == nil, store.todoLoaded, yours.isEmpty {
+                            CaughtUp(search: store.searchText)
+                                .padding(.vertical, 20)
+                                .frame(maxWidth: .infinity)
                         }
-                        ForEach(TodoItem.Kind.yours) { kind in
+                        ForEach(only.map { [$0] } ?? TodoItem.Kind.yours) { kind in
                             let group = yours.filter { $0.kind == kind }
                             if !group.isEmpty {
                                 Section {
@@ -38,20 +71,15 @@ struct TodoView: View {
                                     }
                                     TodoCard(items: group)
                                 } header: {
-                                    TodoGroupHeader(kind: kind, count: group.count, compact: compact).id(kind)
+                                    if only == nil {
+                                        TodoGroupHeader(kind: kind, count: group.count, compact: compact).id(kind)
+                                    }
                                 }
                             } else if !store.isReady(kind), !kind.tileOnlyWhenUsed, kind != .merge {
                                 placeholder(kind)
                             }
                         }
-                        if !waiting.isEmpty {
-                            WaitingHeader(count: waiting.count, compact: compact)
-                            if store.waitingExpanded {
-                                TodoCard(items: waiting)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                            }
-                        }
-                        HiddenToggle()
+                        HiddenToggle(kind: only)
                     }
                     .padding(.horizontal, compact ? 10 : 18)
                     .padding(.vertical, compact ? 10 : 16)
@@ -85,7 +113,9 @@ private struct TodoSummary: View {
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let kinds = TodoItem.Kind.yours.filter { !$0.tileOnlyWhenUsed || (count($0) ?? 0) > 0 }
+        // In the window, a tile for every group, as the sidebar lists them; the popover only has room for the
+        // ones in use.
+        let kinds = TodoItem.Kind.yours.filter { !compact || !$0.tileOnlyWhenUsed || (count($0) ?? 0) > 0 }
         ViewThatFits(in: .horizontal) {
             tiles(kinds, labelled: true)
             tiles(kinds, labelled: false)
@@ -191,45 +221,6 @@ private struct TodoGroupHeader: View {
         .background {
             if !compact { Rectangle().fill(Color(nsColor: .windowBackgroundColor)).padding(.horizontal, -4) }
         }
-    }
-}
-
-private struct WaitingHeader: View {
-    let count: Int
-    let compact: Bool
-    @Environment(InboxStore.self) private var store
-
-    var body: some View {
-        Button {
-            withAnimation(.snappy(duration: 0.25)) { store.waitingExpanded.toggle() }
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9.5, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                    .rotationEffect(.degrees(store.waitingExpanded ? 90 : 0))
-                    .frame(width: 16)
-                Text(TodoItem.Kind.waiting.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text("\(count)")
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(.tertiary)
-                if !compact {
-                    Text(TodoItem.Kind.waiting.subtitle)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 4)
-            .padding(.top, 18)
-            .padding(.bottom, 6)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -343,10 +334,10 @@ struct TodoRow: View {
         .onTapGesture { store.open(item) }
         .contextMenu {
             Button("Open on GitHub") { store.open(item) }
-            Button("Copy Link") { store.copyLink(item) }
             if let pr = item.pr {
                 Button("Show Timeline") { store.showTimeline(pr, from: .todo) }
             }
+            Button("Copy Link") { store.copyLink(item) }
             Button("Open Repository") { NSWorkspace.shared.open(URL(string: "https://github.com/\(item.repository)")!) }
             if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
                 Section("On hold") {
@@ -365,8 +356,9 @@ struct TodoRow: View {
                 }
             }
             Divider()
-            Button(item.hidden ? "Unhide" : item.pr == nil ? "Mark as Done" : "Hide Until It Changes") {
-                Task { await store.markDone(item) }
+            Button(item.hideTitle) { Task { await store.markDone(item) } }
+            if let n = item.notification {
+                Button("Mark as Read") { Task { await store.markRead(n) } }
             }
         }
         .id(item.id)
@@ -694,8 +686,7 @@ private struct TodoRowActions: View {
             }
         }
         .padding(2)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
+        .glass(in: Capsule())
     }
 
     private var doneHelp: String {
@@ -737,11 +728,13 @@ private struct CircleCIHint: View {
 }
 
 // "2 hidden until something changes · Show": hidden items come back on their own, or here.
+// What you hid on this page: all of Your turn, or the one group it's narrowed to.
 private struct HiddenToggle: View {
+    let kind: TodoItem.Kind?
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let count = store.hiddenTodoCount
+        let count = store.hiddenTodoCount(of: kind)
         if count > 0 {
             Button {
                 withAnimation(.snappy(duration: 0.25)) { store.showHiddenTodos.toggle() }
@@ -763,32 +756,45 @@ private struct HiddenToggle: View {
     }
 }
 
-private struct CaughtUp: View {
-    let search: String
-    let waiting: Int
+// For an empty page with things hidden on it.
+private struct ShowHiddenButton: View {
+    let count: Int
+    @Environment(InboxStore.self) private var store
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: search.isEmpty ? "checkmark.seal.fill" : "magnifyingglass")
-                .font(.system(size: 40))
-                .foregroundStyle(search.isEmpty
-                                 ? AnyShapeStyle(Palette.open)
-                                 : AnyShapeStyle(.tertiary))
-            VStack(spacing: 3) {
-                Text(search.isEmpty ? "You're all caught up" : "No matches")
-                    .font(.system(size: 14, weight: .semibold))
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+        if count > 0 {
+            Button("Show \(count) Hidden") {
+                withAnimation(.snappy(duration: 0.25)) { store.showHiddenTodos = true }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
+    }
+}
+
+private struct CaughtUp: View {
+    let search: String
+    var hidden = 0
+    @Environment(InboxStore.self) private var store
+
+    // Your pull requests waiting on others, as In review counts them.
+    private var waiting: Int { store.pipeline[.inReview]?.count ?? 0 }
+
+    var body: some View {
+        Group {
+            if search.isEmpty {
+                ContentUnavailableView {
+                    Label("You're All Caught Up", systemImage: "checkmark.seal")
+                } description: {
+                    Text(subtitle)
+                } actions: {
+                    ShowHiddenButton(count: hidden)
+                }
+            } else {
+                ContentUnavailableView.search(text: search)
+            }
+        }
     }
 
     private var subtitle: String {
-        if !search.isEmpty { return "Nothing matches “\(search)”." }
         switch waiting {
         case 0: return "No reviews, fixes or replies waiting on you."
         case 1: return "1 of your pull requests is waiting on others."

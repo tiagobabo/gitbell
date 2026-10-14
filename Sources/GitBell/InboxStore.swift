@@ -17,9 +17,8 @@ final class InboxStore {
     var toast: String?
     var selection: String?
     var searchText = ""
-    var quickOpenShown = false
-    // A sidebar page the window should switch to, e.g. Settings from ⌘, or the popover's menu.
-    var windowRequest: SidebarItem?
+    // Bumped by ⌘F, to put you in the window's search field.
+    var searchRequest = 0
     // The Settings tab to show, so a button elsewhere can open Settings where it's relevant.
     var settingsTab = SettingsTab.general
 
@@ -40,11 +39,16 @@ final class InboxStore {
     var myTeams: [PersonSuggestion]?
     var unfilteredPulls: [PullSection: [PullRequest]] = [:]
     var unfilteredTotals: [PullSection: Int] = [:]
-    // The single PR section the window is showing; nil in the popover, which shows them all.
-    var pullsFocus: PullSection?
+    // What the window's sidebar narrowed its page to: one group of Your turn, or one stage of your pull
+    // requests. Empty shows everything, as the popover always does.
+    struct Focus: Equatable {
+        var kind: TodoItem.Kind?
+        var stage: PipelineStage?
+    }
+    var focus = Focus()
 
-    // Your turn, the PR lists, and the window's page of your own pull requests by stage.
-    enum Tab: String { case todo, pulls, yours }
+    // Your turn, and your own pull requests by stage: the window's two pages, and the popover's two tabs.
+    enum Tab: String { case todo, yours }
     var tab: Tab = Tab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .todo {
         didSet {
             guard tab != oldValue else { return }
@@ -54,8 +58,8 @@ final class InboxStore {
         }
     }
     // The window and popover share these fields but each keeps its own view of them: the window's comes
-    // from its sidebar, the popover's from where you left it. Nil until first set.
-    private var windowView: (tab: Tab, pullsFocus: PullSection?)?
+    // from its page bar, the popover's from where you left it. Nil until first set.
+    private var windowView: (tab: Tab, focus: Focus)?
     private var popoverView: Tab?
     private var popoverOpen = false
 
@@ -74,7 +78,6 @@ final class InboxStore {
     var showHiddenTodos = false
     // First launch walks through setup in the window. Anyone who had signed in before it existed skips it.
     var onboarding = false
-    var waitingExpanded = false
     // Pull request histories, fetched when you open one's timeline, by pull request id.
     var timelines: [String: PullTimeline] = [:]
     var timelineErrors: [String: String] = [:]
@@ -86,11 +89,6 @@ final class InboxStore {
     var watchPrints: [String: String] = [:]
     private var watchTask: Task<Void, Never>?
     private(set) var pullsRefreshedAt: Date?
-    // Your year on GitHub, for the stats page: fetched when it opens.
-    var stats: PersonalStats?
-    var statsError: String?
-    var statsLoading = false
-    var statsLoadedAt: Date?
 
     var pulls: [PullSection: [PullRequest]] = [:] {
         didSet {
@@ -107,8 +105,6 @@ final class InboxStore {
     var loadedPulls: Set<PullSource> = []
     var pullErrors: [PullSource: String] = [:]
     var isRefreshingPulls = false
-    // Everything starts folded on launch; what you open stays open until you quit.
-    var collapsed = Set(PullSection.allCases)
 
     var dockBadge = UserDefaults.standard.object(forKey: "dockBadge") as? Bool ?? true {
         didSet { UserDefaults.standard.set(dockBadge, forKey: "dockBadge") }
@@ -140,7 +136,6 @@ final class InboxStore {
     }
 
     private(set) var client: GitHubClient?
-    let repos = RepoDirectory()
     private var pollTask: Task<Void, Never>?
     private var pullTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
@@ -224,9 +219,6 @@ final class InboxStore {
         notifications = []
         details = [:]
         lastUpdated = nil
-        stats = nil
-        statsLoadedAt = nil
-        repos.signOut()
         TokenStore.deleteToken()
         TokenStore.mode = .signedOut
         phase = .signedOut
@@ -312,8 +304,6 @@ final class InboxStore {
                     resolvedAt = .now
                 }
                 await self.refreshPulls()
-                // Only goes to GitHub when the list is more than a few hours old.
-                await self.refreshRepos()
                 try? await Task.sleep(for: .seconds(120))
             }
         }
@@ -475,10 +465,6 @@ private struct PullAnswer: Sendable {
 }
 
 extension InboxStore {
-    var actionablePulls: Int {
-        [PullSection.needsReview, .reReview, .needsAction, .readyToMerge].reduce(0) { $0 + (pullTotals[$1] ?? 0) }
-    }
-
     // Your pull requests by how far along they are, open and merged, until they've been live for a day. A stack
     // stays together, bottom first, in the stage of its bottom pull request: that's the one the rest wait on.
     var pipeline: [PipelineStage: [PullRequest]] {
@@ -533,16 +519,6 @@ extension InboxStore {
         } catch {
             Telemetry.report(error, while: "loading a timeline")
             if timelines[pr.id] == nil { timelineErrors[pr.id] = error.localizedDescription }
-        }
-    }
-
-    func isExpanded(_ section: PullSection) -> Bool {
-        !collapsed.contains(section) && !(pulls[section] ?? []).isEmpty
-    }
-
-    func toggle(_ section: PullSection) {
-        withAnimation(.snappy(duration: 0.25)) {
-            if collapsed.contains(section) { collapsed.remove(section) } else { collapsed.insert(section) }
         }
     }
 
@@ -773,29 +749,28 @@ extension InboxStore {
 
 extension InboxStore {
     // Assigning an unchanged value still redraws every observer, so only set what differs.
-    func setView(_ tab: Tab, pullsFocus: PullSection?) {
+    func setView(_ tab: Tab, focus: Focus = Focus()) {
         if self.tab != tab { self.tab = tab }
-        if self.pullsFocus != pullsFocus { self.pullsFocus = pullsFocus }
+        if self.focus != focus { self.focus = focus }
     }
 
-    // The window's sidebar selection. Held back while the popover is open so it can't swap the popover's view.
-    func showInWindow(_ tab: Tab, pullsFocus: PullSection?) {
-        windowView = (tab, pullsFocus)
-        if !popoverOpen { setView(tab, pullsFocus: pullsFocus) }
+    // The window's page. Held back while the popover is open so it can't swap the popover's view.
+    func showInWindow(_ tab: Tab, focus: Focus = Focus()) {
+        windowView = (tab, focus)
+        if !popoverOpen { setView(tab, focus: focus) }
     }
 
     // Each side gets back what it last showed, instantly rather than animating from the other's view.
     func enterPopover() {
         popoverOpen = true
-        // The popover has no page of its own pull requests; their sections are in its PR list.
-        withoutAnimation { setView(popoverView ?? (tab == .yours ? .pulls : tab), pullsFocus: nil) }
+        withoutAnimation { setView(popoverView ?? tab) }
     }
 
     func leavePopover() {
         guard popoverOpen else { return }
         popoverOpen = false
         popoverView = tab
-        if let windowView { withoutAnimation { setView(windowView.tab, pullsFocus: windowView.pullsFocus) } }
+        if let windowView { withoutAnimation { setView(windowView.tab, focus: windowView.focus) } }
     }
 
     private func withoutAnimation(_ body: () -> Void) {
@@ -811,13 +786,11 @@ extension InboxStore {
     var navigableIDs: [String] {
         switch tab {
         case .todo:
-            return todo.filter { $0.kind != .waiting || waitingExpanded }.map(\.id)
-        case .pulls:
-            if let pullsFocus { return pulls(in: pullsFocus).map(\.id) }
-            return PullSection.windowOrder.filter(isExpanded).flatMap { (pulls[$0] ?? []).map(\.id) }
+            if let kind = focus.kind { return todo.filter { $0.kind == kind }.map(\.id) }
+            return todo.filter(\.kind.counted).map(\.id)
         case .yours:
             let pipeline = pipeline
-            return PipelineStage.allCases.flatMap { (pipeline[$0] ?? []).map(\.id) }
+            return (focus.stage.map { [$0] } ?? PipelineStage.allCases).flatMap { (pipeline[$0] ?? []).map(\.id) }
         }
     }
 
@@ -832,13 +805,48 @@ extension InboxStore {
     }
 
     var selectedPull: PullRequest? {
-        guard tab == .pulls || tab == .yours else { return nil }
+        guard tab == .yours else { return nil }
         return pulls.values.lazy.flatMap { $0 }.first { $0.id == self.selection }
     }
 
     func openSelection() {
         if let pr = selectedPull { open(pr) }
         if let item = selectedTodo { open(item) }
+    }
+
+    // The selected row's other actions, shared by the Item menu and the keys, as its context menu names them.
+    var hasSelection: Bool { selectedTodo != nil || selectedPull != nil }
+    private var selectedPR: PullRequest? { selectedTodo?.pr ?? selectedPull }
+
+    var canShowSelectionTimeline: Bool { selectedPR != nil }
+
+    func showSelectionTimeline() {
+        if let pr = selectedTodo?.pr { showTimeline(pr, from: .todo) }
+        else if let pr = selectedPull { showTimeline(pr, from: .pulls) }
+    }
+
+    func copySelectionLink() {
+        if let item = selectedTodo { copyLink(item) } else if let pr = selectedPull { copyLink(pr) }
+    }
+
+    func openSelectionRepository() {
+        guard let repository = selectedTodo?.repository ?? selectedPull?.repository else { return }
+        NSWorkspace.shared.open(URL(string: "https://github.com/\(repository)")!)
+    }
+
+    // Only Your turn's items can be hidden or read.
+    var hideSelectionTitle: String { selectedTodo.map(\.hideTitle) ?? TodoItem.defaultHideTitle }
+
+    func hideSelection() {
+        guard let item = selectedTodo else { return }
+        Task { await markDone(item) }
+    }
+
+    var canMarkSelectionRead: Bool { selectedTodo?.notification != nil }
+
+    func markSelectionRead() {
+        guard let n = selectedTodo?.notification else { return }
+        Task { await markRead(n) }
     }
 
     func neighbour(of id: String, skipping removed: Set<String>) -> String? {

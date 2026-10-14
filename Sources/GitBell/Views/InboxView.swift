@@ -13,10 +13,10 @@ struct InboxView: View {
             case .ready:
                 HeaderView()
                 Divider().opacity(0.5)
-                // Both lists stay alive so each keeps its scroll position across tab switches.
+                // The window's two pages, compact. Both stay alive so each keeps its scroll position across tab switches.
                 ZStack {
                     TodoView(compact: true).tabVisible(store.tab == .todo)
-                    PullsView().tabVisible(store.tab == .pulls)
+                    YourPullsView(compact: true).tabVisible(store.tab == .yours)
                 }
                 .frame(maxHeight: .infinity)
                 FooterView()
@@ -35,9 +35,6 @@ struct HeaderView: View {
         HStack(spacing: 8) {
             TabSwitcher()
             Spacer(minLength: 0)
-            IconButton(symbol: "magnifyingglass", help: "Go to repository (⌘K)") {
-                AppController.shared?.showQuickOpen()
-            }
             IconButton(symbol: "arrow.clockwise", help: "Refresh (⌘R)", busy: store.isRefreshing || store.isRefreshingPulls) {
                 Task { await store.refreshAll() }
             }
@@ -58,7 +55,7 @@ struct TabSwitcher: View {
         @Bindable var store = store
         Picker("View", selection: $store.tab) {
             Text(label(TodoItem.title, store.todoCount)).tag(InboxStore.Tab.todo)
-            Text(label("PRs", store.actionablePulls)).tag(InboxStore.Tab.pulls)
+            Text(label(WindowPage.yours.title, store.sidebarCount(.page(.yours)))).tag(InboxStore.Tab.yours)
         }
         .pickerStyle(.segmented)
         .labelsHidden()
@@ -167,7 +164,7 @@ extension View {
 }
 
 // Arrow keys / J K to move, Return or O to open, E done, M read, C copy link, T timeline.
-// The popover also takes Tab to switch tabs; the window leaves that to the sidebar.
+// The popover also takes Tab to switch tabs. The Item menu offers the same actions.
 struct InboxKeyboard: ViewModifier {
     let inPopover: Bool
     @Environment(InboxStore.self) private var store
@@ -179,19 +176,26 @@ struct InboxKeyboard: ViewModifier {
             .focusEffectDisabled()
             .focused($focused)
             .onAppear { focused = true }
-            .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
-            .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
-            .onKeyPress(.return) { store.openSelection(); return .handled }
+            .onKeyPress(.downArrow) { elsewhere ? .ignored : { store.moveSelection(1); return .handled }() }
+            .onKeyPress(.upArrow) { elsewhere ? .ignored : { store.moveSelection(-1); return .handled }() }
+            .onKeyPress(.return) { elsewhere ? .ignored : { store.openSelection(); return .handled }() }
             .onKeyPress(.tab) {
-                guard inPopover else { return .ignored }
-                let order: [InboxStore.Tab] = [.todo, .pulls]
+                guard inPopover, !elsewhere else { return .ignored }
+                let order: [InboxStore.Tab] = [.todo, .yours]
                 store.tab = order[((order.firstIndex(of: store.tab) ?? 0) + 1) % order.count]
                 return .handled
             }
-            .onKeyPress(.escape) { store.selection = nil; return .handled }
+            .onKeyPress(.escape) { elsewhere ? .ignored : { store.selection = nil; return .handled }() }
             .onKeyPress(characters: CharacterSet(charactersIn: "jkoemct"), phases: .down) { press in
-                handle(press.characters)
+                elsewhere ? .ignored : handle(press.characters)
             }
+    }
+
+    // Typing in a field, such as search, or moving through the window's sidebar: the keys are theirs. Both sit
+    // inside the views this watches, so their keys pass through here first.
+    private var elsewhere: Bool {
+        guard let responder = NSApp.keyWindow?.firstResponder else { return false }
+        return (responder as? NSTextView)?.isFieldEditor == true || responder is NSTableView
     }
 
     private func handle(_ key: String) -> KeyPress.Result {
@@ -200,19 +204,17 @@ struct InboxKeyboard: ViewModifier {
         case "k": store.moveSelection(-1)
         case "o": store.openSelection()
         case "e":
-            guard let item = store.selectedTodo else { return .ignored }
-            Task { await store.markDone(item) }
+            guard store.selectedTodo != nil else { return .ignored }
+            store.hideSelection()
         case "m":
-            guard let n = store.selectedTodo?.notification else { return .ignored }
-            Task { await store.markRead(n) }
+            guard store.canMarkSelectionRead else { return .ignored }
+            store.markSelectionRead()
         case "t":
-            if let pr = store.selectedTodo?.pr { store.showTimeline(pr, from: .todo) }
-            else if let pr = store.selectedPull { store.showTimeline(pr, from: .pulls) }
-            else { return .ignored }
+            guard store.canShowSelectionTimeline else { return .ignored }
+            store.showSelectionTimeline()
         case "c":
-            if let item = store.selectedTodo { store.copyLink(item) }
-            else if let pr = store.selectedPull { store.copyLink(pr) }
-            else { return .ignored }
+            guard store.hasSelection else { return .ignored }
+            store.copySelectionLink()
         default:
             return .ignored
         }
@@ -231,9 +233,7 @@ struct ToastOverlay: ViewModifier {
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
-                    .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                    .glass(in: Capsule(), floating: true)
                     .padding(.bottom, bottomPadding)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }

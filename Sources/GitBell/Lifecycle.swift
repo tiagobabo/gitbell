@@ -171,7 +171,7 @@ enum PipelineStage: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .drafts: Palette.neutral
-        case .inReview: Palette.teal
+        case .inReview: Palette.mint
         case .fix: Palette.danger
         case .ready: Palette.open
         case .shipping: Palette.pending

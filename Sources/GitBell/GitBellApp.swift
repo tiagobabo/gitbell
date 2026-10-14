@@ -15,11 +15,7 @@ struct GitBellApp: App {
                     Button("Check for Updates…") { delegate.controller.updater.checkForUpdates() }
                         .disabled(!delegate.controller.updater.canCheck)
                 }
-                CommandGroup(before: .toolbar) {
-                    Button("Go to Repository…") { delegate.controller.showQuickOpen() }
-                        .keyboardShortcut("k")
-                    Divider()
-                }
+                AppCommands(store: delegate.controller.store) { delegate.controller.showWindow() }
             }
     }
 }
@@ -47,6 +43,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard MenuBarIcon.isShown, !controller.quitting, !systemQuit else { return .terminateNow }
         controller.retreatToMenuBar()
         return .terminateCancel
+    }
+
+    // Right-clicking the Dock icon: the window's pages and a refresh, like the View menu's.
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        let menu = NSMenu()
+        for page in WindowPage.allCases {
+            let item = menu.addItem(withTitle: page.title, action: #selector(showPage(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = page.rawValue
+        }
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Refresh", action: #selector(refresh), keyEquivalent: "").target = self
+        return menu
+    }
+
+    @objc private func showPage(_ item: NSMenuItem) {
+        UserDefaults.standard.set(item.representedObject as? String, forKey: "windowSelection")
+        controller.showWindow()
+    }
+
+    @objc private func refresh() {
+        Task { await controller.store.refreshAll() }
     }
 
     // Clicking the Dock icon with the window closed brings it back.

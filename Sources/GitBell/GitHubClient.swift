@@ -6,6 +6,7 @@ struct APIError: LocalizedError {
 
     var errorDescription: String? { message }
     var isUnauthorized: Bool { status == 401 }
+    var isGatewayTimeout: Bool { [502, 504].contains(status) }
 }
 
 actor GitHubClient {
@@ -889,228 +890,6 @@ actor GitHubClient {
         }
     }
 
-    // MARK: Repositories
-
-    // Unarchived repositories owned by the viewer and each of their organizations, most recently pushed first.
-    func repositories() async throws -> [Repo] {
-        struct Owners: Decodable {
-            struct Viewer: Decodable { let login: String; let organizations: Nodes<Owner> }
-            struct Owner: Decodable { let login: String }
-            let viewer: Viewer
-        }
-        let owners: Owners = try await graphQL("{ viewer { login organizations(first: 100) { nodes { login } } } }")
-        var repos: [Repo] = []
-        for login in [owners.viewer.login] + owners.viewer.organizations.nodes.map(\.login) {
-            var cursor: String?
-            // Ten pages is a thousand repositories, more than any one person navigates.
-            for _ in 0..<10 {
-                struct Page: Decodable {
-                    struct Owner: Decodable { let repositories: Connection }
-                    struct Connection: Decodable { let nodes: [RepoNode]; let pageInfo: PageInfo }
-                    struct PageInfo: Decodable { let hasNextPage: Bool; let endCursor: String? }
-                    let repositoryOwner: Owner?
-                }
-                var variables: [String: Any] = ["login": login]
-                if let cursor { variables["after"] = cursor }
-                let page: Page = try await graphQL(Self.repositoriesQuery, variables)
-                guard let connection = page.repositoryOwner?.repositories else { break }
-                repos += connection.nodes.map(\.repo)
-                guard connection.pageInfo.hasNextPage, let next = connection.pageInfo.endCursor else { break }
-                cursor = next
-            }
-        }
-        return repos
-    }
-
-    private static let repositoriesQuery = """
-    query($login: String!, $after: String) {
-      repositoryOwner(login: $login) {
-        repositories(first: 100, after: $after, isArchived: false, ownerAffiliations: [OWNER],
-                     orderBy: {field: PUSHED_AT, direction: DESC}) {
-          pageInfo { hasNextPage endCursor }
-          nodes { ...repo }
-        }
-      }
-    }
-    """ + repoFragment
-
-    private static let repoFragment = """
-    fragment repo on Repository {
-      nameWithOwner description url isPrivate isFork stargazerCount pushedAt primaryLanguage { name color }
-    }
-    """
-
-    private struct RepoNode: Decodable {
-        let nameWithOwner: String
-        let description: String?
-        let url: URL
-        let isPrivate: Bool
-        let isFork: Bool
-        let stargazerCount: Int
-        let pushedAt: Date?
-        let primaryLanguage: Language?
-        struct Language: Decodable { let name: String; let color: String? }
-
-        var repo: Repo {
-            Repo(fullName: nameWithOwner, description: description, url: url, isPrivate: isPrivate, isFork: isFork,
-                 stars: stargazerCount, pushedAt: pushedAt, language: primaryLanguage?.name, languageColor: primaryLanguage?.color)
-        }
-    }
-
-    // How many pull requests the viewer opened and reviewed in each repository since `since`, from the latest 100 of each.
-    func repoActivity(since: Date) async throws -> [String: Int] {
-        struct Result: Decodable { let authored: Search; let reviewed: Search }
-        struct Search: Decodable { let nodes: [Node?] }
-        struct Node: Decodable { let repository: Owner? }
-        struct Owner: Decodable { let nameWithOwner: String }
-        let day = since.formatted(.iso8601.year().month().day())
-        let result: Result = try await graphQL("""
-        query($authored: String!, $reviewed: String!) {
-          authored: search(query: $authored, type: ISSUE, first: 100) { nodes { ... on PullRequest { repository { nameWithOwner } } } }
-          reviewed: search(query: $reviewed, type: ISSUE, first: 100) { nodes { ... on PullRequest { repository { nameWithOwner } } } }
-        }
-        """, ["authored": "is:pr author:@me created:>=\(day)", "reviewed": "is:pr reviewed-by:@me -author:@me created:>=\(day)"])
-        var counts: [String: Int] = [:]
-        // Your own pull requests say more about where you work than the ones you review.
-        for node in result.authored.nodes.compactMap({ $0 }) { counts[node.repository?.nameWithOwner ?? "", default: 0] += 2 }
-        for node in result.reviewed.nodes.compactMap({ $0 }) { counts[node.repository?.nameWithOwner ?? "", default: 0] += 1 }
-        counts[""] = nil
-        return counts
-    }
-
-    // A repository's page: its main branch, open pull requests and the last 30 days of merges.
-    func repoDetail(_ fullName: String) async throws -> RepoDetail {
-        let parts = fullName.split(separator: "/", maxSplits: 1).map(String.init)
-        guard parts.count == 2 else { throw APIError(status: 0, message: "Not a repository: \(fullName)") }
-        let since = (Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .now).formatted(.iso8601.year().month().day())
-
-        struct Result: Decodable {
-            let repository: Repository?
-            let open: GraphQLResponse.Search
-            let merged: Merged
-        }
-        struct Repository: Decodable {
-            let homepageUrl: String?
-            let pullRequests: Count
-            let issues: Count
-            let latestRelease: Release?
-            let defaultBranchRef: Branch?
-        }
-        struct Count: Decodable { let totalCount: Int }
-        struct Release: Decodable { let tagName: String; let publishedAt: Date?; let url: URL }
-        struct Branch: Decodable { let name: String; let target: Commit? }
-        struct Commit: Decodable {
-            struct Author: Decodable { let name: String?; let user: User? }
-            struct User: Decodable { let login: String; let avatarUrl: URL? }
-            struct Rollup: Decodable { let state: String }
-            let committedDate: Date?
-            let messageHeadline: String?
-            let url: URL?
-            let author: Author?
-            let statusCheckRollup: Rollup?
-        }
-        struct Merged: Decodable { let issueCount: Int; let nodes: [MergedNode?] }
-        struct MergedNode: Decodable {
-            struct User: Decodable { let login: String; let avatarUrl: URL? }
-            let createdAt: Date?
-            let mergedAt: Date?
-            let author: User?
-        }
-
-        let result: Result = try await graphQL("""
-        query($owner: String!, $name: String!, $open: String!, $merged: String!) {
-          repository(owner: $owner, name: $name) {
-            homepageUrl
-            pullRequests(states: OPEN) { totalCount }
-            issues(states: OPEN) { totalCount }
-            latestRelease { tagName publishedAt url }
-            defaultBranchRef { name target { ... on Commit {
-              committedDate messageHeadline url author { name user { login avatarUrl } } statusCheckRollup { state }
-            } } }
-          }
-          open: search(query: $open, type: ISSUE, first: 30) { issueCount nodes { ...pr } }
-          merged: search(query: $merged, type: ISSUE, first: 100) { issueCount nodes { ... on PullRequest {
-            createdAt mergedAt author { login avatarUrl }
-          } } }
-        }
-        """ + Self.pullFragment, [
-            "owner": parts[0], "name": parts[1],
-            "open": "repo:\(fullName) is:pr is:open sort:updated-desc",
-            "merged": "repo:\(fullName) is:pr is:merged merged:>=\(since) sort:updated-desc",
-        ])
-        guard let repo = result.repository else { throw APIError(status: 404, message: "Couldn't find \(fullName)") }
-
-        let commit = repo.defaultBranchRef?.target
-        return RepoDetail(
-            fullName: fullName,
-            homepage: repo.homepageUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
-            openPullCount: repo.pullRequests.totalCount,
-            openIssueCount: repo.issues.totalCount,
-            defaultBranch: repo.defaultBranchRef?.name,
-            lastCommit: commit.flatMap { commit in
-                commit.committedDate.map {
-                    RepoDetail.LastCommit(headline: commit.messageHeadline ?? "", url: commit.url, date: $0,
-                                          author: commit.author?.user?.login ?? commit.author?.name ?? "Someone",
-                                          avatar: commit.author?.user?.avatarUrl, checks: commit.statusCheckRollup?.state)
-                }
-            },
-            latestRelease: repo.latestRelease.map { RepoDetail.Release(tag: $0.tagName, date: $0.publishedAt, url: $0.url) },
-            openPulls: result.open.pulls,
-            mergedCount: result.merged.issueCount,
-            merged: result.merged.nodes.compactMap { node in
-                guard let node, let created = node.createdAt, let merged = node.mergedAt else { return nil }
-                return RepoDetail.MergedPull(createdAt: created, mergedAt: merged, author: node.author?.login ?? "ghost",
-                                             avatar: node.author?.avatarUrl)
-            }
-        )
-    }
-
-    // Commits to the default branch since `since`, and open pull requests, for many repositories at once.
-    // Sixty repositories per request keeps each one quick; GitHub charges a single point for it.
-    func repoPulse(_ fullNames: [String], since: Date) async throws -> [String: RepoPulse] {
-        let timestamp = since.formatted(.iso8601)
-        let batches = stride(from: 0, to: fullNames.count, by: 60).map { Array(fullNames[$0..<min($0 + 60, fullNames.count)]) }
-        // The batches go out together, so a big organization takes about as long as a small one.
-        return try await withThrowingTaskGroup(of: [String: RepoPulse].self) { group in
-            for batch in batches {
-                group.addTask { try await self.pulseBatch(batch, since: timestamp) }
-            }
-            var pulse: [String: RepoPulse] = [:]
-            for try await result in group { pulse.merge(result) { $1 } }
-            return pulse
-        }
-    }
-
-    private func pulseBatch(_ fullNames: [String], since timestamp: String) async throws -> [String: RepoPulse] {
-        struct Node: Decodable {
-            struct Branch: Decodable { let target: Target? }
-            struct Target: Decodable { let history: Count? }
-            struct Count: Decodable { let totalCount: Int }
-            let nameWithOwner: String
-            let pullRequests: Count
-            let defaultBranchRef: Branch?
-        }
-        let fields = fullNames.enumerated().compactMap { index, fullName -> String? in
-            let parts = fullName.split(separator: "/", maxSplits: 1)
-            guard parts.count == 2 else { return nil }
-            return "r\(index): repository(owner: \(Self.quoted(parts[0])), name: \(Self.quoted(parts[1]))) { ...pulse }"
-        }
-        let query = "query($since: GitTimestamp!) {\n\(fields.joined(separator: "\n"))\n}\n" + """
-        fragment pulse on Repository {
-          nameWithOwner
-          pullRequests(states: OPEN) { totalCount }
-          defaultBranchRef { target { ... on Commit { history(since: $since) { totalCount } } } }
-        }
-        """
-        let nodes: [String: Node?] = try await graphQL(query, ["since": timestamp])
-        var pulse: [String: RepoPulse] = [:]
-        for case let node? in nodes.values {
-            pulse[node.nameWithOwner] = RepoPulse(commits: node.defaultBranchRef?.target?.history?.totalCount ?? 0,
-                                                  openPulls: node.pullRequests.totalCount)
-        }
-        return pulse
-    }
-
     private static func quoted(_ text: Substring) -> String {
         let data = try? JSONSerialization.data(withJSONObject: [String(text)])
         return data.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
@@ -1129,7 +908,16 @@ actor GitHubClient {
 
     func graphQL<T: Decodable>(_ query: String, _ variables: [String: Any] = [:]) async throws -> T {
         let body: [String: Any] = ["query": query, "variables": variables]
-        let (data, _) = try await send(makeRequest(base.appending(path: "graphql"), method: "POST", body: body))
+        let request = makeRequest(base.appending(path: "graphql"), method: "POST", body: body)
+        let data: Data
+        do {
+            (data, _) = try await send(request)
+        } catch let error as APIError where error.isGatewayTimeout {
+            // A search that runs past GitHub's ten seconds comes back 502 or 504, and usually answers when asked
+            // again. These are all reads, so asking twice is safe.
+            try await Task.sleep(for: .seconds(1))
+            (data, _) = try await send(request)
+        }
         let response: GraphQL<T>
         do {
             response = try Self.decoder.decode(GraphQL<T>.self, from: data)

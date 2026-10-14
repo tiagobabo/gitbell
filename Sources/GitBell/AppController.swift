@@ -142,11 +142,6 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         store.leavePopover()
     }
 
-    func showQuickOpen() {
-        showWindow()
-        withAnimation(.snappy(duration: 0.15)) { store.quickOpenShown = true }
-    }
-
     func showWindow() {
         popover.performClose(nil)
         NSApp.setActivationPolicy(.regular)
@@ -173,14 +168,20 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         // The saved frame below is the one source of truth; macOS's state restoration would replay an older one.
         window.isRestorable = false
         window.delegate = self
-        // Where and how big you left it; the first time, most of the screen up to a comfortable size.
+        // Where and how big you left it. The first time, just big enough for the sidebar and a full-width list:
+        // 260 for the sidebar and 896 for a list (860 wide, 18 either side), and 800 tall, which fits the
+        // toolbar, the summary and a couple of groups. Wider only adds margins. Never over 90% of the screen.
         // Until 0.7.5 the loading spinner squeezed the window to its minimum and that got saved, so a frame
-        // that small counts as never saved.
+        // that small counts as never saved; and frames saved before the sidebar of groups (layout 2) were sized
+        // for another layout, so they're set aside once.
         let name = "GitBellMainWindow"
-        if !window.setFrameUsingName(name) || (window.frame.width <= 780 && window.frame.height <= 560) {
+        let layout = 2
+        let fresh = UserDefaults.standard.integer(forKey: "windowLayout") < layout
+        if fresh || !window.setFrameUsingName(name) || (window.frame.width <= 780 && window.frame.height <= 560) {
             let screen = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
-            window.setContentSize(NSSize(width: min(1440, screen.width * 0.9), height: min(960, screen.height * 0.9)))
+            window.setContentSize(NSSize(width: min(1160, screen.width * 0.9), height: min(800, screen.height * 0.9)))
             window.center()
+            UserDefaults.standard.set(layout, forKey: "windowLayout")
         }
         window.setFrameAutosaveName(name)
         return window

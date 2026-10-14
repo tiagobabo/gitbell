@@ -48,7 +48,7 @@ struct OnboardingView: View {
                     Button("Skip") { go(1) }
                 }
                 Button(primaryTitle, action: primaryAction)
-                    .buttonStyle(.borderedProminent)
+                    .prominentButtonStyle()
                     .keyboardShortcut(.defaultAction)
                     .disabled(primaryDisabled)
             }

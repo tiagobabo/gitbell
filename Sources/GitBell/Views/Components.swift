@@ -139,12 +139,6 @@ enum LoadingLines {
         "Tallying the merges…",
         "Asking who's been shipping…",
     ]
-    static let stats = [
-        "Counting your commits…",
-        "Watering your contribution garden…",
-        "Polishing your badges…",
-        "Tallying up the good stuff…",
-    ]
 }
 
 struct SignInView: View {
@@ -187,7 +181,7 @@ struct SignInForm: View {
                     Label("Continue with GitHub CLI", systemImage: "terminal.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .prominentButtonStyle()
                 .controlSize(.large)
 
                 HStack {
@@ -304,5 +298,77 @@ extension EnvironmentValues {
 extension View {
     func tooltip(_ text: String) -> some View {
         background(Tooltip(text: text))
+    }
+}
+
+extension View {
+    // The one card: a system fill and a hairline, the same in every list and page.
+    func card() -> some View {
+        background(.fill.quinary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor)))
+    }
+}
+
+extension View {
+    // Controls that float over content are Liquid Glass where the system has it, and a frosted material that
+    // reads the same before then. Floating ones, like the page bar and toasts, get a shadow there too, which
+    // glass brings on its own.
+    @ViewBuilder
+    func glass<S: InsettableShape>(in shape: S, floating: Bool = false) -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: shape)
+        } else {
+            background(.regularMaterial, in: shape)
+                .overlay(shape.strokeBorder(Color.primary.opacity(0.08)))
+                .shadow(color: .black.opacity(floating ? 0.15 : 0), radius: 12, y: 4)
+        }
+    }
+
+    // The one main action in a view: glass where the system has it.
+    @ViewBuilder
+    func prominentButtonStyle() -> some View {
+        if #available(macOS 26, *) {
+            buttonStyle(.glassProminent)
+        } else {
+            buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+// A page narrowed to one group from the sidebar: the group's name large, as the page's own heading, in place of
+// the small label it has among the others.
+struct GroupPageHeader: View {
+    let symbol: String
+    let tint: Color
+    let title: String
+    let count: Int
+    let description: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 40, height: 40)
+                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.card - 2, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(.title2.weight(.bold))
+                    Text("\(count)")
+                        .font(.title3)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                }
+                Text(description)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+        .padding(.bottom, 14)
     }
 }

@@ -3,37 +3,36 @@ import SwiftUI
 // Your pull requests by stage, from draft to live: one page that follows each one past its merge until it has
 // been live for a day. A strip of stages across the top counts each and jumps to it.
 struct YourPullsView: View {
+    // The popover's: tighter, and without the strip of stages, which needs the window's width.
+    var compact = false
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let pipeline = store.pipeline
+        // Narrowed to one stage when it's picked in the sidebar.
+        let only = compact ? nil : store.focus.stage
+        let pipeline = only.map { stage in store.pipeline.filter { $0.key == stage } } ?? store.pipeline
         if !store.pipelineLoaded {
             LoadingView(lines: LoadingLines.pulls)
+        } else if pipeline.isEmpty, !store.searchText.isEmpty {
+            ContentUnavailableView.search(text: store.searchText)
+        } else if pipeline.isEmpty, let only {
+            ContentUnavailableView("All Clear", systemImage: only.symbol, description: Text(only.subtitle))
         } else if pipeline.isEmpty {
-            VStack(spacing: 10) {
-                Image(systemName: store.searchText.isEmpty ? "arrow.triangle.pull" : "magnifyingglass")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Palette.accent.opacity(0.7))
-                VStack(spacing: 3) {
-                    Text(store.searchText.isEmpty ? "No pull requests on the go" : "No matches")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(store.searchText.isEmpty
-                         ? "Your open pull requests show up here, and stay until they've been live for a day."
-                         : "Nothing matches “\(store.searchText)”.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ContentUnavailableView("No Pull Requests on the Go", systemImage: WindowPage.yours.symbol,
+                                   description: Text("Your open pull requests show up here, and stay until they've been live for a day."))
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
-                        PipelineSummary(pipeline: pipeline) { stage in
-                            withAnimation(.snappy) { proxy.scrollTo(stage, anchor: .top) }
+                        if let only {
+                            GroupPageHeader(symbol: only.symbol, tint: only.tint, title: only.title,
+                                            count: pipeline[only]?.count ?? 0, description: only.subtitle)
+                        } else if !compact {
+                            PipelineSummary(pipeline: pipeline) { stage in
+                                withAnimation(.snappy) { proxy.scrollTo(stage, anchor: .top) }
+                            }
+                            .padding(.bottom, 8)
                         }
-                        .padding(.bottom, 8)
 
                         ForEach(PipelineStage.allCases) { stage in
                             if let pulls = pipeline[stage], !pulls.isEmpty {
@@ -51,14 +50,16 @@ struct YourPullsView: View {
                                     .padding(3)
                                     .card()
                                 } header: {
-                                    StageHeader(stage: stage, count: pulls.count).id(stage)
+                                    if only == nil {
+                                        StageHeader(stage: stage, count: pulls.count).id(stage)
+                                    }
                                 }
                             }
                         }
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
-                    .frame(maxWidth: 860)
+                    .padding(.horizontal, compact ? 10 : 18)
+                    .padding(.vertical, compact ? 10 : 16)
+                    .frame(maxWidth: compact ? .infinity : 860)
                     .frame(maxWidth: .infinity)
                 }
                 .onChange(of: store.selection) { _, id in
@@ -109,7 +110,7 @@ private struct StackCard: View {
                 }
             }
             .font(.system(size: 11))
-            .foregroundStyle(Palette.teal)
+            .foregroundStyle(Palette.mint)
             .padding(.horizontal, 10)
             .padding(.top, 8)
             .padding(.bottom, 2)
@@ -121,9 +122,9 @@ private struct StackCard: View {
                     // row's height without having any say in it; sized from the row, it looped the window's layout.
                     .background(alignment: .topLeading) {
                         VStack(spacing: 0) {
-                            Rectangle().fill(index == 0 ? Color.clear : Palette.teal.opacity(0.35)).frame(width: 2, height: 16)
-                            Circle().fill(Palette.teal).frame(width: 7, height: 7)
-                            Rectangle().fill(index == members.count - 1 ? Color.clear : Palette.teal.opacity(0.35)).frame(width: 2)
+                            Rectangle().fill(index == 0 ? Color.clear : Palette.mint.opacity(0.35)).frame(width: 2, height: 16)
+                            Circle().fill(Palette.mint).frame(width: 7, height: 7)
+                            Rectangle().fill(index == members.count - 1 ? Color.clear : Palette.mint.opacity(0.35)).frame(width: 2)
                         }
                         .frame(width: 16)
                         .padding(.leading, 6)

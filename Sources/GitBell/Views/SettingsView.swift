@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var badgesAllowed = true
     @State private var circleCIToken = ""
     @State private var circleCIStatus: String?
+    @State private var confirmingSignOut = false
 
     var body: some View {
         @Bindable var store = store
@@ -43,8 +44,6 @@ struct SettingsView: View {
                     Text("Menu Bar")
                 } footer: {
                     Text("The Dock icon always opens the window. Right-click the menu bar icon for both.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -55,8 +54,6 @@ struct SettingsView: View {
                     Text("Privacy")
                 } footer: {
                     Text("Counts of which pages and settings are used, and what went wrong when something fails. Never your token, names, repositories or organizations.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -71,6 +68,7 @@ struct SettingsView: View {
                 }
             }
             .formStyle(.grouped)
+            .fittedToContent()
             .tabItem { Label("General", systemImage: "gearshape") }
             .tag(SettingsTab.general)
 
@@ -90,11 +88,9 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Notifications")
+                    Text("Notify Me About")
                 } footer: {
                     Text("The Dock icon counts everything waiting on you in \(TodoItem.title).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -103,11 +99,10 @@ struct SettingsView: View {
                     Text(TodoItem.title)
                 } footer: {
                     Text("Team requests follow the people filter in People.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
             .formStyle(.grouped)
+            .fittedToContent()
             .tabItem { Label("Notifications", systemImage: "bell.badge") }
             .tag(SettingsTab.notifications)
 
@@ -121,23 +116,26 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                } header: {
-                    Text("People")
                 } footer: {
                     Text("Filters the inbox and review requests. Your own pull requests always show.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
             .formStyle(.grouped)
+            .fittedToContent()
             .tabItem { Label("People", systemImage: "person.2") }
             .tag(SettingsTab.people)
 
             Form {
                 if let login = store.viewer?.login {
-                    Section("Account") {
+                    Section("GitHub") {
                         LabeledContent("Signed in as", value: login)
-                        Button("Sign Out") { store.signOut() }
+                        Button("Sign Out…", role: .destructive) { confirmingSignOut = true }
+                            .alert("Sign out of GitHub?", isPresented: $confirmingSignOut) {
+                                Button("Sign Out", role: .destructive) { store.signOut() }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("GitBell forgets your token and stops checking for notifications until you sign in again.")
+                            }
                     }
                 }
 
@@ -174,11 +172,10 @@ struct SettingsView: View {
                         Text("Lets GitBell approve jobs that are on hold.")
                         Link("Create a token in CircleCI", destination: URL(string: "https://app.circleci.com/settings/user/tokens")!)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
             }
             .formStyle(.grouped)
+            .fittedToContent()
             .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
             .tag(SettingsTab.accounts)
         }
@@ -187,7 +184,7 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { badgesAllowed = await Notifier.shared.badgesAllowed() }
         }
-        .frame(width: 520, height: 500)
+        .frame(width: 520)
     }
 
     private func saveCircleCIToken() {
@@ -210,5 +207,12 @@ struct SettingsView: View {
         let short = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(short) (\(build))"
+    }
+}
+
+private extension View {
+    // Each tab as tall as what's in it, as System Settings' panes are, rather than one height for all.
+    func fittedToContent() -> some View {
+        scrollDisabled(true).fixedSize(horizontal: false, vertical: true)
     }
 }

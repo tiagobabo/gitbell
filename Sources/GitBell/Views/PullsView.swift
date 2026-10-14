@@ -1,138 +1,5 @@
 import SwiftUI
 
-struct PullsView: View {
-    @Environment(InboxStore.self) private var store
-
-    var body: some View {
-        if !store.pullsLoaded {
-            LoadingView(lines: LoadingLines.pulls)
-        } else {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(PullSection.windowGroups) { group in
-                            Text(group.title.uppercased())
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.top, group.id == PullSection.windowGroups.first?.id ? 2 : 10)
-                                .padding(.bottom, 2)
-                            ForEach(group.sections) { section in
-                                PullSectionView(section: section)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
-                }
-                .onChange(of: store.selection) { _, id in
-                    guard let id else { return }
-                    proxy.scrollTo(id)
-                }
-            }
-        }
-    }
-}
-
-struct PullSectionView: View {
-    let section: PullSection
-    @Environment(InboxStore.self) private var store
-    @State private var hovering = false
-
-    var body: some View {
-        let items = store.pulls[section] ?? []
-        let total = store.pullTotals[section] ?? items.count
-        let expanded = store.isExpanded(section)
-
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 7) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9.5, weight: .bold))
-                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
-                    .rotationEffect(.degrees(expanded ? 90 : 0))
-                    .frame(width: 14)
-                    .opacity(items.isEmpty ? 0.4 : 1)
-                Text(section.windowTitle)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(items.isEmpty ? Color.secondary : Color.primary)
-                Text("\(total)")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .monospacedDigit()
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 1)
-                    .background(badgeColor(total) ?? Color.primary.opacity(0.08), in: Capsule())
-                    .foregroundStyle(badgeColor(total) == nil ? Color.secondary : Color.white)
-                    .contentTransition(.numericText())
-                Spacer()
-                Button {
-                    NSWorkspace.shared.open(store.webURL(for: section))
-                } label: {
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(nsColor: .secondaryLabelColor))
-                        .frame(width: 20, height: 20)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .tooltip("Open on GitHub")
-                .opacity(hovering ? 1 : 0)
-                .environment(\.tooltipsShown, hovering)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color.primary.opacity(hovering && !items.isEmpty ? 0.05 : 0))
-            )
-            .contentShape(Rectangle())
-            .onHover { hovering in withAnimation(.easeOut(duration: 0.12)) { self.hovering = hovering } }
-            .onTapGesture { if !items.isEmpty { store.toggle(section) } }
-            .zIndex(1)
-
-            if expanded {
-                VStack(spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, pr in
-                        if index > 0 { Divider().padding(.leading, 38).opacity(0.6) }
-                        PullRow(pr: pr, showAuthor: section.showsAuthor)
-                    }
-                    if total > items.count {
-                        Divider().opacity(0.6)
-                        Button {
-                            NSWorkspace.shared.open(store.webURL(for: section))
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("View all \(total) on GitHub")
-                                Image(systemName: "arrow.up.right")
-                            }
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Palette.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(3)
-                .card()
-                .padding(.bottom, 8)
-                .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
-            }
-        }
-    }
-
-    // Like Mail's unread badges: grey, unless the section is waiting on you.
-    private func badgeColor(_ total: Int) -> Color? {
-        guard total > 0 else { return nil }
-        switch section {
-        case .needsReview, .reReview: return Palette.pending
-        case .needsAction: return Palette.danger
-        case .readyToMerge: return Palette.open
-        case .teamReview, .drafts, .waiting, .contributing, .merged: return nil
-        }
-    }
-}
-
 struct PullRow: View {
     let pr: PullRequest
     let showAuthor: Bool
@@ -189,7 +56,7 @@ struct PullRow: View {
                 IconButton(symbol: "clock.arrow.circlepath", help: "Show timeline (T)", size: 24) {
                     store.showTimeline(pr, from: .pulls)
                 }
-                .background(.regularMaterial, in: Circle())
+                .glass(in: Circle())
                 .offset(x: 2, y: -4)
                 .opacity(active ? 1 : 0)
                 .allowsHitTesting(active)
@@ -209,14 +76,18 @@ struct PullRow: View {
             if pr.mergeCommitURL != nil {
                 Button("Open Pull Request") { NSWorkspace.shared.open(pr.url) }
             }
-            Button("Copy Link") { store.copyLink(pr) }
             Button("Show Timeline") { store.showTimeline(pr, from: .pulls) }
-            ForEach(pr.checks?.onHold ?? [], id: \.self) { check in
-                Button("Approve \(check.jobName)…") { store.requestApproval(check, on: pr, from: .pulls) }
-                    .disabled(store.isApproving(check, on: pr))
-            }
+            Button("Copy Link") { store.copyLink(pr) }
             Button("Open Repository") {
                 NSWorkspace.shared.open(URL(string: "https://github.com/\(pr.repository)")!)
+            }
+            if let held = pr.checks?.onHold, !held.isEmpty {
+                Section("On hold") {
+                    ForEach(held, id: \.self) { check in
+                        Button("Approve \(check.jobName)…") { store.requestApproval(check, on: pr, from: .pulls) }
+                            .disabled(store.isApproving(check, on: pr))
+                    }
+                }
             }
         }
         .id(pr.id)
