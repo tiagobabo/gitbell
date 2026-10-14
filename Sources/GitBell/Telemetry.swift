@@ -61,6 +61,15 @@ enum Telemetry {
         TelemetryDeck.signal(name, parameters: parameters)
     }
 
+    // Notes what's on screen, so a hang or crash report says where you were. Only fixed names, never a
+    // repository or person.
+    static func breadcrumb(_ message: String) {
+        guard isOn, SentrySDK.isEnabled else { return }
+        let crumb = Breadcrumb(level: .info, category: "ui")
+        crumb.message = message
+        SentrySDK.addBreadcrumb(crumb)
+    }
+
     // Reports an unexpected error. Being offline and an expired session are expected, so they're left out.
     static func report(_ error: Error, while doing: String) {
         guard isOn, SentrySDK.isEnabled, !(error is URLError), !(error is CancellationError) else { return }

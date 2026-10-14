@@ -79,6 +79,7 @@ struct MainWindowView: View {
             if let item {
                 savedSelection = Self.encode(item)
                 Telemetry.signal("Page.viewed", ["page": item.kind])
+                Telemetry.breadcrumb("Showed the \(item.kind) page")
             }
         }
         // The hosting window doesn't always pick up navigationTitle and shows "Untitled", so set it directly.

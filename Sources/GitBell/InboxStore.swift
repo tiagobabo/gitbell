@@ -49,6 +49,7 @@ final class InboxStore {
         didSet {
             guard tab != oldValue else { return }
             UserDefaults.standard.set(tab.rawValue, forKey: "tab")
+            Telemetry.breadcrumb("Switched to the \(tab.rawValue) tab")
             selection = nil
         }
     }
@@ -513,6 +514,7 @@ extension InboxStore {
 
     func showTimeline(_ pr: PullRequest, from origin: ApprovalPrompt.Origin) {
         timelineRequest = TimelineRequest(pr: pr, origin: origin)
+        Telemetry.breadcrumb("Opened a timeline from \(origin)")
         Task { await loadTimeline(pr) }
     }
 
@@ -626,6 +628,7 @@ extension InboxStore {
             lookup?.cancel()
             lookup = Task { try await CircleCIClient(token: token).heldApproval(job: check.jobName, workflow: workflow) }
             approvalPrompt = prompt
+            Telemetry.breadcrumb("Opened an approval prompt from \(origin)")
         }
     }
 

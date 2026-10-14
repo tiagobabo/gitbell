@@ -133,10 +133,12 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
             NSApp.activate()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+            Telemetry.breadcrumb("Opened the menu bar popover on \(store.tab.rawValue)")
         }
     }
 
     func popoverDidClose(_ notification: Notification) {
+        Telemetry.breadcrumb("Closed the menu bar popover")
         store.leavePopover()
     }
 
@@ -152,6 +154,7 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
         self.window = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
+        Telemetry.breadcrumb("Opened the window")
     }
 
     private func makeWindow() -> NSWindow {
