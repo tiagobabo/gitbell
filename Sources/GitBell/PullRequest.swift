@@ -165,9 +165,10 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
 
     var status: PullStatus {
         if mergedAt != nil { return mergedStatus }
+        // A draft can still fall behind its base, and conflicts are worth knowing about before it's ready.
+        if mergeable == "CONFLICTING" || mergeStateStatus == "DIRTY" { return .mergeConflicts }
         if isDraft { return .notReady }
         if isInMergeQueue { return .inMergeQueue }
-        if mergeable == "CONFLICTING" || mergeStateStatus == "DIRTY" { return .mergeConflicts }
         if let checks, checks.requiredFailing { return .checksFailing }
         if reviewDecision == "CHANGES_REQUESTED" { return .changesRequested }
         if let checks, checks.requiredRunning { return .awaitingCI }

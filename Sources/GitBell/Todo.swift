@@ -193,9 +193,11 @@ extension InboxStore {
             items.append(item(pr, kind, threads: byURL[pr.url] ?? []))
         }
         // A comment on a pull request that's otherwise waiting on others is yours to answer.
+        // A draft with merge conflicts is yours to fix like any other.
         for pr in (pulls[.waiting] ?? []) + (pulls[.drafts] ?? []) {
             let unread = byURL[pr.url] ?? []
-            let kind: TodoItem.Kind = held(pr) ? .onHold : unread.contains(where: asksForReply) ? .reply : .waiting
+            let kind: TodoItem.Kind = pr.status == .mergeConflicts ? .fix
+                : held(pr) ? .onHold : unread.contains(where: asksForReply) ? .reply : .waiting
             items.append(item(pr, kind, threads: unread))
         }
         // Team review requests don't show up here, so drop their notifications rather than counting them as replies.
