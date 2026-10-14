@@ -37,40 +37,6 @@ struct LifecycleStrip: View {
     }
 }
 
-// "⏳ Waiting on carol and web-team · 2d", in orange with how long once it's been too long.
-struct WaitingLine: View {
-    let pr: PullRequest
-
-    var body: some View {
-        TimelineView(.everyMinute) { context in
-            if let wait = pr.wait(now: context.date) {
-                HStack(spacing: 5) {
-                    Image(systemName: wait.stuck == nil ? "hourglass" : "exclamationmark.triangle.fill")
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(wait.stuck == nil ? Color.secondary : Palette.pending)
-                    if let stuck = wait.stuck {
-                        Text(stuck).foregroundStyle(Palette.pending)
-                        if !wait.what.hasPrefix("Approved") {
-                            Text("·").foregroundStyle(.tertiary)
-                            Text(wait.what)
-                        }
-                    } else {
-                        Text(wait.what)
-                        if let since = wait.since {
-                            Text("·").foregroundStyle(.tertiary)
-                            Text("for \(RelativeTime.duration(context.date.timeIntervalSince(since)))")
-                        }
-                    }
-                }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            }
-        }
-    }
-}
-
 // The history of a pull request, opened to deployed, with how long each stretch took.
 struct PullTimelineView: View {
     let pr: PullRequest

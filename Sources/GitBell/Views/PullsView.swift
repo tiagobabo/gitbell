@@ -173,9 +173,7 @@ struct PullRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-                PullStatusLine(pr: pr, origin: .pulls, lifecycle: true)
-                ReviewersLine(pr: pr)
-                if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
+                PullStatusAndReviewers(pr: pr, origin: .pulls, lifecycle: true, wait: pr.author == store.viewer?.login)
             }
             // Takes the row's width, so a short title never wraps to share it with a spacer.
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -288,9 +288,7 @@ struct TodoRow: View {
                 .lineLimit(1)
 
                 if let pr = item.pr {
-                    PullStatusLine(pr: pr, lifecycle: item.kind == .waiting)
-                    ReviewersLine(pr: pr)
-                    if pr.author == store.viewer?.login { WaitingLine(pr: pr) }
+                    PullStatusAndReviewers(pr: pr, lifecycle: item.kind == .waiting, wait: pr.author == store.viewer?.login)
                     if pr.laterDeploying {
                         Label("A later merge is deploying, which may carry this out too", systemImage: "hourglass")
                             .font(.system(size: 11, weight: .medium))
@@ -398,29 +396,39 @@ struct PullStatusLine: View {
     var origin = ApprovalPrompt.Origin.todo
     // Shows where it is from opened to deployed in place of the status dot.
     var lifecycle = false
+    // Says how long it's been waiting, or that it's been too long, for your own pull requests.
+    var wait = false
     @Environment(InboxStore.self) private var store
 
     var body: some View {
         let status = pr.status
-        ViewThatFits(in: .horizontal) {
-            line(status, maxFailing: 3)
-            line(status, maxFailing: 1)
-            line(status, maxFailing: 0)
+        TimelineView(.everyMinute) { context in
+            let wait = wait ? pr.wait(now: context.date) : nil
+            ViewThatFits(in: .horizontal) {
+                line(status, wait: wait, now: context.date, maxFailing: 3)
+                line(status, wait: wait, now: context.date, maxFailing: 1)
+                line(status, wait: wait, now: context.date, maxFailing: 0)
+            }
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(.secondary)
-        .padding(.top, 1)
+        .frame(minHeight: PullStatusAndReviewers.lineHeight)
     }
 
-    private func line(_ status: PullStatus, maxFailing: Int) -> some View {
-        HStack(spacing: 10) {
+    private func line(_ status: PullStatus, wait: Wait?, now: Date, maxFailing: Int) -> some View {
+        HStack(spacing: PullStatusAndReviewers.gap) {
             HStack(spacing: 5) {
                 if lifecycle { LifecycleStrip(pr: pr) }
                 else { Circle().fill(Palette.color(for: status.tone)).frame(width: 6, height: 6) }
-                Text(status.label)
+                if let wait {
+                    waiting(status, wait, now: now).tooltip(wait.what)
+                } else {
+                    Text(status.label)
+                }
             }
             .fixedSize()
             if let checks = pr.checks, checks.total > 0 {
+                GroupDivider()
                 // Failing checks, held jobs, then optional ones still running (the required ones are just
                 // "Awaiting CI"), or the deploys still going after a merge.
                 let running = status == .deploying
@@ -447,6 +455,58 @@ struct PullStatusLine: View {
             }
         }
     }
+
+    // "Awaiting approval for 2h", or "⚠ No review for 3d" in orange once it's been too long.
+    @ViewBuilder private func waiting(_ status: PullStatus, _ wait: Wait, now: Date) -> some View {
+        HStack(spacing: 4) {
+            if let stuck = wait.stuck {
+                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 9.5, weight: .semibold))
+                Text(stuck)
+            } else {
+                Text(status.label)
+                if let since = wait.since {
+                    Text("for \(RelativeTime.duration(now.timeIntervalSince(since)))").foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .foregroundStyle(wait.stuck == nil ? Color.secondary : Palette.pending)
+    }
+}
+
+// A faint rule between the status, the checks and the reviewers on one line.
+private struct GroupDivider: View {
+    var body: some View {
+        Rectangle().fill(Color.primary.opacity(0.15)).frame(width: 1, height: 10)
+    }
+}
+
+// The status line with the reviewers beside it, or under it when they don't fit.
+struct PullStatusAndReviewers: View {
+    let pr: PullRequest
+    var origin = ApprovalPrompt.Origin.todo
+    var lifecycle = false
+    var wait = false
+
+    // Chips are this tall, so a line without any sits the same as one with.
+    static let lineHeight: CGFloat = 17
+    static let gap: CGFloat = 8
+
+    var body: some View {
+        let status = PullStatusLine(pr: pr, origin: origin, lifecycle: lifecycle, wait: wait)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Self.gap) {
+                status
+                if ReviewersLine.shows(pr) {
+                    GroupDivider()
+                    ReviewersLine(pr: pr)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                status
+                ReviewersLine(pr: pr)
+            }
+        }
+    }
 }
 
 // Who's been asked to review one of your pull requests and where each of them is: "✓ alice  ◷ banjo".
@@ -454,20 +514,28 @@ struct PullStatusLine: View {
 struct ReviewersLine: View {
     let pr: PullRequest
 
+    static func shows(_ pr: PullRequest) -> Bool {
+        guard let reviewers = pr.reviewers, pr.mergedAt == nil else { return false }
+        return !reviewers.isEmpty || !pr.isDraft
+    }
+
     var body: some View {
-        if let reviewers = pr.reviewers, pr.mergedAt == nil {
+        if Self.shows(pr), let reviewers = pr.reviewers {
             if reviewers.isEmpty {
-                if !pr.isDraft {
-                    Label("No reviewers requested", systemImage: "person.crop.circle.badge.questionmark")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Palette.pending)
+                HStack(spacing: 4) {
+                    Image(systemName: "person.crop.circle.badge.questionmark").font(.system(size: 10, weight: .semibold))
+                    Text("No reviewers requested")
                 }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Palette.pending)
+                .frame(minHeight: PullStatusAndReviewers.lineHeight)
             } else {
                 ViewThatFits(in: .horizontal) {
                     line(reviewers, max: 5)
                     line(reviewers, max: 2)
                     line(reviewers, max: 1)
                 }
+                .frame(minHeight: PullStatusAndReviewers.lineHeight)
             }
         }
     }
