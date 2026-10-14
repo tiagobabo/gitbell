@@ -35,6 +35,10 @@ signature="$("$sparkle_bin/sign_update" -p "$dmg")"
 length="$(wc -c < "$dmg" | tr -d " ")"
 build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' build/GitBell.app/Contents/Info.plist)"
 
+# Sparkle shows the notes in its update window, so they're rendered to HTML the way GitHub renders the release.
+notes_html="$(gh api markdown -f mode=gfm -f context=tiagobabo/gitbell -F text=@"$notes_file")"
+[[ "$notes_html" != *"]]>"* ]] || { echo "The notes can't contain ]]>." >&2; exit 1; }
+
 # A single item is enough: Sparkle only needs to know about the newest version.
 appcast="build/appcast.xml"
 cat > "$appcast" <<XML
@@ -49,7 +53,7 @@ cat > "$appcast" <<XML
       <sparkle:version>$build_number</sparkle:version>
       <sparkle:shortVersionString>$version</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>$repo_url/releases/tag/$tag</sparkle:releaseNotesLink>
+      <description><![CDATA[$notes_html]]></description>
       <enclosure url="$repo_url/releases/download/$tag/GitBell-$version.dmg" length="$length" type="application/octet-stream" sparkle:edSignature="$signature"/>
     </item>
   </channel>
