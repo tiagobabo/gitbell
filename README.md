@@ -4,19 +4,14 @@ GitHub notifications and pull requests in a native Mac app.
 
 ![GitBell](docs/gitbell.png)
 
-- **Your turn:** everything waiting on you in one list: pull requests to review (asked of you or one of your teams), your pull requests to fix (failing checks named, one click from their logs, plus conflicts and requested changes), threads to reply to, CircleCI jobs on hold waiting for your approval (approve them from GitBell with a CircleCI token), your merges whose deploy or checks failed afterwards (they leave on their own once a later merge to the branch deploys), pull requests ready to merge, and approved ones you can merge while optional checks are still running. Checks your branch protection doesn't require never hold a pull request back. Notifications about a pull request fold into it instead of showing twice. Each group appears as soon as its search answers, so the list fills in rather than waiting on the slowest. Press E to hide an item until something changes on it; the foot of the list, or View → Show Hidden Items, brings them back. The Dock icon counts these. Pull requests by other people that you've pushed commits to make you a co-owner, so they join these groups, tagged Contributing, when their checks fail, they're ready to merge, or someone asks you something there.
-- **Your pull requests:** one page that follows each of yours from draft to live: Drafts, In review, Needs fixing, Ready to merge, Shipping (merged, deploying, or checks failing after the merge) and Shipped, where it stays for a day once it's live. Each row has a five-step strip (open, review, checks, merge, deploy) and says who or what it's waiting on and for how long, flagging the ones stuck too long: no review in two days, CI running over two hours, approved but not merged for a day, merged but not deployed after two hours. Deploys are recognised by job name (CircleCI's `deploy_*` jobs and the like).
-- **Stacks:** a pull request based on another's branch is shown as stacked on it. On Your pull requests a stack is one card, bottom first, in the stage of its bottom pull request; elsewhere each row says "Stack · 2 of 3", or "Stack #1203 · 2 of 3", after its bottom pull request, when there's more than one stack to tell apart, and hovering lists the whole stack.
-- **Timeline:** press T, or the clock button on a row, for a pull request's history: opened, review requests, reviews, comments, pushes, the merge and its deploys, with how long each stretch took, from first review to merge to live.
-- **Re-review:** pull requests you commented on or asked changes of, pushed to since, show in Your turn until you look again.
-- **Window:** laid out like Mail, with two pages in the sidebar, Your turn and Your pull requests, each opening into its groups (Review, Fix, Reply, In review, Needs fixing and the rest) with how many are in each. Pick a group to see only it. Your turn's groups match the tiles across its top, and hold only what's on you: your pull requests waiting on others are under In review. Search sits at the top of the sidebar, as in Maps, and looks everywhere or just the section you're in. Your account is in the toolbar's corner.
-- **Quick to notice:** a pull request you open from GitBell is checked every 20 seconds for half an hour, since you're probably acting on it, and so are your merges while they deploy. As soon as one changes, the lists refresh. Coming back to GitBell refreshes too.
-- **Menu bar:** an optional menu bar icon that opens the window or a compact popover with the same two pages.
-- **At home on the Mac:** Liquid Glass on macOS 26, the View and Item menus for every action, context menus that match them, and a Dock menu for the pages and Refresh.
-- **Notifications:** when someone requests your review, when checks fail on your pull request, when changes are requested, when it's ready to merge, when it deploys, or when its checks fail after merging.
-- **Appearance:** light, dark or follow the system.
-- **People filter:** only show activity from the people and teams you pick. While it's on, a filter button in the toolbar says who you're seeing.
-- **Keyboard:** ↑ ↓ or J K to move, Return or O to open, T timeline, E done, M read, C copy link, ⌘1 and ⌘2 switch pages, ⌘F searches. The Item menu and each row's context menu have the same actions.
+- **Your turn:** everything waiting on you in one list: reviews, re-reviews, fixes (with the failing checks named), replies, CircleCI jobs on hold, merges that failed afterwards, and pull requests ready to merge. The Dock icon counts them. Press E to hide one until it changes.
+- **Your pull requests:** each of yours from draft to live, by stage, with what it's waiting on and for how long.
+- **Timelines:** press T for a pull request's history, from opening to deploy, with how long each step took.
+- **Stacks:** pull requests based on each other's branches are shown together.
+- **Notifications:** for review requests, failing checks, requested changes, merges ready to go, deploys, and checks failing after a merge.
+- **Like Mail:** a sidebar of pages and groups with counts, search at the top, Liquid Glass on macOS 26, and menus and keyboard shortcuts for everything (J K to move, O to open, ⌘F to search).
+- **Menu bar:** an optional icon that opens the window or a compact popover.
+- **People filter:** only show activity from the people and teams you pick.
 
 ## Install
 
@@ -28,19 +23,17 @@ GitBell isn't notarised yet, so macOS blocks it the first time. Open System Sett
 xattr -dr com.apple.quarantine /Applications/GitBell.app
 ```
 
-GitBell asks to send notifications during setup. Allow it, with badges on, so the Dock icon can show how many things are waiting on you; you can change this later in System Settings → Notifications → GitBell.
+Allow notifications, with badges, when asked during setup so the Dock icon can count what's waiting on you.
 
-GitBell updates itself with [Sparkle](https://sparkle-project.org): it checks for a new release once a day and asks before installing. If you're on 0.3.0, install the latest release by hand once.
+GitBell updates itself with [Sparkle](https://sparkle-project.org).
 
 ## Sign in
 
-The first launch walks you through setup: GitHub, an optional CircleCI token, notifications, and appearance. You can change all of it later in Settings.
-
-GitBell uses your [GitHub CLI](https://cli.github.com) login if you have one. Otherwise paste a [classic personal access token](https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&description=GitBell) with the `notifications` and `repo` scopes (plus `read:org` to filter by team). It's stored in your Keychain. After an update macOS may ask once whether GitBell can read it; click "Always Allow".
+GitBell uses your [GitHub CLI](https://cli.github.com) login if you have one. Otherwise paste a [classic personal access token](https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&description=GitBell) with the `notifications`, `repo` and `read:org` scopes. It's kept in your Keychain. A CircleCI token is optional, for approving held jobs.
 
 ## Privacy
 
-Release builds send anonymous usage counts to [TelemetryDeck](https://telemetrydeck.com) (which pages and settings are used) and crash and error reports to [Sentry](https://sentry.io) (what GitBell was doing when something failed, and the status code). Neither ever includes your token, your name, or the names of people, repositories or organizations. Turn it off during setup or in Settings → General → Privacy. Builds from source send nothing.
+Release builds send anonymous usage counts to [TelemetryDeck](https://telemetrydeck.com) and crash reports to [Sentry](https://sentry.io), never your token or any names. Turn it off in Settings → General → Privacy. Builds from source send nothing.
 
 ## Build from source
 
@@ -52,7 +45,7 @@ cd gitbell
 ./build.sh --install
 ```
 
-`GITBELL_DEMO=1 build/GitBell.app/Contents/MacOS/GitBell` runs it with made-up data, which is handy for screenshots.
+`GITBELL_DEMO=1 build/GitBell.app/Contents/MacOS/GitBell` runs it with made-up data.
 
 ## License
 
