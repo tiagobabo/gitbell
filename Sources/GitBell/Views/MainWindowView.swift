@@ -129,7 +129,9 @@ struct MainWindowView: View {
                         .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 360)
                 } detail: {
                     detail
-                        // Over the list it's about, centred on it rather than on the whole window.
+                        // The whole column, whatever the page's own size, so the toast sits at its foot and
+                        // centred on it: an empty page is only as big as its message.
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .toastOverlay(bottomPadding: 20)
                         .toolbar { toolbar }
                         .navigationTitle(title)
