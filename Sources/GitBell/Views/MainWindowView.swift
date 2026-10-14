@@ -3,6 +3,7 @@ import SwiftUI
 enum SidebarItem: Hashable {
     case todo
     case yours
+    case stats
     case pulls(PullSection)
     case repo(String)
     case repos
@@ -80,6 +81,8 @@ struct MainWindowView: View {
             TodoView()
         case .yours:
             YourPullsView()
+        case .stats:
+            StatsPage()
         case .pulls(let section):
             PullSectionList(section: section)
         case .repo(let fullName):
@@ -100,6 +103,15 @@ struct MainWindowView: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            if store.people != nil {
+                Button {
+                    AppController.shared?.openSettings(on: .people)
+                } label: {
+                    Label("People Filter", systemImage: "line.3.horizontal.decrease.circle.fill")
+                        .foregroundStyle(Palette.accent)
+                }
+                .help("Only showing activity from \(store.peopleFilter). Click to change.")
+            }
             if selection == .todo || selection == nil {
                 @Bindable var store = store
                 Toggle(isOn: $store.showHiddenTodos.animation(.snappy)) {
@@ -114,6 +126,7 @@ struct MainWindowView: View {
                     case .repo(let fullName): await store.refreshRepo(fullName)
                     case .repos: await store.refreshRepos(force: true)
                     case .org(let owner): await store.loadPulse(owner, force: true)
+                    case .stats: await store.loadStats(force: true)
                     default: await store.refreshAll()
                     }
                 }
@@ -122,7 +135,7 @@ struct MainWindowView: View {
             }
             .keyboardShortcut("r")
             .help("Refresh (⌘R)")
-            .disabled(store.isRefreshing || store.isRefreshingPulls)
+            .disabled(store.isRefreshing || store.isRefreshingPulls || store.statsLoading)
             Button {
                 NSWorkspace.shared.open(webURL)
             } label: {
@@ -138,6 +151,7 @@ struct MainWindowView: View {
         return switch selection {
         case .pulls(let section): section.windowTitle
         case .yours: "Your pull requests"
+        case .stats: "Your stats"
         case .repo(let fullName): String(fullName.split(separator: "/").last ?? "")
         case .repos: "Repositories"
         case .org(let owner): owner
@@ -160,6 +174,8 @@ struct MainWindowView: View {
             let open = [PipelineStage.drafts, .inReview, .fix, .ready].reduce(0) { $0 + (pipeline[$1]?.count ?? 0) }
             let shipping = pipeline[.shipping]?.count ?? 0
             return shipping == 0 ? "\(open) open" : "\(open) open · \(shipping) shipping"
+        case .stats:
+            return "The last 12 months"
         case .repo(let fullName):
             return String(fullName.split(separator: "/").first ?? "")
         case .repos:
@@ -174,6 +190,7 @@ struct MainWindowView: View {
         case .todo, nil: URL(string: "https://github.com/pulls/inbox")!
         case .pulls(let section): store.webURL(for: section)
         case .yours: URL(string: "https://github.com/pulls")!
+        case .stats: URL(string: "https://github.com/\(store.viewer?.login ?? "")")!
         case .repo(let fullName): URL(string: "https://github.com/\(fullName)")!
         case .repos: URL(string: "https://github.com/\(store.repos.all.first?.owner ?? "")")!
         case .org(let owner): URL(string: "https://github.com/\(owner)")!
@@ -188,7 +205,7 @@ struct MainWindowView: View {
             store.showInWindow(.pulls, pullsFocus: section)
         case .yours:
             store.showInWindow(.yours, pullsFocus: nil)
-        case .repo, .repos, .org, nil:
+        case .stats, .repo, .repos, .org, nil:
             break
         }
     }
@@ -197,6 +214,7 @@ struct MainWindowView: View {
         switch item {
         case .todo: "todo"
         case .yours: "yours"
+        case .stats: "stats"
         case .pulls(let section): "pulls.\(section.rawValue)"
         case .repo(let fullName): "repo.\(fullName)"
         case .repos: "repos.all"
@@ -207,6 +225,7 @@ struct MainWindowView: View {
     private static func decode(_ raw: String) -> SidebarItem? {
         if raw == "todo" { return .todo }
         if raw == "yours" { return .yours }
+        if raw == "stats" { return .stats }
         let parts = raw.split(separator: ".", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
@@ -278,38 +297,22 @@ private struct Sidebar: View {
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
-            if store.people != nil {
-                Button {
-                    AppController.shared?.settingsItem()
-                } label: {
-                    // Same columns as the row below: the icon over the avatar, the names over the login.
-                    HStack(spacing: 8) {
-                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                            .font(.system(size: 14))
-                            .frame(width: 22)
-                        Text(store.peopleFilter)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Palette.accent)
+                // A treat rather than a task, so it sits down here with you, below everything you work through.
+                FooterStatsRow(selected: selection == .stats) { selection = .stats }
+                    .padding(.horizontal, 8)
+                    .padding(.top, 6)
+                HStack(spacing: 8) {
+                    Avatar(url: store.viewer?.avatarUrl, size: 22)
+                    Text(store.viewer?.login ?? "")
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 4)
+                    FooterStatus()
                 }
-                .buttonStyle(.plain)
-                .tooltip("Only showing activity from these people. Click to change.")
                 .padding(.horizontal, 14)
-                .padding(.top, 8)
-            }
-            HStack(spacing: 8) {
-                Avatar(url: store.viewer?.avatarUrl, size: 22)
-                Text(store.viewer?.login ?? "")
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 4)
-                FooterStatus()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
             }
             // Opaque, so the list doesn't show through when it scrolls under the footer in a short window.
             .background(.bar)
@@ -363,6 +366,36 @@ private struct RepoSidebarRow: View {
         }
         .badge(count)
         .tooltip(repo.fullName)
+    }
+}
+
+// Your stats, in the footer beside you. Drawn like a selectable sidebar row, since it isn't in the list.
+private struct FooterStatsRow: View {
+    let selected: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Label {
+                Text("Your stats")
+            } icon: {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(Palette.accent))
+                    .frame(width: 18)
+            }
+            .font(.system(size: 13))
+            .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(hovering ? 0.06 : 0))))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

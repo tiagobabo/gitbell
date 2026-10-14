@@ -20,6 +20,8 @@ final class InboxStore {
     var quickOpenShown = false
     // A sidebar page the window should switch to, e.g. Settings from ⌘, or the popover's menu.
     var windowRequest: SidebarItem?
+    // The Settings tab to show, so a button elsewhere can open Settings where it's relevant.
+    var settingsTab = SettingsTab.general
 
     // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "my-org/my-team, octocat".
     var peopleFilter = UserDefaults.standard.string(forKey: "peopleFilter") ?? "" {
@@ -83,6 +85,11 @@ final class InboxStore {
     var watchPrints: [String: String] = [:]
     private var watchTask: Task<Void, Never>?
     private(set) var pullsRefreshedAt: Date?
+    // Your year on GitHub, for the stats page: fetched when it opens.
+    var stats: PersonalStats?
+    var statsError: String?
+    var statsLoading = false
+    var statsLoadedAt: Date?
 
     var pulls: [PullSection: [PullRequest]] = [:] {
         didSet {
@@ -215,6 +222,8 @@ final class InboxStore {
         notifications = []
         details = [:]
         lastUpdated = nil
+        stats = nil
+        statsLoadedAt = nil
         repos.signOut()
         TokenStore.deleteToken()
         TokenStore.mode = .signedOut

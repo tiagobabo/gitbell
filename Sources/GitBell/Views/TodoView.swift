@@ -650,7 +650,7 @@ private struct CircleCIHint: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
-            Button("Add Token…") { AppController.shared?.settingsItem() }
+            Button("Add Token…") { AppController.shared?.openSettings(on: .accounts) }
                 .controlSize(.small)
             Button {
                 withAnimation(.snappy) { store.circleCIHintDismissed = true }

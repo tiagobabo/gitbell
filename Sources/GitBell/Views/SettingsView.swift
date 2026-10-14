@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum SettingsTab: Hashable {
+    case general, notifications, people, accounts
+}
+
 struct SettingsView: View {
     @Environment(InboxStore.self) private var store
     @Environment(Updater.self) private var updater
@@ -13,7 +17,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var store = store
         @Bindable var updater = updater
-        TabView {
+        TabView(selection: $store.settingsTab) {
             Form {
                 Section {
                     Picker("Appearance", selection: $appearance) {
@@ -55,6 +59,7 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("General", systemImage: "gearshape") }
+            .tag(SettingsTab.general)
 
             Form {
                 Section {
@@ -91,6 +96,7 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("Notifications", systemImage: "bell.badge") }
+            .tag(SettingsTab.notifications)
 
             Form {
                 Section {
@@ -112,6 +118,7 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("People", systemImage: "person.2") }
+            .tag(SettingsTab.people)
 
             Form {
                 if let login = store.viewer?.login {
@@ -160,6 +167,7 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
+            .tag(SettingsTab.accounts)
         }
         // Checked each time Settings opens, since you might have just changed it in System Settings.
         .task { badgesAllowed = await Notifier.shared.badgesAllowed() }

@@ -139,6 +139,12 @@ enum LoadingLines {
         "Tallying the merges…",
         "Asking who's been shipping…",
     ]
+    static let stats = [
+        "Counting your commits…",
+        "Watering your contribution garden…",
+        "Polishing your badges…",
+        "Tallying up the good stuff…",
+    ]
 }
 
 struct SignInView: View {

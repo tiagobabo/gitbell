@@ -218,6 +218,12 @@ final class AppController: NSObject, NSWindowDelegate, NSPopoverDelegate {
 
     // Opens the Settings window through the app menu's own Settings… item, which SwiftUI's Settings scene owns.
     @objc func settingsItem() {
+        openSettings(on: nil)
+    }
+
+    // Opens Settings, on `tab` if given, or wherever it was left.
+    func openSettings(on tab: SettingsTab?) {
+        if let tab { store.settingsTab = tab }
         popover.performClose(nil)
         NSApp.activate()
         guard let menu = NSApp.mainMenu?.items.first?.submenu,

@@ -1104,16 +1104,30 @@ actor GitHubClient {
         return data.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
     }
 
+    private struct GraphQLErrors: Decodable {
+        struct Message: Decodable { let message: String }
+        let errors: [Message]?
+    }
+
     private struct GraphQL<T: Decodable>: Decodable {
         struct Message: Decodable { let message: String }
         let data: T?
         let errors: [Message]?
     }
 
-    private func graphQL<T: Decodable>(_ query: String, _ variables: [String: Any] = [:]) async throws -> T {
+    func graphQL<T: Decodable>(_ query: String, _ variables: [String: Any] = [:]) async throws -> T {
         let body: [String: Any] = ["query": query, "variables": variables]
         let (data, _) = try await send(makeRequest(base.appending(path: "graphql"), method: "POST", body: body))
-        let response = try Self.decoder.decode(GraphQL<T>.self, from: data)
+        let response: GraphQL<T>
+        do {
+            response = try Self.decoder.decode(GraphQL<T>.self, from: data)
+        } catch {
+            // A field GitHub failed to answer comes back null beside an error, which says more than "missing data".
+            if let message = (try? Self.decoder.decode(GraphQLErrors.self, from: data))?.errors?.first?.message {
+                throw APIError(status: 200, message: message)
+            }
+            throw error
+        }
         guard let result = response.data else {
             throw APIError(status: 200, message: response.errors?.first?.message ?? "GitHub GraphQL error")
         }
