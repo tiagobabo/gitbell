@@ -95,9 +95,12 @@ enum TokenStore {
     }
 
     // A personal API token for approving held jobs: the one pasted into Settings, else the CircleCI CLI's.
-    static func circleCIToken() -> (token: String, source: CircleCISource)? {
-        if let token = keychainToken(account: circleCIAccount), !token.isEmpty { return (token, .keychain) }
-        return circleCICLIToken().map { ($0, .cli) }
+    // Read off the main thread, since decrypting a Keychain item can stall, or wait on an access prompt.
+    static func circleCIToken() async -> (token: String, source: CircleCISource)? {
+        await Task.detached {
+            if let token = keychainToken(account: circleCIAccount), !token.isEmpty { return (token, .keychain) }
+            return circleCICLIToken().map { ($0, .cli) }
+        }.value
     }
 
     // `circleci setup` writes "token: …" to ~/.circleci/cli.yml.

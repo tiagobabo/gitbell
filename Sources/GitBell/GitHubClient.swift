@@ -1194,3 +1194,12 @@ actor GitHubClient {
         return nil
     }
 }
+
+// GitHub sends "" for a link that isn't set, like a commit status without a target URL, and a plain URL decode
+// fails on it, which would throw away the whole list it came in. Any optional URL that doesn't parse is just missing.
+extension KeyedDecodingContainer {
+    func decodeIfPresent(_ type: URL.Type, forKey key: Key) throws -> URL? {
+        guard let string = try decodeIfPresent(String.self, forKey: key) else { return nil }
+        return URL(string: string)
+    }
+}

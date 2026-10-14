@@ -616,15 +616,17 @@ extension InboxStore {
     // The approval request is looked up meanwhile, so Approve has a single request left to make. Without a
     // CircleCI token, or a workflow to approve it in, it opens the job in CircleCI instead.
     func requestApproval(_ check: PullRequest.Check, on pr: PullRequest, from origin: ApprovalPrompt.Origin) {
-        guard let workflow = check.workflowID, let token = TokenStore.circleCIToken()?.token else {
-            if let url = check.url { NSWorkspace.shared.open(url) }
-            if check.workflowID != nil { show("Add a CircleCI token in Settings to approve from GitBell") }
-            return
+        Task {
+            guard let workflow = check.workflowID, let token = await TokenStore.circleCIToken()?.token else {
+                if let url = check.url { NSWorkspace.shared.open(url) }
+                if check.workflowID != nil { show("Add a CircleCI token in Settings to approve from GitBell") }
+                return
+            }
+            let prompt = ApprovalPrompt(check: check, pr: pr, origin: origin)
+            lookup?.cancel()
+            lookup = Task { try await CircleCIClient(token: token).heldApproval(job: check.jobName, workflow: workflow) }
+            approvalPrompt = prompt
         }
-        let prompt = ApprovalPrompt(check: check, pr: pr, origin: origin)
-        lookup?.cancel()
-        lookup = Task { try await CircleCIClient(token: token).heldApproval(job: check.jobName, workflow: workflow) }
-        approvalPrompt = prompt
     }
 
     func cancelApproval() {
@@ -635,7 +637,7 @@ extension InboxStore {
 
     // Closes the prompt straight away; the job's chip shows the approval going through, then that it went.
     func approve(_ prompt: ApprovalPrompt) async {
-        guard let workflow = prompt.check.workflowID, let token = TokenStore.circleCIToken()?.token else { return }
+        guard let workflow = prompt.check.workflowID, let token = await TokenStore.circleCIToken()?.token else { return }
         let (check, pr, key) = (prompt.check, prompt.pr, prompt.key)
         let pending = lookup
         lookup = nil
