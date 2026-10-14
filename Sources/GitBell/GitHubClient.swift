@@ -295,7 +295,8 @@ actor GitHubClient {
         let base = "is:open is:pr archived:false updated:>=\(day) sort:updated-desc"
         return [
             .needsReview: "\(base) user-review-requested:@me",
-            .teamReview: "\(base) review-requested:@me -user-review-requested:@me",
+            // Once you've reviewed it, your part of a team request is done; pushes after that are a re-review.
+            .teamReview: "\(base) review-requested:@me -user-review-requested:@me -reviewed-by:@me",
             .waiting: "\(base) author:@me",
             .contributing: "\(base) involves:@me -author:@me",
             .reReview: "\(base) -is:draft reviewed-by:@me -author:@me -user-review-requested:@me",
@@ -317,8 +318,13 @@ actor GitHubClient {
         case .reviews:
             let found: Searches = try await graphQL(Self.reviewsQuery, ["direct": queries[.needsReview]!, "team": queries[.teamReview]!])
             let direct = found["direct"], team = found["team"]
-            return PullInbox(sections: [.needsReview: direct?.pulls ?? [], .teamReview: team?.pulls ?? []],
-                             totals: [.needsReview: direct?.issueCount ?? 0, .teamReview: team?.issueCount ?? 0])
+            // Search lags behind a review you just left, so drop those here too.
+            let teamPulls = (team?.pulls ?? []).filter { pr in
+                !(pr.reviewers ?? []).contains { !$0.isTeam && $0.name == viewer && $0.state != .requested }
+            }
+            let teamTotal = max(0, (team?.issueCount ?? 0) - ((team?.pulls.count ?? 0) - teamPulls.count))
+            return PullInbox(sections: [.needsReview: direct?.pulls ?? [], .teamReview: teamPulls],
+                             totals: [.needsReview: direct?.issueCount ?? 0, .teamReview: teamTotal])
         case .yours:
             let found: Searches = try await graphQL(Self.mineQuery, ["q": queries[.waiting]!])
             let open = found["mine"]?.pulls ?? []
