@@ -318,13 +318,19 @@ actor GitHubClient {
         case .reviews:
             let found: Searches = try await graphQL(Self.reviewsQuery, ["direct": queries[.needsReview]!, "team": queries[.teamReview]!])
             let direct = found["direct"], team = found["team"]
-            // Search lags behind a review you just left, so drop those here too.
-            let teamPulls = (team?.pulls ?? []).filter { pr in
-                !(pr.reviewers ?? []).contains { !$0.isTeam && $0.name == viewer && $0.state != .requested }
+            // Search lags behind a review you just left, so drop those here too. Asked again, you show as requested.
+            func unreviewed(_ search: GraphQLResponse.Search?) -> (pulls: [PullRequest], total: Int) {
+                let all = search?.pulls ?? []
+                let kept = all.filter { pr in
+                    !(pr.reviewers ?? []).contains { !$0.isTeam && $0.name == viewer && $0.state != .requested }
+                }
+                return (kept, max(0, (search?.issueCount ?? 0) - (all.count - kept.count)))
             }
-            let teamTotal = max(0, (team?.issueCount ?? 0) - ((team?.pulls.count ?? 0) - teamPulls.count))
-            return PullInbox(sections: [.needsReview: direct?.pulls ?? [], .teamReview: teamPulls],
-                             totals: [.needsReview: direct?.issueCount ?? 0, .teamReview: teamTotal])
+            let mine = unreviewed(direct), teams = unreviewed(team)
+            // Direct requests only fetch reviewers for this; the reviewers line is for team requests.
+            let minePulls = mine.pulls.map { pr in var pr = pr; pr.reviewers = nil; return pr }
+            return PullInbox(sections: [.needsReview: minePulls, .teamReview: teams.pulls],
+                             totals: [.needsReview: mine.total, .teamReview: teams.total])
         case .yours:
             let found: Searches = try await graphQL(Self.mineQuery, ["q": queries[.waiting]!])
             let open = found["mine"]?.pulls ?? []
@@ -629,7 +635,7 @@ actor GitHubClient {
 
     private static let reviewsQuery = """
     query($direct: String!, $team: String!) {
-      direct: search(query: $direct, type: ISSUE, first: 50) { issueCount nodes { ...pr } }
+      direct: search(query: $direct, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } }
       team: search(query: $team, type: ISSUE, first: 50) { issueCount nodes { ...pr ...reviewers } }
     }
     """ + reviewersFragment + pullFragment
