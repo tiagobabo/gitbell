@@ -129,6 +129,8 @@ struct MainWindowView: View {
                         .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 360)
                 } detail: {
                     detail
+                        // Over the list it's about, centred on it rather than on the whole window.
+                        .toastOverlay(bottomPadding: 20)
                         .toolbar { toolbar }
                         .navigationTitle(title)
                         .navigationSubtitle(subtitle)
@@ -141,7 +143,6 @@ struct MainWindowView: View {
                 }
                 .modifier(SearchShortcut(request: store.searchRequest))
                 .inboxKeyboard(inPopover: false)
-                .toastOverlay(bottomPadding: 20)
             }
         }
         // Every phase fills the window. A fixed-size one (a spinner, the sign-in column) would otherwise become
