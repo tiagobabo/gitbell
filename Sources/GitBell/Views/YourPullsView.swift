@@ -6,6 +6,8 @@ struct YourPullsView: View {
     // The popover's: tighter, and without the strip of stages, which needs the window's width.
     var compact = false
     @Environment(InboxStore.self) private var store
+    // Stages folded down to their header, remembered between launches. Shipped starts folded: it's news, not work.
+    @AppStorage("collapsedStages") private var collapsed = PipelineStage.shipped.rawValue
 
     var body: some View {
         // Narrowed to one stage when it's picked in the sidebar.
@@ -29,29 +31,36 @@ struct YourPullsView: View {
                                             count: pipeline[only]?.count ?? 0, description: only.subtitle)
                         } else if !compact {
                             PipelineSummary(pipeline: pipeline) { stage in
-                                withAnimation(.snappy) { proxy.scrollTo(stage, anchor: .top) }
+                                withAnimation(.snappy) {
+                                    expanded(stage).wrappedValue = true
+                                    proxy.scrollTo(stage, anchor: .top)
+                                }
                             }
                             .padding(.bottom, 8)
                         }
 
                         ForEach(PipelineStage.allCases) { stage in
                             if let pulls = pipeline[stage], !pulls.isEmpty {
+                                // Narrowed to one stage, it's all there is to see, so it never folds.
+                                let open = only != nil || expanded(stage).wrappedValue
                                 Section {
-                                    VStack(spacing: 0) {
-                                        ForEach(Array(runs(pulls).enumerated()), id: \.element.id) { index, run in
-                                            if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
-                                            if let stack = run.stack {
-                                                StackCard(stack: stack, members: run.pulls)
-                                            } else {
-                                                PullRow(pr: run.pulls[0], showAuthor: false)
+                                    if open {
+                                        VStack(spacing: 0) {
+                                            ForEach(Array(runs(pulls).enumerated()), id: \.element.id) { index, run in
+                                                if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
+                                                if let stack = run.stack {
+                                                    StackCard(stack: stack, members: run.pulls)
+                                                } else {
+                                                    PullRow(pr: run.pulls[0], showAuthor: false)
+                                                }
                                             }
                                         }
+                                        .padding(3)
+                                        .card()
                                     }
-                                    .padding(3)
-                                    .card()
                                 } header: {
                                     if only == nil {
-                                        StageHeader(stage: stage, count: pulls.count).id(stage)
+                                        StageHeader(stage: stage, count: pulls.count, isExpanded: expanded(stage)).id(stage)
                                     }
                                 }
                             }
@@ -64,6 +73,10 @@ struct YourPullsView: View {
                 }
                 .onChange(of: store.selection) { _, id in
                     guard let id else { return }
+                    // Unfolded first, or there'd be no row to scroll to.
+                    if let stage = pipeline.first(where: { $0.value.contains { $0.id == id } })?.key {
+                        expanded(stage).wrappedValue = true
+                    }
                     proxy.scrollTo(id)
                 }
             }
@@ -78,6 +91,16 @@ private struct Run: Identifiable {
 }
 
 extension YourPullsView {
+    fileprivate func expanded(_ stage: PipelineStage) -> Binding<Bool> {
+        Binding {
+            !collapsed.split(separator: ",").contains(Substring(stage.rawValue))
+        } set: { open in
+            var stages = Set(collapsed.split(separator: ",").map(String.init))
+            if open { stages.remove(stage.rawValue) } else { stages.insert(stage.rawValue) }
+            collapsed = stages.sorted().joined(separator: ",")
+        }
+    }
+
     // A stage's list as single pull requests and stacks, which the pipeline keeps next to each other.
     fileprivate func runs(_ pulls: [PullRequest]) -> [Run] {
         var runs: [Run] = []
@@ -193,13 +216,29 @@ private struct StageTile: View {
     }
 }
 
-// Pinned while you scroll through its stage, on the window's background.
+// Pinned while you scroll through its stage, on the window's background. Click it to fold the stage away.
 private struct StageHeader: View {
     let stage: PipelineStage
     let count: Int
+    @Binding var isExpanded: Bool
 
     var body: some View {
+        Button {
+            withAnimation(.snappy) { isExpanded.toggle() }
+        } label: {
+            label
+        }
+        .buttonStyle(.plain)
+        .tooltip(isExpanded ? "Collapse \(stage.title)" : "Expand \(stage.title)")
+    }
+
+    private var label: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.tertiary)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .frame(width: 10)
             Image(systemName: stage.symbol)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(stage.tint)
@@ -219,6 +258,7 @@ private struct StageHeader: View {
         .padding(.horizontal, 4)
         .padding(.top, 14)
         .padding(.bottom, 6)
+        .contentShape(Rectangle())
         .background { Rectangle().fill(Color(nsColor: .windowBackgroundColor)).padding(.horizontal, -4) }
     }
 }
