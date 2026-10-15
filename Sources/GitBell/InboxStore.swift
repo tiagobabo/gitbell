@@ -565,7 +565,9 @@ extension InboxStore {
     private func receive(_ part: GitHubClient.PullInbox, from source: PullSource) {
         unfilteredPulls.merge(part.sections) { $1 }
         unfilteredTotals.merge(part.totals) { $1 }
-        withAnimation(.snappy) {
+        // A first load puts every row on screen at once, and animating that hung the window for seconds on a long
+        // list. Refreshes change a row or two, so they still animate.
+        withAnimation(loadedPulls.contains(source) ? .snappy : nil) {
             pullErrors[source] = nil
             loadedPulls.insert(source)
             applyPeopleToPulls()

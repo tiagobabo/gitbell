@@ -54,10 +54,9 @@ extension InboxStore {
                 let sections = Demo.pulls.filter { $0.key.source == source }
                 unfilteredPulls.merge(sections) { $1 }
                 unfilteredTotals.merge(Demo.totals.filter { $0.key.source == source }) { $1 }
-                withAnimation(.snappy) {
-                    loadedPulls.insert(source)
-                    applyPeopleToPulls()
-                }
+                // Without animation, as a real first load is.
+                loadedPulls.insert(source)
+                applyPeopleToPulls()
             }
             withAnimation(.snappy) { lastUpdated = .now }
         }
