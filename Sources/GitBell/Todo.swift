@@ -244,8 +244,15 @@ extension InboxStore {
         case "PullRequest", "Issue", "Discussion", "Commit":
             guard ["mention", "assign", "author", "comment"].contains(n.reason) else { return nil }
             let detail = details[n.detailKey]
-            // Merged and closed threads are news, not work, unless someone asked for you by name.
-            if detail?.state == "closed" || detail?.merged == true, n.reason != "mention" { return nil }
+            // Merged and closed threads are news, not work, unless someone asked for you by name. Once merged, even a
+            // mention is done with, unless someone has said something since: the merge itself is the last word.
+            if detail?.merged == true {
+                switch detail?.activity?.kind {
+                case .commented, .changesRequested, .reviewed: break
+                default: return nil
+                }
+            }
+            if detail?.state == "closed", n.reason != "mention" { return nil }
             return asksForReply(n) ? .reply : nil
         default:
             return n.reason == "security_alert" ? .fix : nil
