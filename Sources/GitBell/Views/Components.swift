@@ -308,6 +308,38 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Color(nsColor: .separatorColor)))
     }
+
+    // One row's slice of a card, so a long list can be a lazy stack's rows yet look like one card: the first
+    // slice has the top corners, the last the bottom ones, and the ones between only the sides.
+    func cardSlice(first: Bool, last: Bool) -> some View {
+        let r = Radius.card
+        let shape = UnevenRoundedRectangle(topLeadingRadius: first ? r : 0, bottomLeadingRadius: last ? r : 0,
+                                           bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0,
+                                           style: .continuous)
+        return padding(.horizontal, 3)
+            .padding(.top, first ? 3 : 0)
+            .padding(.bottom, last ? 3 : 0)
+            .background(.fill.quinary, in: shape)
+            .overlay(CardSliceBorder(first: first, last: last).stroke(Color(nsColor: .separatorColor)).clipped())
+    }
+}
+
+// A card's hairline for one slice: down both sides, and round the top or bottom when it's an end.
+private struct CardSliceBorder: Shape {
+    let first: Bool
+    let last: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let r = Radius.card
+        let shape = UnevenRoundedRectangle(cornerRadii: .init(topLeading: first ? r : 0, bottomLeading: last ? r : 0,
+                                                              bottomTrailing: last ? r : 0, topTrailing: first ? r : 0),
+                                           style: .continuous)
+        // Inset half the line so it sits inside, as strokeBorder does. An open end runs a point past the slice,
+        // where the clip cuts it off, leaving only the sides.
+        let top = first ? rect.minY + 0.5 : rect.minY - 1
+        let bottom = last ? rect.maxY - 0.5 : rect.maxY + 1
+        return shape.path(in: CGRect(x: rect.minX + 0.5, y: top, width: rect.width - 1, height: bottom - top))
+    }
 }
 
 extension View {

@@ -45,8 +45,12 @@ struct YourPullsView: View {
                                 let open = only != nil || expanded(stage).wrappedValue
                                 Section {
                                     if open {
-                                        VStack(spacing: 0) {
-                                            ForEach(Array(runs(pulls).enumerated()), id: \.element.id) { index, run in
+                                        // Each run its own row of the lazy stack, so only the ones on screen are
+                                        // built. As one card's contents, a long stage built every row at once and
+                                        // hung the window.
+                                        let runs = runs(pulls)
+                                        ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
+                                            VStack(spacing: 0) {
                                                 if index > 0 { Divider().padding(.leading, 40).opacity(0.6) }
                                                 if let stack = run.stack {
                                                     StackCard(stack: stack, members: run.pulls)
@@ -54,9 +58,9 @@ struct YourPullsView: View {
                                                     PullRow(pr: run.pulls[0], showAuthor: false)
                                                 }
                                             }
+                                            .cardSlice(first: index == 0, last: index == runs.count - 1)
+                                            .id(run.id)
                                         }
-                                        .padding(3)
-                                        .card()
                                     }
                                 } header: {
                                     if only == nil {
@@ -74,10 +78,11 @@ struct YourPullsView: View {
                 .onChange(of: store.selection) { _, id in
                     guard let id else { return }
                     // Unfolded first, or there'd be no row to scroll to.
-                    if let stage = pipeline.first(where: { $0.value.contains { $0.id == id } })?.key {
-                        expanded(stage).wrappedValue = true
-                    }
-                    proxy.scrollTo(id)
+                    guard let group = pipeline.first(where: { $0.value.contains { $0.id == id } }) else { return }
+                    expanded(group.key).wrappedValue = true
+                    // To its row, which for a stack is the stack's: rows off screen aren't built, so the pull
+                    // request inside one has nothing to scroll to.
+                    proxy.scrollTo(runs(group.value).first { $0.pulls.contains { $0.id == id } }?.id ?? id)
                 }
             }
         }
