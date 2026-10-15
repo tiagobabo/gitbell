@@ -10,6 +10,9 @@ cd "$(dirname "$0")"
 version="${VERSION:-$( (git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true) | sed 's/^v//')}"
 version="${version:-0.0.0}"
 build_number="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+# A build to try before releasing (no VERSION) sits just under the release made from the same commit, 52.1 under
+# 53, since Sparkle compares build numbers. Otherwise it would count as that release and never update to it.
+[[ -n "${VERSION:-}" ]] || build_number="$((build_number - 1)).1"
 
 # Usage and crash reporting only happen when these are set, which the release does from ~/.gitbell-telemetry.
 [[ -f ~/.gitbell-telemetry ]] && source ~/.gitbell-telemetry
