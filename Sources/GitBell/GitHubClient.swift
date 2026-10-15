@@ -7,6 +7,8 @@ struct APIError: LocalizedError {
     var errorDescription: String? { message }
     var isUnauthorized: Bool { status == 401 }
     var isGatewayTimeout: Bool { [502, 504].contains(status) }
+    // GitHub is down for a moment; the next poll tries again.
+    var isUnavailable: Bool { status == 503 }
 }
 
 actor GitHubClient {

@@ -70,12 +70,13 @@ enum Telemetry {
         SentrySDK.addBreadcrumb(crumb)
     }
 
-    // Reports an unexpected error. Being offline and an expired session are expected, so they're left out.
+    // Reports an unexpected error. Being offline, an expired session and GitHub being down are expected, so
+    // they're left out.
     static func report(_ error: Error, while doing: String) {
         guard isOn, SentrySDK.isEnabled, !(error is URLError), !(error is CancellationError) else { return }
         let kind: String
         switch error {
-        case let error as APIError where error.isUnauthorized:
+        case let error as APIError where error.isUnauthorized || error.isUnavailable:
             return
         case let error as APIError:
             kind = error.status == 200 ? "GitHub GraphQL error" : "GitHub \(error.status)"
