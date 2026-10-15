@@ -55,7 +55,7 @@ struct TabSwitcher: View {
         @Bindable var store = store
         Picker("View", selection: $store.tab) {
             Text(label(TodoItem.title, store.todoCount)).tag(InboxStore.Tab.todo)
-            Text(label(WindowPage.yours.title, store.sidebarCount(.page(.yours)))).tag(InboxStore.Tab.yours)
+            Text(label(WindowPage.yours.title, store.yoursCount())).tag(InboxStore.Tab.yours)
         }
         .pickerStyle(.segmented)
         .labelsHidden()

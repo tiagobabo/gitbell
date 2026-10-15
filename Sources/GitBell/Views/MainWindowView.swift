@@ -313,33 +313,35 @@ private struct Sidebar: View {
     @AppStorage("sidebarCollapsed") private var collapsed = ""
 
     var body: some View {
+        // Worked out once for every row: each count on its own rebuilt all of Your turn, enough to hang the window.
+        let counts = store.sidebarCounts
         // Always something selected, as in Mail: the list can let go of its row while rows redraw.
         List(selection: Binding(get: { selection }, set: { if let item = $0 { selection = item } })) {
             Section("Inbox") {
-                group(.todo)
+                group(.todo, counts)
             }
             Section("Pull Requests") {
-                group(.yours)
+                group(.yours, counts)
             }
         }
         .listStyle(.sidebar)
     }
 
-    private func group(_ page: WindowPage) -> some View {
+    private func group(_ page: WindowPage, _ counts: [SidebarItem: Int]) -> some View {
         let item = SidebarItem.page(page)
         return DisclosureGroup(isExpanded: expanded(page)) {
             ForEach(item.children, id: \.self) { child in
-                row(child)
+                row(child, counts)
             }
         } label: {
-            row(item)
+            row(item, counts)
         }
     }
 
-    private func row(_ item: SidebarItem) -> some View {
+    private func row(_ item: SidebarItem, _ counts: [SidebarItem: Int]) -> some View {
         Label(item.title, systemImage: item.symbol)
             .lineLimit(1)
-            .badge(store.sidebarCount(item))
+            .badge(counts[item] ?? 0)
             .tag(item)
     }
 
@@ -386,14 +388,22 @@ private struct AccountMenu: View {
 extension InboxStore {
     // The sidebar's counts. A page counts what's waiting on you there, as Mail counts unread mail; each group
     // counts what's in it, as each mailbox does.
-    func sidebarCount(_ item: SidebarItem) -> Int {
-        switch item {
-        case .page(.todo): todoCount
-        case .kind(let kind): allTodos.filter { $0.kind == kind && !$0.hidden }.count
-        // Yours to act on: fixes and merges.
-        case .page(.yours): (pipeline[.fix]?.count ?? 0) + (pipeline[.ready]?.count ?? 0)
-        case .stage(let stage): pipeline[stage]?.count ?? 0
+    var sidebarCounts: [SidebarItem: Int] {
+        var counts: [SidebarItem: Int] = [:]
+        for item in allTodos where item.kind.counted && !item.hidden {
+            counts[.kind(item.kind), default: 0] += 1
+            counts[.page(.todo), default: 0] += 1
         }
+        let pipeline = pipeline
+        for (stage, pulls) in pipeline { counts[.stage(stage)] = pulls.count }
+        counts[.page(.yours)] = yoursCount(pipeline)
+        return counts
+    }
+
+    // Your pull requests that are yours to act on: fixes and merges.
+    func yoursCount(_ pipeline: [PipelineStage: [PullRequest]]? = nil) -> Int {
+        let pipeline = pipeline ?? self.pipeline
+        return (pipeline[.fix]?.count ?? 0) + (pipeline[.ready]?.count ?? 0)
     }
 }
 

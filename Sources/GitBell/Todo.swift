@@ -104,8 +104,11 @@ extension TodoItem.Kind {
 extension InboxStore {
     // Everything on your plate, grouped by what you need to do, most recent first in each group.
     // Hidden items only show when you've asked to see them.
-    var todo: [TodoItem] {
-        allTodos.filter { (showHiddenTodos || !$0.hidden) && matchesSearch($0) }
+    var todo: [TodoItem] { todo(in: allTodos) }
+
+    // The same, from an allTodos a view has already built. It isn't cheap, so build it once per body.
+    func todo(in all: [TodoItem]) -> [TodoItem] {
+        all.filter { (showHiddenTodos || !$0.hidden) && matchesSearch($0) }
     }
 
     var todoCount: Int { allTodos.filter { $0.kind.counted && !$0.hidden }.count }
@@ -142,8 +145,8 @@ extension InboxStore {
     var hiddenTodoCount: Int { hiddenTodoCount(of: nil) }
 
     // Hidden in one group, or anywhere in Your turn.
-    func hiddenTodoCount(of kind: TodoItem.Kind?) -> Int {
-        allTodos.filter { $0.hidden && (kind == nil || $0.kind == kind) }.count
+    func hiddenTodoCount(of kind: TodoItem.Kind?, in all: [TodoItem]? = nil) -> Int {
+        (all ?? allTodos).filter { $0.hidden && (kind == nil || $0.kind == kind) }.count
     }
 
     var allTodos: [TodoItem] {

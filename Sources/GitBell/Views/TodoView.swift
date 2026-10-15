@@ -8,8 +8,9 @@ struct TodoView: View {
     var body: some View {
         // Narrowed to one group when it's picked in the window's sidebar.
         let only = compact ? nil : store.focus.kind
+        let all = store.allTodos
         // Only what's on you: your pull requests waiting on others are under Your pull requests → In review.
-        let items = store.todo.filter { $0.kind.counted && (only == nil || $0.kind == only) }
+        let items = store.todo(in: all).filter { $0.kind.counted && (only == nil || $0.kind == only) }
         let yours = items
         let pending = yours.filter { !$0.hidden }
 
@@ -19,7 +20,7 @@ struct TodoView: View {
         } else if !compact, store.todoLoaded, items.isEmpty {
             // Nothing else on the page, so the empty state takes all of it, centred like every other, offering
             // what you hid there.
-            let hidden = store.hiddenTodoCount(of: only)
+            let hidden = store.hiddenTodoCount(of: only, in: all)
             if let only, store.searchText.isEmpty {
                 ContentUnavailableView {
                     Label("All Clear", systemImage: only.symbol)
@@ -79,7 +80,7 @@ struct TodoView: View {
                                 placeholder(kind)
                             }
                         }
-                        HiddenToggle(kind: only)
+                        HiddenToggle(count: store.hiddenTodoCount(of: only, in: all))
                     }
                     .padding(.horizontal, compact ? 10 : 18)
                     .padding(.vertical, compact ? 10 : 16)
@@ -730,11 +731,10 @@ private struct CircleCIHint: View {
 // "2 hidden until something changes · Show": hidden items come back on their own, or here.
 // What you hid on this page: all of Your turn, or the one group it's narrowed to.
 private struct HiddenToggle: View {
-    let kind: TodoItem.Kind?
+    let count: Int
     @Environment(InboxStore.self) private var store
 
     var body: some View {
-        let count = store.hiddenTodoCount(of: kind)
         if count > 0 {
             Button {
                 withAnimation(.snappy(duration: 0.25)) { store.showHiddenTodos.toggle() }
