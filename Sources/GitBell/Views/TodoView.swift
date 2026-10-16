@@ -486,19 +486,60 @@ struct PullStatusAndReviewers: View {
 
     var body: some View {
         let status = PullStatusLine(pr: pr, origin: origin, lifecycle: lifecycle, wait: wait)
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: Self.gap) {
+        if ReviewersLine.shows(pr) {
+            // A layout rather than a ViewThatFits, which built the status and the reviewers twice over, once for
+            // each way round, and hung the window working out every row's.
+            BesideOrBelow {
                 status
-                if ReviewersLine.shows(pr) {
-                    GroupDivider()
-                    ReviewersLine(pr: pr)
-                }
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                status
+                Rectangle().fill(Color.primary.opacity(0.15))
                 ReviewersLine(pr: pr)
             }
+        } else {
+            status
         }
+    }
+}
+
+// The status, a rule and the reviewers on one line when they fit, otherwise the reviewers under the status
+// without the rule. The rule takes the size it's offered, so it's offered none below.
+private struct BesideOrBelow: Layout {
+    private static let rule = CGSize(width: 1, height: 10)
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let (status, reviewers) = ideal(subviews)
+        if fitsBeside(status, reviewers, in: proposal.width) {
+            return CGSize(width: status.width + reviewers.width + Self.rule.width + 2 * PullStatusAndReviewers.gap,
+                          height: max(status.height, reviewers.height, Self.rule.height))
+        }
+        let below = ProposedViewSize(width: proposal.width, height: nil)
+        let top = subviews[0].sizeThatFits(below), bottom = subviews[2].sizeThatFits(below)
+        return CGSize(width: max(top.width, bottom.width), height: top.height + 3 + bottom.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let (status, reviewers) = ideal(subviews)
+        if fitsBeside(status, reviewers, in: bounds.width) {
+            var x = bounds.minX
+            for (subview, size) in zip(subviews, [status, Self.rule, reviewers]) {
+                subview.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(size))
+                x += size.width + PullStatusAndReviewers.gap
+            }
+        } else {
+            let below = ProposedViewSize(width: bounds.width, height: nil)
+            let top = subviews[0].sizeThatFits(below)
+            subviews[0].place(at: bounds.origin, proposal: below)
+            subviews[1].place(at: bounds.origin, proposal: .zero)
+            subviews[2].place(at: CGPoint(x: bounds.minX, y: bounds.minY + top.height + 3), proposal: below)
+        }
+    }
+
+    private func ideal(_ subviews: Subviews) -> (CGSize, CGSize) {
+        (subviews[0].sizeThatFits(.unspecified), subviews[2].sizeThatFits(.unspecified))
+    }
+
+    private func fitsBeside(_ status: CGSize, _ reviewers: CGSize, in width: CGFloat?) -> Bool {
+        guard let width else { return true }
+        return status.width + reviewers.width + Self.rule.width + 2 * PullStatusAndReviewers.gap <= width
     }
 }
 
