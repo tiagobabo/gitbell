@@ -82,7 +82,7 @@ struct SettingsView: View {
                         LabeledContent("Badges are off for GitBell in macOS") {
                             Button("Turn On…") {
                                 let id = Bundle.main.bundleIdentifier ?? ""
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!)
+                                NSWorkspace.shared.openWithoutWaiting(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!)
                             }
                         }
                         .foregroundStyle(.secondary)

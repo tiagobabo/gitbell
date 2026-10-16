@@ -93,7 +93,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         if let string = response.notification.request.content.userInfo["url"] as? String, let url = URL(string: string) {
-            NSWorkspace.shared.open(url)
+            NSWorkspace.shared.openWithoutWaiting(url)
         }
         completionHandler()
     }

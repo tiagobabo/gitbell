@@ -99,10 +99,10 @@ struct SettingsMenu: View {
             }
             Divider()
             Button("Open GitHub Notifications") {
-                NSWorkspace.shared.open(URL(string: "https://github.com/notifications")!)
+                NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/notifications")!)
             }
             Button("Open Pull Requests Inbox") {
-                NSWorkspace.shared.open(URL(string: "https://github.com/pulls/inbox")!)
+                NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/pulls/inbox")!)
             }
             Button("Sign Out") { store.signOut() }
             Divider()
@@ -137,7 +137,7 @@ struct FooterView: View {
             }
             Spacer()
             Button {
-                NSWorkspace.shared.open(URL(string: "https://github.com/pulls/inbox")!)
+                NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/pulls/inbox")!)
             } label: {
                 HStack(spacing: 3) {
                     Text("github.com")

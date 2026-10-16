@@ -339,7 +339,7 @@ struct TodoRow: View {
                 Button("Show Timeline") { store.showTimeline(pr, from: .todo) }
             }
             Button("Copy Link") { store.copyLink(item) }
-            Button("Open Repository") { NSWorkspace.shared.open(URL(string: "https://github.com/\(item.repository)")!) }
+            Button("Open Repository") { NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/\(item.repository)")!) }
             if let pr = item.pr, let held = pr.checks?.onHold, !held.isEmpty {
                 Section("On hold") {
                     ForEach(held, id: \.self) { check in
@@ -351,7 +351,7 @@ struct TodoRow: View {
             if let failing = item.pr?.checks?.failing, !failing.isEmpty {
                 Section("Failing checks") {
                     ForEach(failing, id: \.self) { check in
-                        Button(check.name) { if let url = check.url { NSWorkspace.shared.open(url) } }
+                        Button(check.name) { if let url = check.url { NSWorkspace.shared.openWithoutWaiting(url) } }
                             .disabled(check.url == nil)
                     }
                 }
@@ -603,7 +603,7 @@ struct CheckChip: View {
     var body: some View {
         Button {
             if check.onHold, approval == .none { approve() }
-            else if let url = check.url { NSWorkspace.shared.open(url) }
+            else if let url = check.url { NSWorkspace.shared.openWithoutWaiting(url) }
         } label: {
             HStack(spacing: 3) {
                 if approval == .approving {
@@ -674,7 +674,7 @@ private struct TodoRowActions: View {
             if let pr = item.pr, let check = pr.checks?.failing.first, check.url != nil {
                 IconButton(symbol: "doc.text.magnifyingglass", help: "Open \(check.name) logs", size: 24) {
                     store.watch(pr)
-                    NSWorkspace.shared.open(check.url!)
+                    NSWorkspace.shared.openWithoutWaiting(check.url!)
                 }
             }
             if let pr = item.pr {

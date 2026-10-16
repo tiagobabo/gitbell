@@ -53,7 +53,7 @@ struct ApprovalConfirmation: View {
                 if let url = check.url {
                     Button("Open in CircleCI") {
                         store.cancelApproval()
-                        NSWorkspace.shared.open(url)
+                        NSWorkspace.shared.openWithoutWaiting(url)
                     }
                     .buttonStyle(.link)
                     .font(.system(size: 11.5))

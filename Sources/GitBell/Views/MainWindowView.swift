@@ -219,7 +219,7 @@ struct MainWindowView: View {
             .help("Refresh (⌘R)")
             .disabled(store.isRefreshing || store.isRefreshingPulls)
             Button {
-                NSWorkspace.shared.open(webURL)
+                NSWorkspace.shared.openWithoutWaiting(webURL)
             } label: {
                 Label("Open on GitHub", systemImage: "arrow.up.right.square")
             }

@@ -283,7 +283,7 @@ extension InboxStore {
         }
         watch(pr)
         if Demo.isOn { return }
-        NSWorkspace.shared.open(pr.url)
+        NSWorkspace.shared.openWithoutWaiting(pr.url)
         for n in item.threads { Task { await markRead(n) } }
     }
 

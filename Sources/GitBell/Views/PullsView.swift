@@ -74,12 +74,12 @@ struct PullRow: View {
         .contextMenu {
             Button(pr.mergeCommitURL == nil ? "Open on GitHub" : "Open Merge Commit") { store.open(pr) }
             if pr.mergeCommitURL != nil {
-                Button("Open Pull Request") { NSWorkspace.shared.open(pr.url) }
+                Button("Open Pull Request") { NSWorkspace.shared.openWithoutWaiting(pr.url) }
             }
             Button("Show Timeline") { store.showTimeline(pr, from: .pulls) }
             Button("Copy Link") { store.copyLink(pr) }
             Button("Open Repository") {
-                NSWorkspace.shared.open(URL(string: "https://github.com/\(pr.repository)")!)
+                NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/\(pr.repository)")!)
             }
             if let held = pr.checks?.onHold, !held.isEmpty {
                 Section("On hold") {

@@ -375,7 +375,7 @@ final class InboxStore {
 
     func open(_ n: GHNotification) {
         Task {
-            NSWorkspace.shared.open(await webURL(for: n))
+            NSWorkspace.shared.openWithoutWaiting(await webURL(for: n))
             await markRead(n)
         }
     }
@@ -589,7 +589,7 @@ extension InboxStore {
 
     func open(_ pr: PullRequest) {
         watch(pr)
-        if !Demo.isOn { NSWorkspace.shared.open(pr.link) }
+        if !Demo.isOn { NSWorkspace.shared.openWithoutWaiting(pr.link) }
     }
 
     // Asks before approving a held CircleCI job, since it usually sets off a deploy, in a popover by its row.
@@ -598,7 +598,7 @@ extension InboxStore {
     func requestApproval(_ check: PullRequest.Check, on pr: PullRequest, from origin: ApprovalPrompt.Origin) {
         Task {
             guard let workflow = check.workflowID, let token = await TokenStore.circleCIToken()?.token else {
-                if let url = check.url { NSWorkspace.shared.open(url) }
+                if let url = check.url { NSWorkspace.shared.openWithoutWaiting(url) }
                 if check.workflowID != nil { show("Add a CircleCI token in Settings to approve from GitBell") }
                 return
             }
@@ -833,7 +833,7 @@ extension InboxStore {
 
     func openSelectionRepository() {
         guard let repository = selectedTodo?.repository ?? selectedPull?.repository else { return }
-        NSWorkspace.shared.open(URL(string: "https://github.com/\(repository)")!)
+        NSWorkspace.shared.openWithoutWaiting(URL(string: "https://github.com/\(repository)")!)
     }
 
     // Only Your turn's items can be hidden or read.

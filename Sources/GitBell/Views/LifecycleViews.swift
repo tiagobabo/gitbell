@@ -106,7 +106,7 @@ struct PullTimelineView: View {
             }
 
             HStack {
-                Button("Open on GitHub") { NSWorkspace.shared.open(pr.url) }
+                Button("Open on GitHub") { NSWorkspace.shared.openWithoutWaiting(pr.url) }
                     .buttonStyle(.link)
                 Spacer()
                 Button("Done") { store.timelineRequest = nil }
@@ -158,7 +158,7 @@ private struct EventRow: View {
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(hovering && event.url != nil ? 0.05 : 0)))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture { if let url = event.url { NSWorkspace.shared.open(url) } }
+        .onTapGesture { if let url = event.url { NSWorkspace.shared.openWithoutWaiting(url) } }
     }
 }
 
