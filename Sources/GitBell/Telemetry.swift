@@ -47,6 +47,14 @@ enum Telemetry {
                 options.enableNetworkTracking = false
                 options.enableCaptureFailedRequests = false
                 options.enableAutoPerformanceTracing = false
+                // A Mac starved for CPU hangs every app on it, so each report says how busy it was. Hangs from an
+                // overloaded Mac aren't GitBell's to fix.
+                options.beforeSend = { event in
+                    var tags = event.tags ?? [:]
+                    tags["system.load"] = systemLoad()
+                    event.tags = tags
+                    return event
+                }
             }
         }
     }
@@ -89,6 +97,14 @@ enum Telemetry {
         SentrySDK.capture(message: message) { scope in
             scope.setTag(value: doing, key: "action")
         }
+    }
+
+    // The last minute's load average per core: "normal" under 1, "busy" up to 2, "overloaded" past that.
+    private static func systemLoad() -> String {
+        var load = [0.0]
+        guard getloadavg(&load, 1) == 1 else { return "unknown" }
+        let perCore = load[0] / Double(ProcessInfo.processInfo.activeProcessorCount)
+        return perCore < 1 ? "normal" : perCore < 2 ? "busy" : "overloaded"
     }
 
     private static func buildSetting(_ key: String) -> String? {
