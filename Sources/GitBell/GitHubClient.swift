@@ -6,9 +6,10 @@ struct APIError: LocalizedError {
 
     var errorDescription: String? { message }
     var isUnauthorized: Bool { status == 401 }
-    var isGatewayTimeout: Bool { [502, 504].contains(status) }
-    // GitHub is down for a moment; the next poll tries again.
-    var isUnavailable: Bool { status == 503 }
+    // GitHub gave up on a slow search: 502 or 504 from its gateway, 499 when it closes the request itself.
+    var isGatewayTimeout: Bool { [499, 502, 504].contains(status) }
+    // GitHub is down or slow for a moment; the next poll tries again.
+    var isUnavailable: Bool { status == 503 || isGatewayTimeout }
 }
 
 actor GitHubClient {
@@ -915,7 +916,7 @@ actor GitHubClient {
         do {
             (data, _) = try await send(request)
         } catch let error as APIError where error.isGatewayTimeout {
-            // A search that runs past GitHub's ten seconds comes back 502 or 504, and usually answers when asked
+            // A search that runs past GitHub's ten seconds comes back 499, 502 or 504, and usually answers when asked
             // again. These are all reads, so asking twice is safe.
             try await Task.sleep(for: .seconds(1))
             (data, _) = try await send(request)
