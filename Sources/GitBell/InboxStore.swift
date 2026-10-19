@@ -326,7 +326,7 @@ final class InboxStore {
                 loadDetails(for: next)
             }
             lastUpdated = .now
-            statusError = nil
+            if statusError != nil { statusError = nil }
         } catch let error as APIError where error.isUnauthorized {
             show("Your GitHub session expired.")
             signOut()

@@ -193,13 +193,6 @@ struct MainWindowView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if store.statusError != nil {
-            ToolbarItem(placement: .primaryAction) {
-                Label("Couldn't Refresh", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Palette.pending)
-                    .help(store.statusError ?? "")
-            }
-        }
         ToolbarItemGroup(placement: .primaryAction) {
             if store.people != nil {
                 Button {
@@ -210,13 +203,20 @@ struct MainWindowView: View {
                 }
                 .help("Only showing activity from \(store.peopleFilter). Click to change.")
             }
+            // A failed refresh shows on this button rather than as an item of its own. Adding and removing a toolbar
+            // item rebuilds the toolbar, and an error that comes and goes with each poll hung the window doing it.
             Button {
                 Task { await store.refreshAll() }
             } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                if store.statusError != nil {
+                    Label("Couldn't Refresh", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Palette.pending)
+                } else {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
             }
             // ⌘R is the View menu's.
-            .help("Refresh (⌘R)")
+            .help(store.statusError.map { "Couldn't refresh. \($0)\nClick to try again (⌘R)." } ?? "Refresh (⌘R)")
             .disabled(store.isRefreshing || store.isRefreshingPulls)
             Button {
                 NSWorkspace.shared.openWithoutWaiting(webURL)
