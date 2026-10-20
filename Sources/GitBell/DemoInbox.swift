@@ -4,21 +4,25 @@ import SwiftUI
 extension InboxStore {
     func loadDemo() {
         viewer = Viewer(login: Demo.viewer, avatarUrl: URL(string: "https://avatars.githubusercontent.com/u/583231?v=4")!)
+        orgs = Demo.orgs
+        peopleFilter = Demo.people
+        memberships = Demo.memberships
+        Task { await resolvePeople() }
 
-        func repo(_ name: String) -> GHNotification.Repository {
-            GHNotification.Repository(name: name, fullName: "acme/\(name)",
-                                      htmlUrl: URL(string: "https://github.com/acme/\(name)")!,
-                                      owner: GHNotification.Owner(login: "acme", avatarUrl: Demo.avatar("acme")))
+        func repo(_ name: String, owner: String) -> GHNotification.Repository {
+            GHNotification.Repository(name: name, fullName: "\(owner)/\(name)",
+                                      htmlUrl: URL(string: "https://github.com/\(owner)/\(name)")!,
+                                      owner: GHNotification.Owner(login: owner, avatarUrl: Demo.avatar(owner)))
         }
 
         func item(_ id: String, _ repoName: String, _ type: String, _ number: Int?, _ title: String, reason: String,
                   minutes: Double, author: String, _ kind: Activity.Kind?, by actor: String? = nil, _ snippet: String? = nil,
-                  state: String = "open", merged: Bool = false) -> GHNotification {
+                  state: String = "open", merged: Bool = false, owner: String = "acme") -> GHNotification {
             let path = type == "Issue" ? "issues" : "pulls"
-            let url = number.map { URL(string: "https://api.github.com/repos/acme/\(repoName)/\(path)/\($0)")! }
+            let url = number.map { URL(string: "https://api.github.com/repos/\(owner)/\(repoName)/\(path)/\($0)")! }
             let n = GHNotification(id: id, unread: true, reason: reason, updatedAt: Demo.minutesAgo(minutes),
                                    subject: .init(title: title, url: url, latestCommentUrl: nil, type: type),
-                                   repository: repo(repoName))
+                                   repository: repo(repoName, owner: owner))
             details[n.detailKey] = SubjectDetail(
                 state: state, merged: merged, draft: false, htmlUrl: n.fallbackURL,
                 activity: kind.map { Activity(kind: $0, actor: actor, avatar: actor.map(Demo.avatar), snippet: snippet, url: nil) },
@@ -43,6 +47,10 @@ extension InboxStore {
                  minutes: 48, author: "dave", nil),
             item("7", "infra", "PullRequest", 302, "Move staging to the new cluster", reason: "review_requested",
                  minutes: 75, author: "grace", .approved, by: "heidi"),
+            item("9", "weekend-game", "Issue", 19, "Crashes when the level timer hits zero", reason: "mention",
+                 minutes: 33, author: "ivan", .commented, by: "ivan", "@monalisa got a crash log, attached.", owner: Demo.viewer),
+            item("10", "mobile", "PullRequest", 236, "Bump the minimum iOS version to 17", reason: "mention",
+                 minutes: 58, author: "judy", .commented, by: "judy", "@monalisa does this break the widget?", owner: "globex"),
         ]
 
         phase = .ready
@@ -56,7 +64,7 @@ extension InboxStore {
                 unfilteredTotals.merge(Demo.totals.filter { $0.key.source == source }) { $1 }
                 // Without animation, as a real first load is.
                 loadedPulls.insert(source)
-                applyPeopleToPulls()
+                applyFiltersToPulls()
             }
             withAnimation(.snappy) { lastUpdated = .now }
         }

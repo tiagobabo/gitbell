@@ -23,6 +23,8 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("f")
             Divider()
+            Button("Filters…") { AppController.shared?.openSettings(on: .filters) }
+                .disabled(store.phase != .ready)
             Toggle("Show Hidden Items", isOn: Binding(get: { store.showHiddenTodos },
                                                       set: { on in withAnimation(.snappy) { store.showHiddenTodos = on } }))
                 .disabled(!page.hasPrefix("todo") || (store.hiddenTodoCount == 0 && !store.showHiddenTodos))

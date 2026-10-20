@@ -5,6 +5,11 @@ enum Demo {
     static let isOn = ProcessInfo.processInfo.environment["GITBELL_DEMO"] != nil
 
     static let viewer = "monalisa"
+    // Organizations you belong to. Repositories outside them, like your own, count as personal.
+    static let orgs = ["acme", "globex"]
+    // Who the people filter starts with, and which organizations they're in. Ivan only works on personal projects.
+    static let people = "alice, judy, ivan"
+    static let memberships: [String: Set<String>] = ["alice": ["acme"], "judy": ["globex"], "ivan": []]
 
     static func avatar(_ login: String) -> URL {
         URL(string: "https://github.com/identicons/\(login).png")!
@@ -24,21 +29,22 @@ enum Demo {
     static func pr(_ number: Int, _ repo: String, _ title: String, by author: String, minutes: Double,
                    review: String? = "REVIEW_REQUIRED", draft: Bool = false, mergeState: String = "BLOCKED",
                    checks: (String, Int, Int, Int) = ("SUCCESS", 12, 0, 12), failing: [String] = [],
-                   optionalRunning: [String] = [], held: [String] = [], reviewers: [String] = []) -> PullRequest {
+                   optionalRunning: [String] = [], held: [String] = [], reviewers: [String] = [],
+                   owner: String = "acme") -> PullRequest {
         let failing = failing.map {
-            PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"))
+            PullRequest.Check(name: $0, url: URL(string: "https://github.com/\(owner)/\(repo)/actions"))
         }
         let running = optionalRunning.map {
-            PullRequest.Check(name: $0, url: URL(string: "https://github.com/acme/\(repo)/actions"), required: false)
+            PullRequest.Check(name: $0, url: URL(string: "https://github.com/\(owner)/\(repo)/actions"), required: false)
         } + held.map {
-            var check = PullRequest.Check(name: $0, url: URL(string: "https://app.circleci.com/pipelines/github/acme/\(repo)"), required: false)
+            var check = PullRequest.Check(name: $0, url: URL(string: "https://app.circleci.com/pipelines/github/\(owner)/\(repo)"), required: false)
             check.onHold = true
             check.workflowID = "demo-workflow"
             return check
         }
-        var pr = PullRequest(id: "demo-\(repo)-\(number)", number: number, title: title,
-                    url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
-                    isDraft: draft, updatedAt: minutesAgo(minutes), repository: "acme/\(repo)",
+        var pr = PullRequest(id: "demo-\(owner)-\(repo)-\(number)", number: number, title: title,
+                    url: URL(string: "https://github.com/\(owner)/\(repo)/pull/\(number)")!,
+                    isDraft: draft, updatedAt: minutesAgo(minutes), repository: "\(owner)/\(repo)",
                     author: author, authorAvatar: avatar(author), reviewDecision: review,
                     mergeable: "MERGEABLE", mergeStateStatus: mergeState, isInMergeQueue: false,
                     checks: PullRequest.Checks(state: checks.0, passed: checks.1, failed: checks.2, total: checks.3,
@@ -54,7 +60,7 @@ enum Demo {
                 case "commented": .commented
                 default: .requested
                 }
-                return .init(name: name, avatar: kind == "team" ? avatar("acme") : avatar(name), isTeam: kind == "team", state: state)
+                return .init(name: name, avatar: kind == "team" ? avatar(owner) : avatar(name), isTeam: kind == "team", state: state)
             }
         }
         return pr
@@ -80,16 +86,20 @@ enum Demo {
         .needsReview: [
             pr(482, "web", "Add dark mode to the settings page", by: "alice", minutes: 4),
             pr(1198, "api", "Upgrade to Postgres 17", by: "dave", minutes: 38, checks: ("PENDING", 9, 0, 12)),
+            pr(14, "dotfiles", "Add a Brewfile for the new laptop", by: "ivan", minutes: 140, owner: viewer),
         ],
         .teamReview: [
             pr(302, "infra", "Move staging to the new cluster", by: "grace", minutes: 75),
             pr(91, "design-system", "Spacing tokens for compact layouts", by: "heidi", minutes: 190),
+            pr(233, "mobile", "Offline mode for the order list", by: "judy", minutes: 48, owner: "globex"),
         ],
         .needsAction: [
             pr(479, "web", "Cache search results for an hour", by: viewer, minutes: 12, review: "CHANGES_REQUESTED",
                reviewers: ["changes:bob", "commented:carol"]),
             pr(484, "web", "Upgrade to Rails 8.1", by: viewer, minutes: 31, checks: ("FAILURE", 10, 2, 12),
                failing: ["rspec (3/8)", "rubocop"]),
+            pr(23, "weekend-game", "Save high scores to iCloud", by: viewer, minutes: 65, checks: ("FAILURE", 4, 1, 5),
+               failing: ["swift test"], owner: viewer),
         ],
         .readyToMerge: [
             with(pr(476, "web", "Show the last sign-in on the profile page", by: viewer, minutes: 55,
@@ -113,6 +123,10 @@ enum Demo {
                 $0.baseRef = "webhooks/unknown-ids"
                 $0.headRef = "invoices/pdf-service"
             },
+            pr(7, "dotfiles", "Switch the shell prompt to Starship", by: viewer, minutes: 220, checks: ("SUCCESS", 2, 0, 2),
+               reviewers: ["ivan"], owner: viewer),
+            pr(240, "mobile", "Push notifications for order updates", by: viewer, minutes: 100, checks: ("PENDING", 8, 0, 10),
+               reviewers: ["judy"], owner: "globex"),
         ],
         .merged: GitHubClient.markShippedLater([
             merged(1204, "api", "Retry webhook deliveries with backoff", minutes: 18, checks: ("PENDING", 14, 0, 16),
@@ -151,7 +165,7 @@ enum Demo {
     ]
 
     static let totals: [PullSection: Int] = [
-        .needsReview: 2, .teamReview: 4, .reReview: 1, .needsAction: 2, .readyToMerge: 2, .merged: 6, .waiting: 3, .drafts: 1, .contributing: 2,
+        .needsReview: 3, .teamReview: 5, .reReview: 1, .needsAction: 3, .readyToMerge: 2, .merged: 6, .waiting: 5, .drafts: 1, .contributing: 2,
     ]
 
     // A made-up history that fits what the pull request looks like now.

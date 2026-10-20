@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: Hashable {
-    case general, notifications, people, accounts
+    case general, notifications, filters, accounts
 }
 
 struct SettingsView: View {
@@ -98,7 +98,7 @@ struct SettingsView: View {
                 } header: {
                     Text(TodoItem.title)
                 } footer: {
-                    Text("Team requests follow the people filter in People.")
+                    Text("Team requests follow the filters in Filters.")
                 }
             }
             .formStyle(.grouped)
@@ -108,6 +108,23 @@ struct SettingsView: View {
 
             Form {
                 Section {
+                    if store.orgs.isEmpty {
+                        Text("You're not in any organizations")
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(store.orgs, id: \.self) { org in
+                        Toggle(org, isOn: Binding(get: { store.isShown(org: org) }, set: { store.setShown(org: org, $0) }))
+                            .disabled(!store.canHide(org: org))
+                    }
+                    Toggle("Personal", isOn: Binding(get: { !store.hidePersonal }, set: { store.setPersonalShown($0) }))
+                        .disabled(!store.canHidePersonal)
+                } header: {
+                    Text("Organizations")
+                } footer: {
+                    Text("Hidden ones are left out everywhere, your own pull requests too. Personal is every repository outside your organizations, yours included.")
+                }
+
+                Section {
                     Toggle("Only show activity from these people", isOn: $store.peopleFilterOn)
                     PeoplePicker()
                         .disabled(!store.peopleFilterOn)
@@ -116,14 +133,17 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    FilterWarnings()
+                } header: {
+                    Text("People")
                 } footer: {
                     Text("Filters the inbox and review requests. Your own pull requests always show.")
                 }
             }
             .formStyle(.grouped)
             .fittedToContent()
-            .tabItem { Label("People", systemImage: "person.2") }
-            .tag(SettingsTab.people)
+            .tabItem { Label("Filters", systemImage: "line.3.horizontal.decrease.circle") }
+            .tag(SettingsTab.filters)
 
             Form {
                 if let login = store.viewer?.login {

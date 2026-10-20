@@ -194,15 +194,7 @@ struct MainWindowView: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            if store.people != nil {
-                Button {
-                    AppController.shared?.openSettings(on: .people)
-                } label: {
-                    Label("People Filter", systemImage: "line.3.horizontal.decrease.circle.fill")
-                        .foregroundStyle(Palette.accent)
-                }
-                .help("Only showing activity from \(store.peopleFilter). Click to change.")
-            }
+            FilterMenu()
             // A failed refresh shows on this button rather than as an item of its own. Adding and removing a toolbar
             // item rebuilds the toolbar, and an error that comes and goes with each poll hung the window doing it.
             Button {

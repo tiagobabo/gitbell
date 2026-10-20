@@ -11,7 +11,7 @@ GitHub notifications and pull requests in a native Mac app.
 - **Notifications:** for review requests, failing checks, requested changes, merges ready to go, deploys, and checks failing after a merge.
 - **Like Mail:** a sidebar of pages and groups with counts, search at the top, Liquid Glass on macOS 26, and menus and keyboard shortcuts for everything (J K to move, O to open, ⌘F to search).
 - **Menu bar:** an optional icon that opens the window or a compact popover.
-- **People filter:** only show activity from the people and teams you pick.
+- **Filters:** pick which of your organizations show, and whether your personal repositories do, and only show activity from the people and teams you pick.
 
 ## Install
 

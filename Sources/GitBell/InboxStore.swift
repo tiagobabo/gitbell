@@ -24,19 +24,35 @@ final class InboxStore {
 
     // "Only show activity from these people": GitHub logins and org/team slugs, e.g. "my-org/my-team, octocat".
     var peopleFilter = UserDefaults.standard.string(forKey: "peopleFilter") ?? "" {
-        didSet { UserDefaults.standard.set(peopleFilter, forKey: "peopleFilter") }
+        didSet { if !Demo.isOn { UserDefaults.standard.set(peopleFilter, forKey: "peopleFilter") } }
     }
     var peopleFilterOn = UserDefaults.standard.bool(forKey: "peopleFilterOn") {
         didSet {
-            UserDefaults.standard.set(peopleFilterOn, forKey: "peopleFilterOn")
+            if !Demo.isOn { UserDefaults.standard.set(peopleFilterOn, forKey: "peopleFilterOn") }
             Task { await resolvePeople() }
         }
     }
     // Resolved lowercased logins; nil means no filter.
     private(set) var people: Set<String>?
     private(set) var peopleStatus: String?
+    // Which of your organizations each picked login is in, lowercased, to warn when the organizations you hide
+    // leave them out. Missing until known.
+    var memberships: [String: Set<String>] = [:]
     // The viewer's teams, fetched once for the people picker.
     var myTeams: [PersonSuggestion]?
+    // The organizations you belong to, by login, kept between launches so the filter applies before GitHub answers.
+    // Which of them to hide, lowercased, and whether to hide everything outside them: your own repositories and
+    // other people's. What's hidden is saved rather than what's shown, so an organization you join later shows up.
+    // Demo mode leaves your real choices alone.
+    var orgs = UserDefaults.standard.stringArray(forKey: "orgs") ?? [] {
+        didSet { if !Demo.isOn { UserDefaults.standard.set(orgs, forKey: "orgs") } }
+    }
+    var hiddenOrgs = Set(UserDefaults.standard.stringArray(forKey: "hiddenOrgs") ?? []) {
+        didSet { if !Demo.isOn { UserDefaults.standard.set(hiddenOrgs.sorted(), forKey: "hiddenOrgs") } }
+    }
+    var hidePersonal = UserDefaults.standard.bool(forKey: "hidePersonal") {
+        didSet { if !Demo.isOn { UserDefaults.standard.set(hidePersonal, forKey: "hidePersonal") } }
+    }
     var unfilteredPulls: [PullSection: [PullRequest]] = [:]
     var unfilteredTotals: [PullSection: Int] = [:]
     // What the window's sidebar narrowed its page to: one group of Your turn, or one stage of your pull
@@ -167,11 +183,12 @@ final class InboxStore {
     // Why nothing has loaded yet, once a first attempt has failed.
     var firstLoadError: String? { lastUpdated == nil || !pullsLoaded ? statusError : nil }
 
-    // Notifications after the people filter. A thread counts if its author or latest actor is one of them;
-    // threads with neither known (CI runs, releases) are left out while the filter is on.
+    // Notifications after the organization and people filters. A thread counts for the people filter if its author
+    // or latest actor is one of them; threads with neither known (CI runs, releases) are left out while it's on.
     var shownNotifications: [GHNotification] {
-        guard let people else { return notifications }
-        return notifications.filter { n in
+        let shown = orgFilterOn ? notifications.filter { isShown(owner: $0.repository.owner.login) } : notifications
+        guard let people else { return shown }
+        return shown.filter { n in
             guard let detail = details[n.detailKey] else { return false }
             return [detail.author, detail.activity?.actor].contains { $0.map { people.contains($0.lowercased()) } ?? false }
         }
@@ -216,6 +233,7 @@ final class InboxStore {
         client = nil
         viewer = nil
         myTeams = nil
+        orgs = []
         notifications = []
         details = [:]
         lastUpdated = nil
@@ -270,6 +288,7 @@ final class InboxStore {
             "presentation": Presentation.current.rawValue,
             "appearance": Appearance.current.rawValue,
             "peopleFilter": "\(peopleFilterOn)",
+            "orgFilter": "\(orgFilterOn)",
         ])
         return true
     }
@@ -298,8 +317,9 @@ final class InboxStore {
             var resolvedAt = Date.distantPast
             while !Task.isCancelled {
                 guard let self else { return }
-                // Team membership rarely changes; look it up again every hour.
+                // Team and organization membership rarely change; look them up again every hour.
                 if Date.now.timeIntervalSince(resolvedAt) > 3600 {
+                    await self.loadOrgs()
                     await self.resolvePeople()
                     resolvedAt = .now
                 }
@@ -535,13 +555,21 @@ extension InboxStore {
             isRefreshingPulls = false
             pullsRefreshedAt = .now
         }
+        // Showing other organizations while these searches were out asks again for what they left out.
+        var scope: String
+        repeat {
+            scope = searchScope
+            await fetchPulls(client, scope: scope)
+        } while self.client != nil && scope != searchScope
+    }
 
+    private func fetchPulls(_ client: GitHubClient, scope: String) async {
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
         let viewer = viewer?.login
         await withTaskGroup(of: PullAnswer.self) { group in
             for source in PullSource.allCases {
                 group.addTask {
-                    do { return PullAnswer(source: source, part: try await client.pulls(source, since: since, viewer: viewer)) }
+                    do { return PullAnswer(source: source, part: try await client.pulls(source, since: since, viewer: viewer, scope: scope)) }
                     catch { return PullAnswer(source: source, error: error) }
                 }
             }
@@ -570,7 +598,7 @@ extension InboxStore {
         withAnimation(loadedPulls.contains(source) ? .snappy : nil) {
             pullErrors[source] = nil
             loadedPulls.insert(source)
-            applyPeopleToPulls()
+            applyFiltersToPulls()
         }
         switch source {
         case .reviews:
@@ -679,11 +707,11 @@ extension InboxStore {
     func webURL(for section: PullSection) -> URL {
         if section == .merged {
             return URL(string: "https://github.com/search?type=pullrequests")!
-                .appending(queryItems: [URLQueryItem(name: "q", value: GitHubClient.mergedQuery())])
+                .appending(queryItems: [URLQueryItem(name: "q", value: GitHubClient.mergedQuery(scope: searchScope))])
         }
         let since = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
         guard section.showsAuthor,
-              let query = GitHubClient.searchQueries(since: since)[section] else { return URL(string: "https://github.com/pulls/inbox")! }
+              let query = GitHubClient.searchQueries(since: since, scope: searchScope)[section] else { return URL(string: "https://github.com/pulls/inbox")! }
         return URL(string: "https://github.com/search?type=pullrequests")!
             .appending(queryItems: [URLQueryItem(name: "q", value: query)])
     }
@@ -924,10 +952,11 @@ extension InboxStore {
 
     func resolvePeople() async {
         let tokens = peopleEntries.map { $0.lowercased() }
-        guard peopleFilterOn, !tokens.isEmpty, let client else {
+        // Demo mode has no GitHub to ask, so its people are taken as they are.
+        guard peopleFilterOn, !tokens.isEmpty, client != nil || Demo.isOn else {
             people = nil
             peopleStatus = nil
-            applyPeopleToPulls()
+            applyFiltersToPulls()
             return
         }
 
@@ -935,24 +964,34 @@ extension InboxStore {
         var failed: [String] = []
         for token in tokens {
             let parts = token.split(separator: "/").map(String.init)
-            if parts.count == 2 {
+            if parts.count == 2, let client {
                 do { logins.formUnion(try await client.teamMembers(org: parts[0], team: parts[1])) }
                 catch { failed.append(token) }
             } else {
                 logins.insert(token)
             }
         }
+        if let client { memberships = await Self.memberships(of: tokens.filter { !$0.contains("/") }, in: orgs, client: client) }
         people = logins
         peopleStatus = failed.isEmpty
             ? "\(logins.count) \(logins.count == 1 ? "person" : "people")"
             : "Couldn't load \(failed.joined(separator: ", "))"
-        applyPeopleToPulls()
+        applyFiltersToPulls()
     }
 
-    // Review requests only from these people; your own pull requests always show.
-    func applyPeopleToPulls() {
+    // Only the organizations being shown, which the searches already ask for, but an answer from before you
+    // changed them can still arrive. Review requests only from these people; your own pull requests always show.
+    func applyFiltersToPulls() {
         var sections = unfilteredPulls
         var totals = unfilteredTotals
+        if orgFilterOn {
+            for (section, all) in unfilteredPulls {
+                let kept = all.filter { isShown(repository: $0.repository) }
+                guard kept.count < all.count else { continue }
+                sections[section] = kept
+                totals[section] = max(0, (totals[section] ?? 0) - (all.count - kept.count))
+            }
+        }
         if let people {
             for section in [PullSection.needsReview, .teamReview, .reReview] {
                 let kept = (sections[section] ?? []).filter { people.contains($0.author.lowercased()) }

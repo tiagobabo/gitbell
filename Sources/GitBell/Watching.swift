@@ -39,7 +39,7 @@ extension InboxStore {
             unfilteredPulls[section]?.removeAll { $0.id == pr.id }
             if let to { unfilteredPulls[to, default: []].insert(next, at: 0) }
             for key in [section] + (to.map { [$0] } ?? []) { unfilteredTotals[key] = unfilteredPulls[key]?.count }
-            withAnimation(.snappy) { applyPeopleToPulls() }
+            withAnimation(.snappy) { applyFiltersToPulls() }
             show("\(pr.repositoryName)#\(pr.number) changed, so GitBell refreshed")
         }
     }

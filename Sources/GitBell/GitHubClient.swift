@@ -116,6 +116,24 @@ actor GitHubClient {
         }
     }
 
+    // Organisations the viewer belongs to, by login. Private memberships need the read:org scope.
+    func viewerOrgs() async throws -> [String] {
+        struct Org: Decodable { let login: String }
+        let orgs: [Org] = try await get(base.appending(path: "user/orgs")
+            .appending(queryItems: [URLQueryItem(name: "per_page", value: "100")]))
+        return orgs.map(\.login)
+    }
+
+    // Whether someone is in one of your organizations: 204 if they are, 404 if not.
+    func isMember(_ login: String, of org: String) async throws -> Bool {
+        do {
+            _ = try await send(makeRequest(base.appending(path: "orgs/\(org)/members/\(login)")))
+            return true
+        } catch let error as APIError where error.status == 404 {
+            return false
+        }
+    }
+
     func markRead(_ id: String) async throws {
         _ = try await send(makeRequest(thread(id), method: "PATCH"))
     }
@@ -298,9 +316,10 @@ actor GitHubClient {
         var totals: [PullSection: Int]
     }
 
-    static func searchQueries(since: Date) -> [PullSection: String] {
+    // `scope` narrows every search to the organisations being shown, like "org:acme" or "-org:acme".
+    static func searchQueries(since: Date, scope: String = "") -> [PullSection: String] {
         let day = since.formatted(.iso8601.year().month().day())
-        let base = "is:open is:pr archived:false updated:>=\(day) sort:updated-desc"
+        let base = "is:open is:pr archived:false updated:>=\(day) \(scope) sort:updated-desc"
         return [
             .needsReview: "\(base) user-review-requested:@me",
             // Once you've reviewed it, your part of a team request is done; pushes after that are a re-review.
@@ -312,15 +331,15 @@ actor GitHubClient {
     }
 
     // Your pull requests merged in the last week, whose merge commits are still worth watching.
-    static func mergedQuery() -> String {
+    static func mergedQuery(scope: String = "") -> String {
         let since = (Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now).formatted(.iso8601.year().month().day())
-        return "is:pr is:merged archived:false author:@me merged:>=\(since) sort:updated-desc"
+        return "is:pr is:merged archived:false author:@me merged:>=\(since) \(scope) sort:updated-desc"
     }
 
     // One of the searches behind the pull request lists. Each is fetched on its own, so the lists can fill in
     // as their answers arrive instead of waiting on the slowest.
-    func pulls(_ source: PullSource, since: Date, viewer: String?) async throws -> PullInbox {
-        let queries = Self.searchQueries(since: since)
+    func pulls(_ source: PullSource, since: Date, viewer: String?, scope: String = "") async throws -> PullInbox {
+        let queries = Self.searchQueries(since: since, scope: scope)
         typealias Searches = [String: GraphQLResponse.Search]
         switch source {
         case .reviews:
@@ -363,7 +382,7 @@ actor GitHubClient {
             return PullInbox(sections: [.contributing: pulls, .reReview: again],
                              totals: [.contributing: pulls.count, .reReview: again.count])
         case .merged:
-            let found: Searches = try await graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery()])
+            let found: Searches = try await graphQL(Self.mergedPullsQuery, ["q": Self.mergedQuery(scope: scope)])
             var merged = Self.markShippedLater((found["merged"]?.pulls ?? [])
                 .sorted { ($0.mergedAt ?? .distantPast) > ($1.mergedAt ?? .distantPast) })
             // Best effort: without it, only your own later merges count.
