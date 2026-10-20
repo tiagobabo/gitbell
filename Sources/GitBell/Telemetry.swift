@@ -48,10 +48,13 @@ enum Telemetry {
                 options.enableCaptureFailedRequests = false
                 options.enableAutoPerformanceTracing = false
                 // A Mac starved for CPU hangs every app on it, so each report says how busy it was. Hangs from an
-                // overloaded Mac aren't GitBell's to fix.
+                // overloaded Mac aren't GitBell's to fix, so they aren't sent.
                 options.beforeSend = { event in
+                    let load = systemLoad()
+                    let hang = event.exceptions?.contains { $0.mechanism?.type == "AppHang" } == true
+                    if hang, load == "overloaded" { return nil }
                     var tags = event.tags ?? [:]
-                    tags["system.load"] = systemLoad()
+                    tags["system.load"] = load
                     event.tags = tags
                     return event
                 }
