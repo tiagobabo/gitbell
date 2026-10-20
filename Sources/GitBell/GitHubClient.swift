@@ -3,11 +3,16 @@ import Foundation
 struct APIError: LocalizedError {
     let status: Int
     let message: String
+    // GraphQL's own code for what went wrong, like NOT_FOUND or FORBIDDEN, when GitHub gives one.
+    var type: String? = nil
 
     var errorDescription: String? { message }
     var isUnauthorized: Bool { status == 401 }
-    // GitHub gave up on a slow search: 502 or 504 from its gateway, 499 when it closes the request itself.
-    var isGatewayTimeout: Bool { [499, 502, 504].contains(status) }
+    // GitHub gave up on a slow search: 502 or 504 from its gateway, 499 when it closes the request itself, or a
+    // GraphQL answer that only says something went wrong, "the result of a timeout, or ... a GitHub bug".
+    var isGatewayTimeout: Bool {
+        [499, 502, 504].contains(status) || (status == 200 && message.contains("may be the result of a timeout"))
+    }
     // GitHub is down or slow for a moment; the next poll tries again.
     var isUnavailable: Bool { status == 503 || isGatewayTimeout }
 }
@@ -156,7 +161,7 @@ actor GitHubClient {
         let response = try Self.decoder.decode(ResourceResponse.self, from: data)
         // Deleted or inaccessible subjects come back as null alongside an error; keep the rest.
         guard let resources = response.data else {
-            throw APIError(status: 200, message: response.errors?.first?.message ?? "GitHub GraphQL error")
+            throw response.errors?.first?.apiError ?? APIError(status: 200, message: "GitHub GraphQL error")
         }
 
         var details: [String: SubjectDetail] = [:]
@@ -198,9 +203,8 @@ actor GitHubClient {
     """
 
     private struct ResourceResponse: Decodable {
-        struct Message: Decodable { let message: String }
         let data: [String: ResourceNode?]?
-        let errors: [Message]?
+        let errors: [GraphQLError]?
     }
 
     private struct ResourceNode: Decodable {
@@ -898,41 +902,49 @@ actor GitHubClient {
         return data.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
     }
 
+    private struct GraphQLError: Decodable {
+        let message: String
+        let type: String?
+
+        var apiError: APIError { APIError(status: 200, message: message, type: type) }
+    }
+
     private struct GraphQLErrors: Decodable {
-        struct Message: Decodable { let message: String }
-        let errors: [Message]?
+        let errors: [GraphQLError]?
     }
 
     private struct GraphQL<T: Decodable>: Decodable {
-        struct Message: Decodable { let message: String }
         let data: T?
-        let errors: [Message]?
+        let errors: [GraphQLError]?
     }
 
     func graphQL<T: Decodable>(_ query: String, _ variables: [String: Any] = [:]) async throws -> T {
         let body: [String: Any] = ["query": query, "variables": variables]
         let request = makeRequest(base.appending(path: "graphql"), method: "POST", body: body)
-        let data: Data
         do {
-            (data, _) = try await send(request)
+            return try await graphQL(request)
         } catch let error as APIError where error.isGatewayTimeout {
-            // A search that runs past GitHub's ten seconds comes back 499, 502 or 504, and usually answers when asked
-            // again. These are all reads, so asking twice is safe.
+            // A search that runs past GitHub's ten seconds comes back 499, 502, 504 or as a GraphQL timeout, and
+            // usually answers when asked again. These are all reads, so asking twice is safe.
             try await Task.sleep(for: .seconds(1))
-            (data, _) = try await send(request)
+            return try await graphQL(request)
         }
+    }
+
+    private func graphQL<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let (data, _) = try await send(request)
         let response: GraphQL<T>
         do {
             response = try Self.decoder.decode(GraphQL<T>.self, from: data)
         } catch {
             // A field GitHub failed to answer comes back null beside an error, which says more than "missing data".
-            if let message = (try? Self.decoder.decode(GraphQLErrors.self, from: data))?.errors?.first?.message {
-                throw APIError(status: 200, message: message)
+            if let error = (try? Self.decoder.decode(GraphQLErrors.self, from: data))?.errors?.first {
+                throw error.apiError
             }
             throw error
         }
         guard let result = response.data else {
-            throw APIError(status: 200, message: response.errors?.first?.message ?? "GitHub GraphQL error")
+            throw response.errors?.first?.apiError ?? APIError(status: 200, message: "GitHub GraphQL error")
         }
         return result
     }

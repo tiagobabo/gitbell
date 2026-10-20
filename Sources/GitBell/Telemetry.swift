@@ -87,7 +87,8 @@ enum Telemetry {
         case let error as APIError where error.isUnauthorized || error.isUnavailable:
             return
         case let error as APIError:
-            kind = error.status == 200 ? "GitHub GraphQL error" : "GitHub \(error.status)"
+            // GraphQL's error type, never its message, which can name a repository.
+            kind = error.status == 200 ? "GitHub GraphQL error \(error.type ?? "without a type")" : "GitHub \(error.status)"
         default:
             let error = error as NSError
             kind = "\(error.domain) \(error.code)"
