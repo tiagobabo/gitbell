@@ -353,6 +353,7 @@ private struct Sidebar: View {
 // and your account's settings.
 private struct AccountMenu: View {
     @Environment(InboxStore.self) private var store
+    @State private var avatar: NSImage?
 
     var body: some View {
         Menu {
@@ -369,11 +370,35 @@ private struct AccountMenu: View {
             Label {
                 Text(store.viewer?.login ?? "Account")
             } icon: {
-                Avatar(url: store.viewer?.avatarUrl, size: 22)
+                if let avatar {
+                    Image(nsImage: avatar).renderingMode(.original)
+                } else {
+                    Image(systemName: "person.crop.circle")
+                }
             }
         }
         .menuIndicator(.hidden)
         .help(store.viewer?.login ?? "Account")
+        .task(id: store.viewer?.avatarUrl) { avatar = await Self.load(store.viewer?.avatarUrl) }
+    }
+
+    // A toolbar menu's icon ignores SwiftUI frames and tints what it's given, so the photo arrives at whatever size
+    // GitHub sent, in black. Drawn into a fixed-size image that isn't a template, it stays small and in colour.
+    private static func load(_ url: URL?, size: CGFloat = 22) async -> NSImage? {
+        guard let url = url?.appending(queryItems: [URLQueryItem(name: "s", value: "\(Int(size * 3))")]),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let photo = NSImage(data: data) else { return nil }
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            NSBezierPath(ovalIn: rect).addClip()
+            photo.draw(in: rect)
+            NSColor.labelColor.withAlphaComponent(0.1).setStroke()
+            let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 0.25, dy: 0.25))
+            ring.lineWidth = 0.5
+            ring.stroke()
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 }
 
