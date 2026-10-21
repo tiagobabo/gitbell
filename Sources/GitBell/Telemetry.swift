@@ -6,7 +6,8 @@ import TelemetryDeck
 // The IDs come from the build (TELEMETRYDECK_APP_ID and SENTRY_DSN, see build.sh), so a build from source sends
 // nothing unless you give it your own. Never on in demo mode.
 // Nothing sent names a person, repository or organization: signals carry settings and page kinds, and errors
-// carry a status code and what GitBell was doing, never GitHub's message, which can quote repository names.
+// carry a status code or the field that failed to decode, and what GitBell was doing, never GitHub's message,
+// which can quote repository names.
 @MainActor
 enum Telemetry {
     static let key = "shareUsage"
@@ -92,6 +93,9 @@ enum Telemetry {
         case let error as APIError:
             // GraphQL's error type, never its message, which can name a repository.
             kind = error.status == 200 ? "GitHub GraphQL error \(error.type ?? "without a type")" : "GitHub \(error.status)"
+        case let error as DecodingError:
+            // Which field failed, by GitHub's field names and list positions, never a value.
+            kind = decodingKind(error)
         default:
             let error = error as NSError
             kind = "\(error.domain) \(error.code)"
@@ -100,7 +104,22 @@ enum Telemetry {
         guard reported.insert(message).inserted else { return }
         SentrySDK.capture(message: message) { scope in
             scope.setTag(value: doing, key: "action")
+            // One issue per message. Grouped by stack, they all landed in whichever crash shared their top frames.
+            scope.setFingerprint([message])
         }
+    }
+
+    // "Decoding error dataCorrupted at direct.nodes.3.author.avatarUrl"
+    private static func decodingKind(_ error: DecodingError) -> String {
+        let (kind, context): (String, DecodingError.Context?) = switch error {
+        case .dataCorrupted(let context): ("dataCorrupted", context)
+        case .keyNotFound(let key, let context): ("keyNotFound \(key.stringValue)", context)
+        case .typeMismatch(_, let context): ("typeMismatch", context)
+        case .valueNotFound(_, let context): ("valueNotFound", context)
+        @unknown default: ("unknown", nil)
+        }
+        let path = (context?.codingPath ?? []).map { $0.intValue.map(String.init) ?? $0.stringValue }
+        return "Decoding error \(kind)" + (path.isEmpty ? "" : " at \(path.joined(separator: "."))")
     }
 
     // The last minute's load average per core: "normal" under 1, "busy" up to 2, "overloaded" past that.

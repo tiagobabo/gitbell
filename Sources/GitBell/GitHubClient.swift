@@ -552,11 +552,11 @@ actor GitHubClient {
                 let conclusion: String?
                 let startedAt: Date?
                 let completedAt: Date?
-                let detailsUrl: URL?
+                let detailsUrl: Link?
                 let context: String?
                 let state: String?
                 let createdAt: Date?
-                let targetUrl: URL?
+                let targetUrl: Link?
             }
             let createdAt: Date
             let mergedAt: Date?
@@ -648,7 +648,7 @@ actor GitHubClient {
             } else if outcome == "SUCCESS" {
                 if let at = deploy.completedAt ?? deploy.createdAt { done.append((name, at)) }
             } else if GraphQLResponse.Node.failedStates.contains(outcome ?? "") {
-                add(.deployFailed(name), nil, deploy.completedAt ?? deploy.createdAt, deploy.detailsUrl ?? deploy.targetUrl)
+                add(.deployFailed(name), nil, deploy.completedAt ?? deploy.createdAt, deploy.detailsUrl?.url ?? deploy.targetUrl?.url)
             }
         }
         if let last = done.map(\.1).max() { add(.deployed(done.map(\.0)), nil, last) }
@@ -822,19 +822,19 @@ actor GitHubClient {
                 let name: String?
                 let status: String?
                 let conclusion: String?
-                let detailsUrl: URL?
+                let detailsUrl: Link?
                 let context: String?
                 let state: String?
-                let targetUrl: URL?
+                let targetUrl: Link?
                 let description: String?
 
                 var check: PullRequest.Check? {
                     guard let name = name ?? context else { return nil }
-                    var check = PullRequest.Check(name: GitHubClient.checkName(name), url: detailsUrl ?? targetUrl)
+                    var check = PullRequest.Check(name: GitHubClient.checkName(name), url: detailsUrl?.url ?? targetUrl?.url)
                     check.cancelled = conclusion == "CANCELLED" || state == "ERROR"
                     // CircleCI says "Your job is on hold on CircleCI!" for an approval job nobody has approved yet.
                     check.onHold = state == "PENDING" && description?.localizedCaseInsensitiveContains("on hold") == true
-                    check.workflowID = (targetUrl ?? detailsUrl).flatMap(GitHubClient.circleCIWorkflow)
+                    check.workflowID = (targetUrl?.url ?? detailsUrl?.url).flatMap(GitHubClient.circleCIWorkflow)
                     return check
                 }
                 var isFailing: Bool { Node.failedStates.contains(conclusion ?? state ?? "") }
@@ -969,6 +969,16 @@ actor GitHubClient {
     }
 
     private struct Nodes<Node: Decodable>: Decodable { let nodes: [Node] }
+
+    // A check's link, as its CI service gave it to GitHub. That can be empty or not a URL at all, which would fail
+    // the whole search it came in, so it's nil instead.
+    private struct Link: Decodable {
+        let url: URL?
+
+        init(from decoder: Decoder) throws {
+            url = (try? decoder.singleValueContainer().decode(String.self)).flatMap { URL(string: $0) }
+        }
+    }
 
     private func thread(_ id: String) -> URL {
         base.appending(path: "notifications/threads/\(id)")
