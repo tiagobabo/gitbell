@@ -487,17 +487,18 @@ private struct PullAnswer: Sendable {
 extension InboxStore {
     // Your pull requests by how far along they are, open and merged, until they've been live for a day. A stack
     // stays together, bottom first, in the stage of its bottom pull request: that's the one the rest wait on.
+    // Only open ones move with it, so one that hasn't merged never shows as shipping.
     var pipeline: [PipelineStage: [PullRequest]] {
         let now = Date.now
         let yours = [PullSection.drafts, .waiting, .needsAction, .readyToMerge, .merged].flatMap { pulls(in: $0) }
         var staged = yours.compactMap { pr in PipelineStage.of(pr, now: now).map { (stage: $0, pr: pr) } }
         var bottom: [String: (position: Int, stage: PipelineStage)] = [:]
-        for (stage, pr) in staged {
+        for (stage, pr) in staged where pr.mergedAt == nil {
             guard let stack = stacks[pr.id], let position = stack.position(of: pr) else { continue }
             if position < bottom[stack.id]?.position ?? .max { bottom[stack.id] = (position, stage) }
         }
         staged = staged.map { entry in
-            guard let stack = stacks[entry.pr.id], let stage = bottom[stack.id]?.stage else { return entry }
+            guard entry.pr.mergedAt == nil, let stack = stacks[entry.pr.id], let stage = bottom[stack.id]?.stage else { return entry }
             return (stage, entry.pr)
         }
         var result: [PipelineStage: [PullRequest]] = [:]
@@ -1004,6 +1005,14 @@ extension InboxStore {
         if let again = sections[.reReview] {
             sections[.reReview] = again.filter { !asked.contains($0.id) }
             totals[.reReview] = sections[.reReview]?.count
+        }
+        // Search lags behind a merge, so for a while a merged pull request still turns up as open, or the open
+        // list is from before the merge. The merged list has it right; an open copy would hold a stack together.
+        let merged = Set((sections[.merged] ?? []).map(\.id))
+        for section in [PullSection.drafts, .waiting, .needsAction, .readyToMerge] {
+            guard let all = sections[section], all.contains(where: { merged.contains($0.id) }) else { continue }
+            sections[section] = all.filter { !merged.contains($0.id) }
+            totals[section] = max(0, (totals[section] ?? 0) - (all.count - (sections[section]?.count ?? 0)))
         }
         withAnimation(.snappy) {
             pulls = sections
