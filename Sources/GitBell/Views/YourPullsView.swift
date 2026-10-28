@@ -59,7 +59,9 @@ struct YourPullsView: View {
                                                 }
                                             }
                                             .cardSlice(first: index == 0, last: index == runs.count - 1)
-                                            .id(run.id)
+                                            // By stage too: a row that moves stage under the same id kept showing
+                                            // where it came from, a draft on hold in Ready to merge.
+                                            .id(Run.rowID(run.id, in: stage))
                                         }
                                     }
                                 } header: {
@@ -82,7 +84,8 @@ struct YourPullsView: View {
                     expanded(group.key).wrappedValue = true
                     // To its row, which for a stack is the stack's: rows off screen aren't built, so the pull
                     // request inside one has nothing to scroll to.
-                    proxy.scrollTo(runs(group.value).first { $0.pulls.contains { $0.id == id } }?.id ?? id)
+                    let run = runs(group.value).first { $0.pulls.contains { $0.id == id } }?.id ?? id
+                    proxy.scrollTo(Run.rowID(run, in: group.key))
                 }
             }
         }
@@ -93,6 +96,8 @@ private struct Run: Identifiable {
     let pulls: [PullRequest]
     let stack: PullStack?
     var id: String { stack?.id ?? pulls[0].id }
+
+    static func rowID(_ id: String, in stage: PipelineStage) -> String { "\(stage.rawValue)/\(id)" }
 }
 
 extension YourPullsView {
