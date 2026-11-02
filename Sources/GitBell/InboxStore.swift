@@ -957,7 +957,7 @@ extension InboxStore {
         guard peopleFilterOn, !tokens.isEmpty, client != nil || Demo.isOn else {
             people = nil
             peopleStatus = nil
-            applyFiltersToPulls()
+            withAnimation(.snappy) { applyFiltersToPulls() }
             return
         }
 
@@ -977,7 +977,7 @@ extension InboxStore {
         peopleStatus = failed.isEmpty
             ? "\(logins.count) \(logins.count == 1 ? "person" : "people")"
             : "Couldn't load \(failed.joined(separator: ", "))"
-        applyFiltersToPulls()
+        withAnimation(.snappy) { applyFiltersToPulls() }
     }
 
     // Only the organizations being shown, which the searches already ask for, but an answer from before you
@@ -1014,9 +1014,8 @@ extension InboxStore {
             sections[section] = all.filter { !merged.contains($0.id) }
             totals[section] = max(0, (totals[section] ?? 0) - (all.count - (sections[section]?.count ?? 0)))
         }
-        withAnimation(.snappy) {
-            pulls = sections
-            pullTotals = totals
-        }
+        // Callers choose the animation: a first load mustn't animate, and an animation here would override theirs.
+        pulls = sections
+        pullTotals = totals
     }
 }
