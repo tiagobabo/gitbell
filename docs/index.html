@@ -47,6 +47,7 @@
     --type: "Courier Prime", "Courier New", monospace;
     --gutter: clamp(16px, 4vw, 56px);
     --max: 1320px;
+    --mount-pad: 14px;
     color-scheme: light;
   }
 
@@ -155,8 +156,9 @@
   }
 
   /* App */
-  .app-shot { max-width: 1180px; margin: 0 auto; }
-  .mount { background: var(--rail); padding: clamp(8px, 1.2vw, 14px); border-radius: 8px; box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6); }
+  /* Screenshots are 2x captures of a 1080pt window: never show them wider than 1080px, or Retina screens stretch them. */
+  .app-shot { max-width: calc(1080px + 2 * var(--mount-pad)); margin: 0 auto; }
+  .mount { --mount-pad: 14px; background: var(--rail); padding: var(--mount-pad); border-radius: 8px; box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6); }
   .mount img { border-radius: 4px; }
   .label { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 14px 0 0; font: 400 14px/1.4 var(--type); color: var(--ink-2); }
   .label b { color: var(--ink); font-weight: 700; }
@@ -198,7 +200,7 @@
   @media (max-width: 560px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
   /* Timeline strip */
-  .wide { margin: clamp(40px, 5vw, 64px) auto 0; max-width: 1180px; }
+  .wide { margin: clamp(40px, 5vw, 64px) auto 0; max-width: calc(1080px + 2 * var(--mount-pad)); }
   .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px clamp(32px, 4vw, 64px); align-items: center; margin-top: clamp(48px, 6vw, 80px); }
   .two h3 { font-size: clamp(26px, 2.4vw, 32px); line-height: 1.2; }
   .two p { margin: 10px 0 0; color: var(--ink-2); font-size: 17px; max-width: 46ch; }
