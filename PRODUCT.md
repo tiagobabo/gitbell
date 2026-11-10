@@ -44,10 +44,11 @@ GitBell tells you what to do, not what happened. GitHub's notifications are a fe
 - App icon: the GitHub mark on a dark rounded square with a blue notification dot (`docs/assets/icon.png`, source `Resources/AppIcon.icns`).
 - Icons in the app are GitHub's Octicons.
 - Voice: plain, short, concrete sentences in British English. Say what the app does and what the user does, without marketing superlatives.
+- Site look: follows Apple's product-page conventions and the app's own macOS look (system font, white and #f5f5f7 sections, blue pill buttons, real window screenshots). The user asked for this after rejecting two themed directions. No Apple logos, names or trade dress beyond that general style.
 
 ## Evidence on Hand
 
-- Real app screenshots from the built-in demo data (`GITBELL_DEMO=1`): `docs/assets/your-turn-light.png`, `docs/assets/your-pull-requests-light.png` (light mode, 2480×1560).
+- Real app screenshots from the built-in demo data (`GITBELL_DEMO=1`): `docs/assets/hero-light.png`, `docs/assets/hero-dark.png`, `docs/assets/yours-dark.png` (window with macOS shadow, 2x) and crops `docs/assets/crop-*.png`.
 - Feature overview image: `docs/gitbell.png`.
 - Demo data uses made-up repos and people (alice, bob, carol, web#482, api#1203); it is not real usage.
 - No testimonials, customer logos, usage numbers or press exist. Do not invent any.
