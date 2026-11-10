@@ -91,6 +91,9 @@ struct TodoView: View {
                     guard let id else { return }
                     proxy.scrollTo(id)
                 }
+                // The same flat colour the pinned headers paint. The window's own background is tinted by the
+                // wallpaper, so without this the headers show as darker bands in dark mode.
+                .background { if !compact { Color(nsColor: .windowBackgroundColor) } }
             }
         }
     }

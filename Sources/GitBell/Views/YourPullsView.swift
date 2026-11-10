@@ -87,6 +87,9 @@ struct YourPullsView: View {
                     let run = runs(group.value).first { $0.pulls.contains { $0.id == id } }?.id ?? id
                     proxy.scrollTo(Run.rowID(run, in: group.key))
                 }
+                // The same flat colour the pinned headers paint. The window's own background is tinted by the
+                // wallpaper, so without this the headers show as darker bands in dark mode.
+                .background { if !compact { Color(nsColor: .windowBackgroundColor) } }
             }
         }
     }
