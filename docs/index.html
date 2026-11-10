@@ -12,37 +12,40 @@
 <meta property="og:url" content="https://tiagobabo.github.io/gitbell/">
 <link rel="canonical" href="https://tiagobabo.github.io/gitbell/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#121212">
+<meta name="theme-color" content="#d6d9d1">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/icon.png">
-<link rel="preload" href="assets/fonts/aileron-800.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/fonts/aileron-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/barlow-semi-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/courier-prime-700.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  @font-face { font-family: "Aileron"; src: url("assets/fonts/aileron-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
-  @font-face { font-family: "Aileron"; src: url("assets/fonts/aileron-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-  @font-face { font-family: "Aileron"; src: url("assets/fonts/aileron-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+  @font-face { font-family: "Barlow Semi Condensed"; src: url("assets/fonts/barlow-semi-condensed-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: "Barlow Semi Condensed"; src: url("assets/fonts/barlow-semi-condensed-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Barlow"; src: url("assets/fonts/barlow-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Barlow"; src: url("assets/fonts/barlow-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: "Courier Prime"; src: url("assets/fonts/courier-prime-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Courier Prime"; src: url("assets/fonts/courier-prime-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
   :root {
-    --sign: #121212;          /* enamel sign band */
-    --sign-ink: #ffffff;
-    --sign-dim: #b9b9b9;      /* secondary text on the sign, 9.6:1 */
-    --wall: #fafaf8;          /* glaze between grout lines */
-    --wall-line: #121212;
-    --ink: #121212;
-    --ink-2: #4a4a46;         /* secondary text on the wall, 8.3:1 */
-    --edge: #fccc0a;          /* platform edge */
+    --console: #d6d9d1;     /* the board's enamel */
+    --rail: #2b2e2a;        /* strip holders and rails */
+    --ink: #1c1d1a;
+    --ink-2: #464943;       /* 7.0:1 on the console */
+    --paper: #f5f1e6;       /* plain strip stock */
+    --pencil: #c0362c;      /* grease pencil */
 
-    /* One line per action. Text on yellow and lime is black. */
-    --l-review: #c9470a;
-    --l-rereview: #fccc0a;
-    --l-fix: #d62a22;
-    --l-after: #996633;
-    --l-hold: #b933ad;
-    --l-reply: #0039a6;
-    --l-merge: #00843a;
-    --l-mergeable: #6cbe45;
+    /* Strip stock, one per action */
+    --s-review: #f0e1b3;
+    --s-rereview: #f5f1e6;
+    --s-fix: #f2c7bf;
+    --s-after: #f1cf9f;
+    --s-hold: #dcd2ee;
+    --s-reply: #cbdff1;
+    --s-merge: #cae5c4;
+    --s-mergeable: #e1edcf;
 
-    --font: "Aileron", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --head: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+    --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+    --type: "Courier Prime", "Courier New", monospace;
     --gutter: clamp(16px, 4vw, 56px);
     --max: 1320px;
     color-scheme: light;
@@ -50,450 +53,380 @@
 
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--wall) url("assets/tile-wall.webp") 0 0 / 240px 120px repeat;
-    color: var(--ink);
-    font: 400 18px/1.5 var(--font);
-    -webkit-font-smoothing: antialiased;
-    font-variant-numeric: tabular-nums;
-  }
-  ::selection { background: var(--edge); color: var(--ink); }
+  body { margin: 0; background: var(--console); color: var(--ink); font: 400 18px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--ink); color: var(--paper); }
   img { display: block; max-width: 100%; height: auto; }
-  a { color: inherit; text-underline-offset: 0.18em; text-decoration-thickness: 2px; }
-  :focus-visible { outline: 3px solid var(--edge); outline-offset: 3px; }
+  a { color: inherit; text-underline-offset: .18em; text-decoration-thickness: 1.5px; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   .wrap { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; }
-  .skip { position: absolute; left: -999px; top: 8px; background: var(--edge); color: var(--ink); padding: 8px 14px; font-weight: 700; z-index: 20; }
+  .skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--paper); padding: 8px 14px; font-weight: 600; z-index: 20; }
   .skip:focus { left: 8px; }
+  h1, h2, h3 { font-family: var(--head); font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 
-  /* The sign band: black enamel with the hairline a station sign carries near its top edge. */
-  .band {
-    background: var(--sign);
-    color: var(--sign-ink);
-    position: relative;
-  }
-  .band::before {
-    content: "";
-    position: absolute;
-    left: 0; right: 0; top: 7px;
-    height: 2px;
-    background: rgba(255,255,255,.9);
-  }
-
-  /* Line bullets */
-  .bullet {
-    --c: var(--ink);
-    display: inline-grid;
-    place-items: center;
-    flex: none;
-    width: 1.75em; height: 1.75em;
-    border-radius: 50%;
-    background: var(--c);
-    color: #fff;
-    font-weight: 800;
-    font-size: 1em;
-    line-height: 1;
-    letter-spacing: 0;
-  }
-  .bullet.dark { color: var(--ink); }
-  [data-line="review"]    { --c: var(--l-review); }
-  [data-line="rereview"]  { --c: var(--l-rereview); }
-  [data-line="fix"]       { --c: var(--l-fix); }
-  [data-line="after"]     { --c: var(--l-after); }
-  [data-line="hold"]      { --c: var(--l-hold); }
-  [data-line="reply"]     { --c: var(--l-reply); }
-  [data-line="merge"]     { --c: var(--l-merge); }
-  [data-line="mergeable"] { --c: var(--l-mergeable); }
-
-  /* Nav */
-  .nav { padding: 20px 0 14px; }
-  .nav .wrap { display: flex; align-items: center; gap: 24px; }
-  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; }
-  .brand img { width: 32px; height: 32px; }
-  .nav ul { margin: 0 0 0 auto; padding: 0; list-style: none; display: flex; gap: clamp(16px, 3vw, 36px); font-weight: 700; font-size: 16px; }
-  .nav a:not(.brand) { text-decoration: none; color: var(--sign-dim); }
-  .nav a:not(.brand) { display: inline-flex; align-items: center; gap: 7px; }
-  .nav a:not(.brand):hover { color: var(--sign-ink); }
-  .nav .dir { width: 13px; height: 13px; fill: currentColor; }
+  /* Nav: the console's top rail */
+  .nav { background: var(--rail); color: var(--paper); }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 700 22px/1 var(--head); }
+  .brand img { width: 30px; height: 30px; }
+  .nav ul { margin: 0 0 0 auto; padding: 0; list-style: none; display: flex; gap: clamp(16px, 3vw, 32px); font: 700 14px/1 var(--type); text-transform: uppercase; letter-spacing: .06em; }
+  .nav ul a { text-decoration: none; color: #cfd2c8; }
+  .nav ul a:hover { color: #fff; text-decoration: underline; }
   @media (max-width: 520px) { .nav .hide-sm { display: none; } }
 
-  /* Hero sign */
-  .hero { padding: clamp(28px, 3.5vw, 44px) 0 clamp(24px, 2.5vw, 32px); border-top: 1px solid #2b2b2b; }
-  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: start; }
-  .hero h1 {
-    margin: 0;
-    font-weight: 800;
-    font-size: clamp(56px, 8.4vw, 96px);
-    line-height: .95;
-    letter-spacing: -0.03em;
-  }
-  .hero .lede { margin: 14px 0 0; max-width: 34ch; font-size: clamp(19px, 1.8vw, 23px); line-height: 1.35; color: var(--sign-dim); font-weight: 400; }
-  .hero .lede b { color: var(--sign-ink); font-weight: 700; }
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 12px; padding: 15px 22px 15px 18px; background: var(--ink); color: var(--paper); border-radius: 3px; font: 700 20px/1 var(--head); text-decoration: none; letter-spacing: .01em; transition: background-color .2s cubic-bezier(.16,1,.3,1); }
+  .btn:hover { background: #3a3d37; }
+  .btn svg { width: 22px; height: 22px; flex: none; }
 
-  .exit { display: grid; justify-items: end; gap: 10px; padding-top: 6px; }
-  .plate {
-    display: inline-flex; align-items: center; gap: 14px;
-    background: #fff; color: var(--ink);
-    padding: 16px 22px 16px 18px;
-    border-radius: 6px;
-    font-weight: 800; font-size: 21px; letter-spacing: -0.01em;
-    text-decoration: none;
-    transition: background-color .2s cubic-bezier(.16,1,.3,1);
-  }
-  .plate:hover { background: var(--edge); }
-  .plate svg { width: 30px; height: 30px; flex: none; }
-  .plate.on-wall { background: var(--sign); color: #fff; }
-  .plate.on-wall:hover { background: #333; }
-  .exit small { color: var(--sign-dim); font-size: 14px; text-align: right; }
-  @media (max-width: 860px) {
-    .hero .wrap { grid-template-columns: minmax(0, 1fr); }
-    .exit { justify-items: start; grid-row: 3; }
-    .exit small { text-align: left; }
-  }
+  /* Hero */
+  .hero { padding: clamp(40px, 5vw, 72px) 0 clamp(48px, 6vw, 88px); }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: clamp(32px, 4vw, 64px); align-items: start; }
+  .hero h1 { font-size: clamp(60px, 7.4vw, 96px); line-height: .92; letter-spacing: -0.02em; }
+  .hero .lede { margin: 20px 0 28px; font-size: clamp(19px, 1.7vw, 22px); line-height: 1.45; color: var(--ink-2); max-width: 30ch; }
+  .hero .lede b { color: var(--ink); font-weight: 600; }
+  .meta { margin: 14px 0 0; font: 400 14px/1.4 var(--type); color: var(--ink-2); }
+  @media (max-width: 980px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); } }
 
-  /* Line selector */
-  .lines { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
-  .lines button {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 6px 14px 6px 6px;
-    border: 0; border-radius: 999px;
-    background: transparent;
-    color: var(--sign-ink);
-    font: 700 16px/1 var(--font);
-    cursor: pointer;
-    box-shadow: inset 0 0 0 1.5px #3a3a3a;
-    transition: box-shadow .2s cubic-bezier(.16,1,.3,1), background-color .2s cubic-bezier(.16,1,.3,1);
-  }
-  .lines button .bullet { font-size: 15px; }
-  .lines button b { color: var(--sign-dim); font-weight: 700; min-width: 1ch; }
-  .lines button:hover { box-shadow: inset 0 0 0 1.5px #8a8a8a; }
-  .lines button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: none; }
-  .lines button[aria-pressed="true"] b { color: var(--ink-2); }
-  .lines button:disabled { opacity: .45; cursor: default; box-shadow: inset 0 0 0 1.5px #2a2a2a; }
-  .lines .all { padding-left: 16px; min-height: 37.5px; }
+  /* The bay */
+  .bay { background: var(--rail); border-radius: 6px; padding: 12px 12px 14px; box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 18px 40px -24px rgba(0,0,0,.55); overflow: hidden; }
+  .bay-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 2px 6px 10px; color: #d9dcd2; font: 700 14px/1 var(--type); text-transform: uppercase; letter-spacing: .08em; }
+  .bay-head b { color: #fff; font-size: 18px; }
+  .strips { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 
-  /* Departure list */
-  .board { grid-column: 1 / -1; margin: 20px 0 0; padding: 0; list-style: none; border-top: 2px solid #fff; }
-  .board li {
+  /* A strip in its holder */
+  .strip {
+    --stock: var(--paper);
+    position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 6px 18px;
-    padding: 11px 4px;
-    border-bottom: 1px solid #2f2f2f;
+    grid-template-columns: 6.6em minmax(0, 8.4em) minmax(0, 1fr) 4.6em;
+    min-height: 66px;
+    background: var(--stock);
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+    color: var(--ink);
+    outline-offset: 2px;
+    transition: transform .45s cubic-bezier(.16,1,.3,1), opacity .45s cubic-bezier(.16,1,.3,1);
   }
-  .board li[hidden] { display: none; }
-  .board .bullet { font-size: 19px; }
-  .board .what { min-width: 0; }
-  .board .title { display: block; font-weight: 700; font-size: clamp(18px, 1.6vw, 21px); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .board .why { display: block; color: var(--sign-dim); font-size: 16px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .board .why b { color: var(--sign-ink); font-weight: 700; }
-  .board time { font-weight: 700; font-size: clamp(18px, 1.6vw, 21px); text-align: right; min-width: 3.2em; }
-  .board time small { display: block; font-weight: 400; font-size: 13px; color: var(--sign-dim); }
-  @media (max-width: 600px) { .board .title, .board .why { white-space: normal; } .board li { align-items: start; } .board .bullet { margin-top: 2px; } }
-  .board li.in { animation: flip .5s cubic-bezier(.16,1,.3,1) both; }
-  @keyframes flip { from { opacity: 0; transform: translateY(-10px); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); } }
-  .demo-note { grid-column: 1 / -1; margin: 12px 0 0; font-size: 13px; color: var(--sign-dim); }
+  .strip > * { padding: 8px 12px; border-left: 1px solid rgba(28,29,26,.28); min-width: 0; }
+  .strip > :first-child { border-left: 0; }
+  .strip > .mark { padding: 0; border: 0; }
+  .strip .code { display: flex; align-items: center; background: rgba(28,29,26,.08); font: 700 12.5px/1.15 var(--type); text-transform: uppercase; letter-spacing: .05em; }
+  .strip .call { display: flex; flex-direction: column; justify-content: center; font-family: var(--type); }
+  .strip .call b { font-size: 19px; letter-spacing: .02em; white-space: nowrap; }
+  .strip .call span { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .strip .what { display: flex; flex-direction: column; justify-content: center; }
+  .strip .title { font: 600 17px/1.3 var(--body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .strip .why { font: 400 14px/1.35 var(--type); color: var(--ink); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 0; margin-left: -7px; padding-left: 7px; }
+  .strip .time { display: flex; flex-direction: column; justify-content: center; align-items: flex-end; font-family: var(--type); }
+  .strip .time b { font-size: 19px; }
+  .strip .time span { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+  .strip[data-a="review"]    { --stock: var(--s-review); }
+  .strip[data-a="rereview"]  { --stock: var(--s-rereview); }
+  .strip[data-a="fix"]       { --stock: var(--s-fix); }
+  .strip[data-a="after"]     { --stock: var(--s-after); }
+  .strip[data-a="hold"]      { --stock: var(--s-hold); }
+  .strip[data-a="reply"]     { --stock: var(--s-reply); }
+  .strip[data-a="merge"]     { --stock: var(--s-merge); }
+  .strip[data-a="mergeable"] { --stock: var(--s-mergeable); }
+  .bay .strip { cursor: pointer; }
+  .bay .strip:hover { transform: translateX(4px); }
+  .strip.out { transform: translateX(110%); opacity: 0; }
+  .strip[hidden] { display: none; }
 
-  /* Platform edge */
-  .edge {
-    position: relative; z-index: 2;
-    height: 26px;
-    background-color: var(--edge);
-    background-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,.14) 0 3px, transparent 3.5px);
-    background-size: 13px 13px;
-  }
+  /* Grease pencil, drawn by hand */
+  .mark { position: absolute; pointer-events: none; overflow: visible; }
+  .mark path { fill: none; stroke: var(--pencil); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .pencil { position: relative; display: inline-block; padding: 0 2px; margin-left: 7px; }
+  .ring { left: -7px; top: -4px; width: calc(100% + 14px); height: calc(100% + 8px); }
+  .tick { right: 5.4em; top: 8px; width: 24px; height: 24px; }
 
-  /* The app on the wall */
-  .platform { position: relative; z-index: 1; margin-top: -14px; }
-  .shot-full { border-radius: 12px !important; }
-  .shot { border-radius: 0 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 24px 60px -20px rgba(0,0,0,.28); background: #fff; }
-  .caption { display: flex; flex-wrap: wrap; gap: 6px 24px; justify-content: space-between; margin-top: 16px; font-size: 15px; color: var(--ink-2); }
+  .bay-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 12px 6px 0; color: #d9dcd2; font: 400 13.5px/1.6 var(--type); }
+  .bay-foot button { font: 700 13.5px/1 var(--type); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: transparent; border: 1px solid #6c7068; border-radius: 3px; padding: 9px 12px; cursor: pointer; }
+  .bay-foot button:hover { border-color: #fff; }
+  .bay-foot button:disabled { opacity: .45; cursor: default; }
+  .key { display: inline-grid; place-items: center; min-width: 1.8em; height: 1.8em; padding: 0 .4em; border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 .92em/1 var(--type); vertical-align: middle; }
+  .demo { margin: 10px 2px 0; font: 400 13px/1.4 var(--type); color: var(--ink-2); }
 
-  /* Section signs: one instruction each */
-  section { padding-top: clamp(72px, 9vw, 128px); }
-  .sign { padding: 30px 0 22px; }
-  .sign .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
-  .sign h2 { margin: 0; font-weight: 800; font-size: clamp(30px, 4.8vw, 60px); line-height: 1; letter-spacing: -0.025em; }
-  .sign .arrow { width: .8em; height: .8em; vertical-align: -0.06em; }
-  .nw { white-space: nowrap; }
-  .sign .bullets { display: flex; flex-wrap: wrap; gap: 6px; font-size: clamp(16px, 1.7vw, 22px); }
-  .under { padding-top: clamp(28px, 3.5vw, 44px); }
-  .under p.intro { margin: 0 0 32px; max-width: 62ch; font-size: clamp(19px, 1.6vw, 22px); line-height: 1.45; color: var(--ink-2); }
-  .under p.intro b { color: var(--ink); }
-
-  /* Legend */
-  .legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(32px, 5vw, 80px); }
-  .legend li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; padding: 18px 0; border-top: 1px solid var(--wall-line); align-items: start; align-content: start; }
-  .legend .bullet { font-size: 22px; grid-row: span 2; }
-  .legend h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; padding-top: 4px; }
-  .legend p { margin: 0; color: var(--ink-2); font-size: 17px; }
-  @media (max-width: 760px) { .legend { grid-template-columns: minmax(0, 1fr); } }
-
-  /* Line map */
-  .linemap { position: relative; margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .linemap::before { content: ""; position: absolute; left: calc(100% / 12); right: calc(100% / 12); top: 15px; height: 10px; background: var(--l-reply); border-radius: 5px; }
-  .linemap li { position: relative; text-align: center; padding: 0 6px; }
-  .linemap .stop { display: block; width: 40px; height: 40px; margin: 0 auto 14px; border-radius: 50%; background: #fff; border: 6px solid var(--l-reply); position: relative; }
-  .linemap li.here .stop { background: var(--edge); }
-  .linemap h3 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.3; }
-  .linemap p { margin: 6px 0 0; font-size: 15px; color: var(--ink-2); line-height: 1.35; }
-  .linemap .train { display: inline-block; margin-top: 10px; background: var(--sign); color: #fff; font-weight: 700; font-size: 14px; padding: 6px 10px; border-radius: 4px; white-space: nowrap; }
-  @media (max-width: 860px) {
-    .linemap { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    .linemap::before { left: 15px; right: auto; top: 20px; bottom: 20px; width: 10px; height: auto; }
-    .linemap li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0 20px; text-align: left; padding: 0 0 26px; }
-    .linemap .stop { margin: 0; grid-row: span 3; }
-    .linemap h3 { padding-top: 8px; }
-    .linemap .train { justify-self: start; }
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 5.4em minmax(0, 1fr) 4em; }
+    .strip .call { display: none; }
+    .strip .title, .strip .why { white-space: normal; }
+    .strip .code { font-size: 11px; }
+    .tick { right: 4.6em; }
   }
 
-  .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 5vw, 72px); align-items: start; margin-top: clamp(48px, 6vw, 80px); }
-  @media (max-width: 900px) { .split { grid-template-columns: minmax(0, 1fr); } }
+  /* App */
+  .mount { background: var(--rail); padding: clamp(8px, 1.2vw, 14px); border-radius: 8px; box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6); }
+  .mount img { border-radius: 4px; }
+  .label { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 14px 0 0; font: 400 14px/1.4 var(--type); color: var(--ink-2); }
+  .label b { color: var(--ink); font-weight: 700; }
 
-  /* Timeline (press T) */
-  .times { margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
-  .times li { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--wall-line); font-size: 17px; }
-  .times i { height: 10px; background: var(--ink); border-radius: 5px; }
-  .times time { font-weight: 700; text-align: right; min-width: 4.5em; }
-  .key {
-    display: inline-grid; place-items: center;
-    min-width: 1.9em; height: 1.9em; padding: 0 .45em;
-    border-radius: 5px;
-    background: var(--sign); color: #fff;
-    font-weight: 800; font-size: .9em; line-height: 1;
-  }
-  .note { margin: 16px 0 0; color: var(--ink-2); font-size: 15px; }
+  /* Sections */
+  section { padding-top: clamp(80px, 10vw, 140px); }
+  .head { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px clamp(32px, 4vw, 64px); align-items: end; margin-bottom: clamp(28px, 3.5vw, 48px); }
+  .head h2 { font-size: clamp(38px, 4.6vw, 60px); line-height: 1; letter-spacing: -0.015em; }
+  .head p { margin: 0; font-size: clamp(18px, 1.5vw, 20px); color: var(--ink-2); max-width: 58ch; }
+  .head p b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 860px) { .head { grid-template-columns: minmax(0, 1fr); } }
 
-  /* Keys */
-  .keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(32px, 5vw, 80px); margin: 0; padding: 0; list-style: none; }
-  .keys li { display: flex; align-items: center; gap: 18px; padding: 14px 0; border-top: 1px solid var(--wall-line); font-size: 19px; }
-  .keys .key { font-size: 20px; }
-  .keys .pair { display: flex; gap: 6px; min-width: 5.4em; }
-  @media (max-width: 760px) { .keys { grid-template-columns: minmax(0, 1fr); } }
+  /* Legend: one strip of each stock */
+  .legend { list-style: none; margin: 0; padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; background: var(--rail); border-radius: 6px; }
+  .legend .strip { grid-template-columns: 9em minmax(0, 1fr); min-height: 0; }
+  .legend .strip p { margin: 0; font-size: 16px; line-height: 1.4; align-self: center; padding: 12px 14px; }
+  .legend .strip .code { font-size: 13px; padding: 12px; }
+  @media (max-width: 800px) { .legend { grid-template-columns: minmax(0, 1fr); } }
+  .note { margin: 28px 0 0; max-width: 72ch; color: var(--ink-2); font-size: 18px; }
+  .note b { color: var(--ink); font-weight: 600; }
 
-  .after-note { margin: 28px 0 0; max-width: 72ch; font-size: 18px; color: var(--ink-2); }
-  .after-note b { color: var(--ink); }
-  /* Service notes */
-  .notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 clamp(32px, 4vw, 64px); margin: 0; padding: 0; list-style: none; }
-  .notes li { padding: 20px 0; border-top: 2px solid var(--ink); }
-  .notes h3 { margin: 0 0 6px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
-  .notes p { margin: 0; color: var(--ink-2); font-size: 17px; }
-  @media (max-width: 900px) { .notes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 600px) { .notes { grid-template-columns: minmax(0, 1fr); } }
+  /* The board: one bay per stage */
+  .board { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; background: var(--rail); padding: 10px; border-radius: 6px; }
+  .stage { background: #3a3e39; border-radius: 3px; padding: 10px 8px 12px; min-width: 0; }
+  .stage h3 { font: 700 13px/1.3 var(--type); text-transform: uppercase; letter-spacing: .07em; color: #fff; margin: 2px 4px 10px; display: flex; justify-content: space-between; gap: 6px; }
+  .stage h3 span { color: #c3c7bd; }
+  .stage ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .mini { background: var(--paper); border-radius: 2px; padding: 9px 10px 10px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
+  .mini b { display: block; font: 700 13.5px/1.3 var(--type); }
+  .mini span { display: block; font: 600 14px/1.3 var(--body); margin-top: 3px; }
+  .mini small { display: block; font: 400 12.5px/1.35 var(--type); color: var(--ink-2); margin-top: 4px; }
+  .stage.review .mini { background: var(--s-review); }
+  .stage.fix .mini { background: var(--s-fix); }
+  .stage.ready .mini { background: var(--s-merge); }
+  .stage.ship .mini { background: var(--s-after); }
+  .stage.done .mini { background: #e7e5dc; }
+  .mini.stack { box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), -4px 4px 0 -1px #8f948a; }
+  @media (max-width: 1000px) { .board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-  /* Install */
-  .steps { counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 clamp(32px, 4vw, 64px); margin: 0; padding: 0; list-style: none; }
-  .steps li { padding: 22px 0 0; border-top: 2px solid var(--ink); }
-  .steps h3 { display: flex; align-items: center; gap: 14px; margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.01em; }
-  .steps h3::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--ink); color: #fff; font-size: 18px; }
-  .steps p { margin: 0 0 12px; color: var(--ink-2); font-size: 17px; }
-  .steps code { font: 500 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
-  .steps p code { background: #e7e7e1; padding: 2px 6px; border-radius: 4px; color: var(--ink); }
-  .steps pre { margin: 0; padding: 14px 16px; background: var(--sign); color: #fff; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
-  @media (max-width: 900px) { .steps { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+  /* Timeline strip */
+  .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 4vw, 64px); align-items: start; margin-top: clamp(48px, 6vw, 80px); }
+  .two h3 { font-size: clamp(26px, 2.4vw, 32px); line-height: 1.2; }
+  .two p { margin: 10px 0 18px; color: var(--ink-2); font-size: 17px; }
+  .tl { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--paper); border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px var(--rail); margin: 5px; }
+  .tl div { padding: 10px 10px 12px; border-left: 1px solid rgba(28,29,26,.28); font-family: var(--type); min-width: 0; }
+  .tl div:first-child { border-left: 0; }
+  .tl span { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-2); }
+  .tl b { display: block; font-size: 18px; margin-top: 4px; white-space: nowrap; }
+  .tl .long { background: var(--s-review); }
+  @media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 480px) { .tl { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tl div:nth-child(4) { border-left: 0; } .tl div:nth-child(n+4) { border-top: 1px solid rgba(28,29,26,.28); } }
 
-  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 clamp(32px, 4vw, 64px); margin: clamp(56px, 7vw, 96px) 0 0; padding: 0; list-style: none; }
-  .facts li { padding-top: 18px; border-top: 1px solid var(--wall-line); }
-  .facts h3 { margin: 0 0 6px; font-size: 19px; font-weight: 800; }
-  .facts p { margin: 0; color: var(--ink-2); font-size: 16px; }
-  @media (max-width: 760px) { .facts { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+  /* Keys card */
+  .card { background: var(--paper); border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px var(--rail); padding: clamp(18px, 2.4vw, 28px) clamp(18px, 2.6vw, 32px); margin: 5px; }
+  .keys { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(28px, 4vw, 64px); }
+  .keys li { display: flex; align-items: center; gap: 16px; padding: 11px 0; border-bottom: 1px dashed rgba(28,29,26,.4); font-size: 18px; }
+  .keys li:nth-last-child(-n+2) { border-bottom: 0; }
+  .keys .k { display: flex; gap: 5px; min-width: 5.4em; }
+  .keys .key { background: var(--rail); color: #fff; font-size: 15px; }
+  @media (max-width: 700px) { .keys { grid-template-columns: minmax(0, 1fr); } .keys li:nth-last-child(2) { border-bottom: 1px dashed rgba(28,29,26,.4); } }
+
+  /* Install strips */
+  .install { list-style: none; margin: 0; display: grid; gap: 6px; background: var(--rail); padding: 10px; border-radius: 6px; }
+  .install .strip { grid-template-columns: 4.2em minmax(0, 1fr); min-height: 0; }
+  .install .num { display: flex; align-items: center; justify-content: center; font: 700 28px/1 var(--type); background: rgba(28,29,26,.08); }
+  .install .body { padding: 18px 22px 20px; display: grid; grid-template-columns: minmax(0, 12em) minmax(0, 1fr); gap: 8px 28px; align-items: start; }
+  .install h3 { font-size: 26px; line-height: 1.2; }
+  .install p { margin: 0 0 10px; font-size: 17px; max-width: 70ch; }
+  .install p:last-child { margin-bottom: 0; }
+  .install code { font: 400 15px/1.5 var(--type); }
+  .install p code { background: rgba(28,29,26,.08); padding: 1px 5px; border-radius: 2px; }
+  .install pre { margin: 0 0 10px; padding: 12px 14px; background: var(--rail); color: #fff; border-radius: 3px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .install .btn { font-size: 18px; padding: 12px 18px 12px 14px; }
+  @media (max-width: 760px) { .install .body { grid-template-columns: minmax(0, 1fr); padding: 14px 16px 16px; } .install .strip { grid-template-columns: 3em minmax(0, 1fr); } }
+
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px clamp(28px, 4vw, 64px); margin: clamp(56px, 7vw, 96px) 0 0; padding: 0; list-style: none; }
+  .facts li { border-top: 2px solid var(--ink); padding-top: 14px; }
+  .facts h3 { font-size: 22px; margin-bottom: 6px; }
+  .facts p { margin: 0; color: var(--ink-2); font-size: 16.5px; }
+  @media (max-width: 760px) { .facts { grid-template-columns: minmax(0, 1fr); } }
 
   /* Close */
-  .close { padding: clamp(56px, 7vw, 96px) 0 clamp(48px, 6vw, 72px); }
-  .close .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 32px; }
-  .close h2 { margin: 0; font-weight: 800; font-size: clamp(48px, 7vw, 96px); line-height: .95; letter-spacing: -0.03em; }
-  .close p { margin: 14px 0 0; color: var(--sign-dim); font-size: 19px; }
-  footer { background: var(--sign); color: var(--sign-dim); font-size: 14px; padding: 22px 0 32px; border-top: 1px solid #2b2b2b; }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
-  footer a { color: var(--sign-ink); text-decoration: none; }
+  .close { margin-top: clamp(96px, 12vw, 160px); background: var(--rail); color: var(--paper); padding: clamp(56px, 7vw, 96px) 0; }
+  .close .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px; }
+  .close h2 { font-size: clamp(52px, 7vw, 96px); line-height: .92; letter-spacing: -0.02em; }
+  .close p { margin: 14px 0 0; font: 400 15px/1.4 var(--type); color: #cfd2c8; }
+  .close .btn { background: var(--s-review); color: var(--ink); }
+  .close .btn:hover { background: #fff3cf; }
+  footer { background: var(--rail); color: #b9bdb3; border-top: 1px solid #454943; padding: 20px 0 30px; font: 400 13.5px/1.5 var(--type); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between; }
+  footer ul { display: flex; gap: 20px; margin: 0; padding: 0; list-style: none; }
+  footer a { color: #fff; text-decoration: none; }
   footer a:hover { text-decoration: underline; }
-  footer ul { display: flex; gap: 22px; margin: 0; padding: 0; list-style: none; }
 
-  @media (prefers-reduced-motion: reduce) {
-    .board li.in { animation: none; }
-    .plate, .lines button { transition: none; }
-  }
+  @media (prefers-reduced-motion: reduce) { .strip, .btn { transition: none; } .bay .strip:hover { transform: none; } }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
-<header class="band">
-  <nav class="nav" aria-label="Main">
-    <div class="wrap">
-      <a class="brand" href="./"><img src="assets/icon.png" alt="" width="32" height="32">GitBell</a>
-      <ul>
-        <li class="hide-sm"><a href="#lines">Features <svg class="dir" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z"/></svg></a></li>
-        <li><a href="#install">Install <svg class="dir" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z"/></svg></a></li>
-        <li><a href="https://github.com/tiagobabo/gitbell">Source <svg class="dir" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 13h17.5l-5.6-5.6 4.2-4.2L31.9 16 19.1 28.8l-4.2-4.2 5.6-5.6H3z"/></svg></a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <div class="hero" id="main">
-    <div class="wrap">
-      <div>
-        <h1>Your turn</h1>
-        <p class="lede"><b>GitBell tells you what to do on GitHub, not what happened.</b> Everything waiting on you, why, and for how long, in a Mac app.</p>
-      </div>
-
-      <div class="exit">
-        <a class="plate" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z" fill="currentColor"/></svg>
-          Download for Mac
-        </a>
-        <small><span data-version>Free and open source</span> · macOS 14 or later</small>
-      </div>
-
-      <ul class="lines" aria-label="Show one kind of action">
-        <li><button type="button" class="all" aria-pressed="true" data-filter="all">All <b>10</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="review"><span class="bullet" data-line="review" aria-hidden="true">R</span>Review <b>2</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="rereview" disabled><span class="bullet dark" data-line="rereview" aria-hidden="true">P</span>Re-review <b>0</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="fix"><span class="bullet" data-line="fix" aria-hidden="true">F</span>Fix <b>3</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="after"><span class="bullet" data-line="after" aria-hidden="true">X</span>Failed after merge <b>1</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="hold"><span class="bullet" data-line="hold" aria-hidden="true">H</span>On hold <b>1</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="reply"><span class="bullet" data-line="reply" aria-hidden="true">C</span>Reply <b>1</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="merge"><span class="bullet" data-line="merge" aria-hidden="true">M</span>Merge <b>1</b></button></li>
-        <li><button type="button" aria-pressed="false" data-filter="mergeable"><span class="bullet dark" data-line="mergeable" aria-hidden="true">G</span>Mergeable <b>1</b></button></li>
-      </ul>
-
-      <ol class="board" aria-live="polite">
-        <li data-line="review"><span class="bullet" data-line="review" role="img" aria-label="Review">R</span><span class="what"><span class="title">Add dark mode to the settings page</span><span class="why">web#482 · alice is waiting on <b>your review</b></span></span><time>3m<small>waiting</small></time></li>
-        <li data-line="fix"><span class="bullet" data-line="fix" role="img" aria-label="Fix">F</span><span class="what"><span class="title">Upgrade to Rails 8.1</span><span class="why">web#484 · <b>rspec (3/8)</b> and <b>rubocop</b> failing</span></span><time>30m<small>waiting</small></time></li>
-        <li data-line="hold"><span class="bullet" data-line="hold" role="img" aria-label="On hold">H</span><span class="what"><span class="title">Move invoices to the new PDF service</span><span class="why">api#1207 · CircleCI job <b>approve_staging</b> needs approving</span></span><time>1h<small>waiting</small></time></li>
-        <li data-line="after"><span class="bullet" data-line="after" role="img" aria-label="Failed after merge">X</span><span class="what"><span class="title">Rename the billing worker queues</span><span class="why">api#1202 · merged, then <b>lint</b> failed</span></span><time>9h<small>waiting</small></time></li>
-        <li data-line="merge" data-more hidden><span class="bullet" data-line="merge" role="img" aria-label="Merge">M</span><span class="what"><span class="title">Return 404 for unknown webhook ids</span><span class="why">api#1203 · <b>approved and green</b>, ready to merge</span></span><time>2h<small>waiting</small></time></li>
-        <li data-line="review" data-more hidden><span class="bullet" data-line="review" role="img" aria-label="Review">R</span><span class="what"><span class="title">Offline mode for the order list</span><span class="why">mobile#233 · judy is waiting on <b>your review</b></span></span><time>47m<small>waiting</small></time></li>
-        <li data-line="fix" data-more hidden><span class="bullet" data-line="fix" role="img" aria-label="Fix">F</span><span class="what"><span class="title">Cache search results for an hour</span><span class="why">web#479 · bob <b>requested changes</b></span></span><time>11m<small>waiting</small></time></li>
-        <li data-line="fix" data-more hidden><span class="bullet" data-line="fix" role="img" aria-label="Fix">F</span><span class="what"><span class="title">Move checkout to the new payments API</span><span class="why">web#486 · you pushed to it, <b>system specs</b> failing</span></span><time>1h<small>waiting</small></time></li>
-        <li data-line="reply" data-more hidden><span class="bullet" data-line="reply" role="img" aria-label="Reply">C</span><span class="what"><span class="title">Paginate the audit log</span><span class="why">web#480 · alice <b>mentioned you</b> in a thread</span></span><time>19m<small>waiting</small></time></li>
-        <li data-line="mergeable" data-more hidden><span class="bullet dark" data-line="mergeable" role="img" aria-label="Mergeable">G</span><span class="what"><span class="title">Push notifications for order updates</span><span class="why">mobile#240 · <b>approved</b>, optional checks still running</span></span><time>1h<small>waiting</small></time></li>
-      </ol>
-      <p class="demo-note">Example pull requests from GitBell's demo data. <span data-more-note>Showing 4 of 10; pick a line to see just those.</span></p>
-    </div>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/icon.png" alt="" width="30" height="30">GitBell</a>
+    <ul>
+      <li class="hide-sm"><a href="#strips">Features</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="https://github.com/tiagobabo/gitbell">Source</a></li>
+    </ul>
   </div>
 </header>
-<div class="edge" role="presentation"></div>
 
-<main>
-  <div class="platform">
+<main id="main">
+  <div class="hero">
     <div class="wrap">
-      <img class="shot" src="assets/your-turn-light.png" width="2480" height="1560" alt="GitBell's Your turn page: groups for Review, Fix, Failed after merge and On hold, each pull request showing its checks, reviewers and how long it has waited.">
-      <p class="caption"><span>Your turn, in the app. The Dock icon counts what's waiting.</span><span>Demo data, light mode.</span></p>
+      <div>
+        <h1>Your turn.</h1>
+        <p class="lede"><b>GitBell tells you what to do on GitHub, not what happened.</b> Every pull request waiting on you, why, and for how long, in a Mac app.</p>
+        <a class="btn" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4v11.2l4.1-4.1 2.8 2.8L12 20.8l-8.9-8.9 2.8-2.8 4.1 4.1z" fill="currentColor"/></svg>
+          Download for Mac
+        </a>
+        <p class="meta"><span data-version>Free and open source</span> · macOS 14 or later</p>
+      </div>
+
+      <div>
+        <div class="bay" aria-label="Your turn, example">
+          <div class="bay-head"><span>Your turn</span><span><b data-count>6</b> waiting on you</span></div>
+          <ol class="strips" data-bay>
+            <li class="strip" data-a="review" tabindex="0">
+              <span class="code">Review</span>
+              <span class="call"><b>WEB 482</b><span>alice</span></span>
+              <span class="what"><span class="title">Add dark mode to the settings page</span><span class="why">Waiting on your review</span></span>
+              <span class="time"><b>3M</b><span>waiting</span></span>
+            </li>
+            <li class="strip" data-a="fix" tabindex="0">
+              <span class="code">Fix</span>
+              <span class="call"><b>WEB 484</b><span>you</span></span>
+              <span class="what"><span class="title">Upgrade to Rails 8.1</span><span class="why"><span class="pencil">rspec (3/8)<svg class="mark ring" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="M8 6 C30 0, 78 0, 94 8 C102 14, 92 26, 60 28 C30 30, 2 26, 4 14 C5 9, 12 5, 22 4"/></svg></span> and rubocop failing</span></span>
+              <span class="time"><b>30M</b><span>waiting</span></span>
+            </li>
+            <li class="strip" data-a="hold" tabindex="0">
+              <span class="code">On hold</span>
+              <span class="call"><b>API 1207</b><span>you</span></span>
+              <span class="what"><span class="title">Move invoices to the new PDF service</span><span class="why">approve_staging needs approving</span></span>
+              <span class="time"><b>1H</b><span>waiting</span></span>
+            </li>
+            <li class="strip" data-a="reply" tabindex="0">
+              <span class="code">Reply</span>
+              <span class="call"><b>WEB 480</b><span>alice</span></span>
+              <span class="what"><span class="title">Paginate the audit log</span><span class="why">You were mentioned in a thread</span></span>
+              <span class="time"><b>19M</b><span>waiting</span></span>
+            </li>
+            <li class="strip" data-a="after" tabindex="0">
+              <span class="code">Failed after merge</span>
+              <span class="call"><b>API 1202</b><span>you</span></span>
+              <span class="what"><span class="title">Rename the billing worker queues</span><span class="why">Merged, then lint failed</span></span>
+              <span class="time"><b>9H</b><span>waiting</span></span>
+            </li>
+            <li class="strip" data-a="merge" tabindex="0">
+              <span class="code">Merge</span>
+              <span class="call"><b>API 1203</b><span>you</span></span>
+              <span class="what"><span class="title">Return 404 for unknown webhook ids</span><span class="why">Approved and green</span></span>
+              <span class="time"><b>2H</b><span>waiting</span></span>
+              <svg class="mark tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13 C6 15, 8 18, 9 20 C12 13, 16 8, 22 3"/></svg>
+            </li>
+          </ol>
+          <div class="bay-foot">
+            <span>Click a strip, or <span class="key">J</span> <span class="key">K</span> then <span class="key">E</span>, to hide it until it changes.</span>
+            <button type="button" data-restore disabled>Bring back <span data-hidden>0</span></button>
+          </div>
+        </div>
+        <p class="demo">Example strips from GitBell's demo data.</p>
+      </div>
     </div>
   </div>
 
-  <section id="lines" aria-labelledby="lines-h">
-    <div class="band sign">
-      <div class="wrap">
-        <span class="bullets" aria-hidden="true">
-          <span class="bullet" data-line="review">R</span><span class="bullet dark" data-line="rereview">P</span><span class="bullet" data-line="fix">F</span><span class="bullet" data-line="after">X</span><span class="bullet" data-line="hold">H</span><span class="bullet" data-line="reply">C</span><span class="bullet" data-line="merge">M</span><span class="bullet dark" data-line="mergeable">G</span>
-        </span>
-        <h2 id="lines-h">Every reason has a line</h2>
+  <div class="wrap">
+    <div class="mount"><img src="assets/your-turn-light.png" width="2480" height="1560" alt="GitBell's Your turn page: groups for Review, Fix, Failed after merge and On hold, each pull request showing its checks, reviewers and how long it has waited."></div>
+    <p class="label"><b>Your turn, in the app.</b><span>The Dock icon counts what's waiting.</span><span>Demo data.</span></p>
+  </div>
+
+  <section id="strips" aria-labelledby="strips-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="strips-h">Every strip says what to do</h2>
+        <p>GitHub's notifications are a feed of things that happened. GitBell sorts them into <b>what you need to do</b>, names the reason on the row, and drops what isn't yours.</p>
       </div>
-    </div>
-    <div class="wrap under">
-      <p class="intro">GitHub's notifications are a feed of things that happened. GitBell sorts them into <b>what you need to do</b>, names the reason on the row, and drops what isn't yours. Press <span class="key">E</span> to hide one until it changes.</p>
       <ul class="legend">
-        <li><span class="bullet" data-line="review" aria-hidden="true">R</span><h3>Review</h3><p>Someone is waiting on your review.</p></li>
-        <li><span class="bullet dark" data-line="rereview" aria-hidden="true">P</span><h3>Re-review</h3><p>Pushed to since you reviewed.</p></li>
-        <li><span class="bullet" data-line="fix" aria-hidden="true">F</span><h3>Fix</h3><p>Failing checks, conflicts and requested changes, with the failing checks named.</p></li>
-        <li><span class="bullet" data-line="after" aria-hidden="true">X</span><h3>Failed after merge</h3><p>Merged, then a deploy or checks failed.</p></li>
-        <li><span class="bullet" data-line="hold" aria-hidden="true">H</span><h3>On hold</h3><p>CircleCI jobs waiting for someone to approve them. Approve from GitBell.</p></li>
-        <li><span class="bullet" data-line="reply" aria-hidden="true">C</span><h3>Reply</h3><p>Mentions, assignments and comments on your threads.</p></li>
-        <li><span class="bullet" data-line="merge" aria-hidden="true">M</span><h3>Merge</h3><p>Approved and green.</p></li>
-        <li><span class="bullet dark" data-line="mergeable" aria-hidden="true">G</span><h3>Mergeable</h3><p>Approved, with optional checks still running or failing.</p></li>
+        <li class="strip" data-a="review"><span class="code">Review</span><p>Someone is waiting on your review.</p></li>
+        <li class="strip" data-a="rereview"><span class="code">Re-review</span><p>Pushed to since you reviewed.</p></li>
+        <li class="strip" data-a="fix"><span class="code">Fix</span><p>Failing checks, conflicts and requested changes, with the failing checks named.</p></li>
+        <li class="strip" data-a="after"><span class="code">Failed after merge</span><p>Merged, then a deploy or checks failed.</p></li>
+        <li class="strip" data-a="hold"><span class="code">On hold</span><p>CircleCI jobs waiting for someone to approve them. Approve from GitBell.</p></li>
+        <li class="strip" data-a="reply"><span class="code">Reply</span><p>Mentions, assignments and comments on your threads.</p></li>
+        <li class="strip" data-a="merge"><span class="code">Merge</span><p>Approved and green.</p></li>
+        <li class="strip" data-a="mergeable"><span class="code">Mergeable</span><p>Approved, with optional checks still running or failing.</p></li>
       </ul>
-      <p class="after-note"><b>Told when it's your turn.</b> Notifications for review requests, failing checks, requested changes, merges ready to go, deploys, and checks failing after a merge. <b>Only what's yours.</b> Pick which organisations show, whether your personal repositories do, and the people and teams whose activity counts.</p>
+      <p class="note"><b>Told when it's your turn.</b> Notifications for review requests, failing checks, requested changes, merges ready to go, deploys, and checks failing after a merge. <b>Only what's yours.</b> Pick which organisations show, whether your personal repositories do, and the people and teams whose activity counts.</p>
     </div>
   </section>
 
   <section aria-labelledby="yours-h">
-    <div class="band sign">
-      <div class="wrap">
-        <h2 id="yours-h">Your pull requests, to <span class="nw">production&nbsp;<svg class="arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 13h17.5l-5.6-5.6 4.2-4.2L31.9 16 19.1 28.8l-4.2-4.2 5.6-5.6H3z" fill="#fff"/></svg></span></h2>
+    <div class="wrap">
+      <div class="head">
+        <h2 id="yours-h">Your pull requests, bay by bay</h2>
+        <p>Each pull request you opened or pushed to moves along the board until it's live, with what it's waiting on and for how long. Pull requests built on each other's branches stay together as a stack.</p>
       </div>
-    </div>
-    <div class="wrap under">
-      <p class="intro">Each pull request you opened or pushed to runs along one line, with what it's waiting on and for how long. Pull requests built on each other's branches stay together as a stack.</p>
-      <ol class="linemap">
-        <li><span class="stop"></span><h3>Drafts</h3><p>Not ready for review yet</p></li>
-        <li><span class="stop"></span><h3>In review</h3><p>Waiting on reviewers or CI</p></li>
-        <li><span class="stop"></span><h3>Needs fixing</h3><p>Checks, conflicts or changes</p></li>
-        <li><span class="stop"></span><h3>Ready to merge</h3><p>Approved and green</p></li>
-        <li class="here"><span class="stop"></span><h3>Shipping</h3><p>Merged, deploying</p><span class="train">api#1204 deploying</span></li>
-        <li><span class="stop"></span><h3>Shipped</h3><p>Live</p></li>
-      </ol>
+      <div class="board" role="list" aria-label="Your pull requests by stage, example">
+        <div class="stage" role="listitem"><h3>Drafts <span>1</span></h3><ol><li class="mini"><b>WEB 481</b><span>Try a new onboarding flow</span><small>cypress failing</small></li></ol></div>
+        <div class="stage review" role="listitem"><h3>In review <span>2</span></h3><ol><li class="mini"><b>WEB 480</b><span>Paginate the audit log</span><small>CI 6/9 · 19m</small></li><li class="mini stack"><b>API 1203</b><span>Return 404 for unknown webhook ids</span><small>stack of 2 · no review for 3d</small></li></ol></div>
+        <div class="stage fix" role="listitem"><h3>Needs fixing <span>1</span></h3><ol><li class="mini"><b>WEB 484</b><span>Upgrade to Rails 8.1</span><small>rspec, rubocop</small></li></ol></div>
+        <div class="stage ready" role="listitem"><h3>Ready <span>1</span></h3><ol><li class="mini"><b>MOB 240</b><span>Push notifications for order updates</span><small>approved</small></li></ol></div>
+        <div class="stage ship" role="listitem"><h3>Shipping <span>1</span></h3><ol><li class="mini"><b>API 1204</b><span>Retry failed webhooks</span><small>deploying</small></li></ol></div>
+        <div class="stage done" role="listitem"><h3>Shipped <span>1</span></h3><ol><li class="mini"><b>WEB 476</b><span>Faster search index</span><small>live 2h ago</small></li></ol></div>
+      </div>
+      <p class="demo">Example board. In the app these are the stages of Your pull requests.</p>
 
-      <div class="split">
+      <div class="two">
         <div>
-          <h3 style="margin:0 0 8px;font-size:26px;font-weight:800;letter-spacing:-0.015em">Press <span class="key">T</span> for the timeline</h3>
-          <p style="margin:0 0 20px;color:var(--ink-2);font-size:17px">A pull request's history from opening to deploy, with how long each step took.</p>
-          <ol class="times">
-            <li><span>Opened</span><i style="width:6%"></i><time>0m</time></li>
-            <li><span>Review</span><i style="width:100%"></i><time>3h 12m</time></li>
-            <li><span>Checks</span><i style="width:18%"></i><time>18m</time></li>
-            <li><span>Merged</span><i style="width:4%"></i><time>2m</time></li>
-            <li><span>Deployed</span><i style="width:10%"></i><time>9m</time></li>
-          </ol>
-          <p class="note">Example timings.</p>
+          <h3>Press <span class="key" style="font-size:.8em;background:var(--rail);color:#fff">T</span> for the timeline</h3>
+          <p>A pull request's history from opening to deploy, with how long each step took. The slow step stands out.</p>
+          <div class="tl" aria-label="Example timeline">
+            <div><span>Opened</span><b>0M</b></div>
+            <div class="long"><span>Review</span><b>3H 12M</b></div>
+            <div><span>Checks</span><b>18M</b></div>
+            <div><span>Merged</span><b>2M</b></div>
+            <div><span>Deployed</span><b>9M</b></div>
+          </div>
+          <p class="demo">Example timings.</p>
         </div>
         <figure style="margin:0">
-          <img class="shot shot-full" src="assets/your-pull-requests-light.png" width="2480" height="1560" loading="lazy" alt="GitBell's Your pull requests page: pull requests grouped by stage, with a stack of two and the checks and reviewers each is waiting on.">
-          <figcaption class="caption"><span>Your pull requests, by stage, in the app.</span><span>Demo data.</span></figcaption>
+          <div class="mount"><img src="assets/your-pull-requests-light.png" width="2480" height="1560" loading="lazy" alt="GitBell's Your pull requests page: pull requests grouped by stage, with a stack of two and the checks and reviewers each is waiting on."></div>
+          <figcaption class="label"><b>Your pull requests, by stage, in the app.</b><span>Demo data.</span></figcaption>
         </figure>
       </div>
     </div>
   </section>
 
   <section aria-labelledby="keys-h">
-    <div class="band sign">
-      <div class="wrap">
+    <div class="wrap">
+      <div class="head">
         <h2 id="keys-h">Everything has a key</h2>
+        <p>Laid out like Mail: a sidebar of pages and groups with counts, search at the top, and a menu item for every key. Liquid Glass on macOS 26. An optional <b>menu bar</b> icon opens the window or a compact popover.</p>
       </div>
-    </div>
-    <div class="wrap under">
-      <p class="intro">Laid out like Mail: a sidebar of pages and groups with counts, search at the top, and a menu item for every key. Liquid Glass on macOS 26. An optional <b>menu bar</b> icon opens the window or a compact popover.</p>
-      <ul class="keys">
-        <li><span class="pair"><span class="key">J</span><span class="key">K</span></span>Move down and up</li>
-        <li><span class="pair"><span class="key">O</span></span>Open on GitHub</li>
-        <li><span class="pair"><span class="key">E</span></span>Hide until it changes</li>
-        <li><span class="pair"><span class="key">T</span></span>Show the timeline</li>
-        <li><span class="pair"><span class="key">C</span></span>Copy the link</li>
-        <li><span class="pair"><span class="key">M</span></span>Mark as read</li>
-        <li><span class="pair"><span class="key">⌘</span><span class="key">F</span></span>Search everything</li>
-        <li><span class="pair"><span class="key">⌘</span><span class="key">R</span></span>Refresh</li>
-      </ul>
+      <div class="card">
+        <ul class="keys">
+          <li><span class="k"><span class="key">J</span><span class="key">K</span></span>Move down and up</li>
+          <li><span class="k"><span class="key">O</span></span>Open on GitHub</li>
+          <li><span class="k"><span class="key">E</span></span>Hide until it changes</li>
+          <li><span class="k"><span class="key">T</span></span>Show the timeline</li>
+          <li><span class="k"><span class="key">C</span></span>Copy the link</li>
+          <li><span class="k"><span class="key">M</span></span>Mark as read</li>
+          <li><span class="k"><span class="key">⌘</span><span class="key">F</span></span>Search everything</li>
+          <li><span class="k"><span class="key">⌘</span><span class="key">R</span></span>Refresh</li>
+        </ul>
+      </div>
     </div>
   </section>
 
   <section id="install" aria-labelledby="install-h">
-    <div class="band sign">
-      <div class="wrap">
-        <h2 id="install-h">Set up in a <span class="nw">minute&nbsp;<svg class="arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z" fill="#fff"/></svg></span></h2>
+    <div class="wrap">
+      <div class="head">
+        <h2 id="install-h">Set up in a minute</h2>
+        <p>Three steps, with nothing left out: the notarisation workaround, the token scopes and the telemetry setting are all here.</p>
       </div>
-    </div>
-    <div class="wrap under">
-      <ol class="steps">
-        <li>
-          <h3>Download</h3>
-          <p>Get the DMG and drag GitBell to Applications. It updates itself with Sparkle.</p>
-          <a class="plate on-wall" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z" fill="currentColor"/></svg>
-            Download for Mac
-          </a>
-        </li>
-        <li>
-          <h3>Open it</h3>
-          <p>GitBell isn't notarised yet, so macOS blocks it the first time. In System Settings → Privacy &amp; Security, click Open Anyway, or run:</p>
-          <pre><code>xattr -dr com.apple.quarantine /Applications/GitBell.app</code></pre>
-        </li>
-        <li>
-          <h3>Sign in</h3>
-          <p>GitBell uses your GitHub CLI login if you have one. Otherwise paste a <a href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&amp;description=GitBell">classic personal access token</a> with <code>notifications</code>, <code>repo</code> and <code>read:org</code>. It's kept in your Keychain.</p>
-          <p>A CircleCI token is optional, for approving held jobs.</p>
-        </li>
+      <ol class="install">
+        <li class="strip" data-a="review"><span class="num">1</span><div class="body"><h3>Download</h3><div><p>Get the DMG and drag GitBell to Applications. It updates itself with Sparkle.</p><p><a class="btn" data-download href="https://github.com/tiagobabo/gitbell/releases/latest"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4v11.2l4.1-4.1 2.8 2.8L12 20.8l-8.9-8.9 2.8-2.8 4.1 4.1z" fill="currentColor"/></svg>Download for Mac</a></p></div></div></li>
+        <li class="strip" data-a="hold"><span class="num">2</span><div class="body"><h3>Open it</h3><div><p>GitBell isn't notarised yet, so macOS blocks it the first time. In System Settings → Privacy &amp; Security, click Open Anyway, or run:</p><pre><code>xattr -dr com.apple.quarantine /Applications/GitBell.app</code></pre></div></div></li>
+        <li class="strip" data-a="merge"><span class="num">3</span><div class="body"><h3>Sign in</h3><div><p>GitBell uses your GitHub CLI login if you have one. Otherwise paste a <a href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&amp;description=GitBell">classic personal access token</a> with <code>notifications</code>, <code>repo</code> and <code>read:org</code>. It's kept in your Keychain.</p><p>A CircleCI token is optional, for approving held jobs.</p></div></div></li>
       </ol>
 
       <ul class="facts">
@@ -505,15 +438,14 @@
   </section>
 </main>
 
-<div class="edge" role="presentation" style="margin-top:clamp(80px,10vw,140px)"></div>
-<div class="band close">
+<div class="close">
   <div class="wrap">
     <div>
-      <h2>It's your turn.</h2>
+      <h2>Your turn.</h2>
       <p>Free for macOS 14 and later.</p>
     </div>
-    <a class="plate" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z" fill="currentColor"/></svg>
+    <a class="btn" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4v11.2l4.1-4.1 2.8 2.8L12 20.8l-8.9-8.9 2.8-2.8 4.1 4.1z" fill="currentColor"/></svg>
       Download GitBell
     </a>
   </div>
@@ -530,7 +462,7 @@
 </footer>
 
 <script>
-  // Point the download plates straight at the latest DMG, and show its version.
+  // Point the download buttons straight at the latest DMG, and show its version.
   fetch("https://api.github.com/repos/tiagobabo/gitbell/releases/latest")
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(release => {
@@ -541,23 +473,37 @@
     })
     .catch(() => {});
 
-  // Each line bullet shows just that line on the board, the way a sign updates.
-  const buttons = document.querySelectorAll(".lines button");
-  const rows = document.querySelectorAll(".board li");
-  const note = document.querySelector("[data-more-note]");
-  buttons.forEach(button => button.addEventListener("click", () => {
-    const line = button.dataset.filter;
-    buttons.forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-    rows.forEach(row => {
-      const show = line === "all" ? !row.hasAttribute("data-more") : row.dataset.line === line;
-      row.hidden = !show;
-      row.classList.remove("in");
-      if (show) { void row.offsetWidth; row.classList.add("in"); }
-    });
-    rows.forEach((row, i) => row.style.animationDelay = "");
-    [...rows].filter(r => !r.hidden).forEach((row, i) => row.style.animationDelay = (i * 40) + "ms");
-    if (note) note.hidden = line !== "all";
-  }));
+  // The hero bay works like the app: J and K move, E or a click hides a strip until it changes.
+  const bay = document.querySelector("[data-bay]");
+  const count = document.querySelector("[data-count]");
+  const hiddenCount = document.querySelector("[data-hidden]");
+  const restore = document.querySelector("[data-restore]");
+  const visible = () => [...bay.children].filter(s => !s.hidden && !s.classList.contains("out"));
+  const update = () => {
+    const hidden = bay.children.length - visible().length;
+    count.textContent = visible().length;
+    hiddenCount.textContent = hidden;
+    restore.disabled = hidden === 0;
+  };
+  const hide = strip => {
+    const list = visible(), i = list.indexOf(strip), next = list[i + 1] || list[i - 1];
+    strip.classList.add("out");
+    setTimeout(() => { strip.hidden = true; }, 450);
+    if (next) next.focus({ preventScroll: true });
+    update();
+  };
+  bay.addEventListener("click", e => { const s = e.target.closest(".strip"); if (s) hide(s); });
+  bay.addEventListener("keydown", e => {
+    const s = e.target.closest(".strip"); if (!s) return;
+    const list = visible(), i = list.indexOf(s);
+    if (e.key === "j" || e.key === "ArrowDown") { list[Math.min(i + 1, list.length - 1)].focus(); e.preventDefault(); }
+    else if (e.key === "k" || e.key === "ArrowUp") { list[Math.max(i - 1, 0)].focus(); e.preventDefault(); }
+    else if (e.key === "e" || e.key === "Enter" || e.key === " ") { hide(s); e.preventDefault(); }
+  });
+  restore.addEventListener("click", () => {
+    [...bay.children].forEach(s => { s.hidden = false; requestAnimationFrame(() => s.classList.remove("out")); });
+    update();
+  });
 </script>
 </body>
 </html>
