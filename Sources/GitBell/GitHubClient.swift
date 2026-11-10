@@ -5,6 +5,8 @@ struct APIError: LocalizedError {
     let message: String
     // GraphQL's own code for what went wrong, like NOT_FOUND or FORBIDDEN, when GitHub gives one.
     var type: String? = nil
+    // GitHub answered with a success status but a body that isn't JSON, like an empty or cut-off one.
+    var isUnreadable = false
 
     var errorDescription: String? { message }
     var isUnauthorized: Bool { status == 401 }
@@ -14,7 +16,7 @@ struct APIError: LocalizedError {
         [499, 502, 504].contains(status) || (status == 200 && message.contains("may be the result of a timeout"))
     }
     // GitHub is down or slow for a moment; the next poll tries again.
-    var isUnavailable: Bool { status == 503 || isGatewayTimeout }
+    var isUnavailable: Bool { status == 503 || isGatewayTimeout || isUnreadable }
 }
 
 actor GitHubClient {
@@ -942,19 +944,23 @@ actor GitHubClient {
         let request = makeRequest(base.appending(path: "graphql"), method: "POST", body: body)
         do {
             return try await graphQL(request)
-        } catch let error as APIError where error.isGatewayTimeout {
+        } catch let error as APIError where error.isGatewayTimeout || error.isUnreadable {
             // A search that runs past GitHub's ten seconds comes back 499, 502, 504 or as a GraphQL timeout, and
-            // usually answers when asked again. These are all reads, so asking twice is safe.
+            // usually answers when asked again, as does one whose answer was cut off. These are all reads, so asking
+            // twice is safe.
             try await Task.sleep(for: .seconds(1))
             return try await graphQL(request)
         }
     }
 
     private func graphQL<T: Decodable>(_ request: URLRequest) async throws -> T {
-        let (data, _) = try await send(request)
+        let (data, http) = try await send(request)
         let response: GraphQL<T>
         do {
             response = try Self.decoder.decode(GraphQL<T>.self, from: data)
+        } catch DecodingError.dataCorrupted(let context) where context.codingPath.isEmpty {
+            // Not JSON at all, so there's no field to blame and nothing GraphQL could have said.
+            throw APIError(status: http.statusCode, message: "GitHub sent an answer GitBell couldn't read", isUnreadable: true)
         } catch {
             // A field GitHub failed to answer comes back null beside an error, which says more than "missing data".
             if let error = (try? Self.decoder.decode(GraphQLErrors.self, from: data))?.errors?.first {
