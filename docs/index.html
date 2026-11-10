@@ -176,7 +176,7 @@
     <div class="wrap">
       <img class="icon" src="assets/icon.png" alt="" width="96" height="96">
       <h1>GitBell</h1>
-      <p class="tagline">Your turn, at a glance. <span>GitHub, sorted into what to do next.</span></p>
+      <p class="tagline">GitHub notifications and pull requests, <span>sorted by what you need to do.</span></p>
       <div class="ctas">
         <a class="pill" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">Download for Mac</a>
         <a class="more" href="https://github.com/tiagobabo/gitbell">View on GitHub</a>
@@ -191,26 +191,26 @@
   <section id="highlights" class="alt">
     <div class="wide">
       <div class="intro">
-        <h2>Not what happened.<br>What to do.</h2>
-        <p>GitHub's notifications are a feed of events. GitBell sorts them into <b>reviews, fixes, replies, held CI jobs and merges</b>, says why each one is yours, and leaves out the rest. The Dock icon counts what's waiting.</p>
+        <h2>Everything waiting on you, in one list.</h2>
+        <p>GitBell groups your GitHub activity into <b>reviews, fixes, replies, held CI jobs and merges</b>, shows why each one needs you, and leaves out the rest. The Dock icon shows how many are waiting.</p>
       </div>
 
       <div class="tiles">
         <article class="tile full">
           <h3>See which check broke.</h3>
-          <p>Failing checks are named on the row, along with requested changes and missing reviewers, so you know what to fix before you open it.</p>
+          <p>Each row names the failing checks, requested changes and missing reviewers, so you can see what to fix before opening it.</p>
           <div class="art"><img class="crop" src="assets/crop-fix.png" width="1590" height="505" loading="lazy" alt="The Fix group: Upgrade to Rails 8.1 with rspec (3/8) and rubocop failing, and Cache search results with changes requested by bob."></div>
         </article>
 
         <article class="tile">
-          <h3>From draft to deployed.</h3>
-          <p>Each of your pull requests, by stage, with what it's waiting on and for how long.</p>
+          <h3>Your pull requests, by stage.</h3>
+          <p>From draft to deployed, with what each one is waiting on and for how long.</p>
           <div class="art"><img class="crop" src="assets/crop-stages.png" width="1000" height="170" loading="lazy" alt="Stage counts: Drafts 1, In review 4, Fix 2, Merge 2."></div>
         </article>
 
         <article class="tile pad">
-          <h3>Told when it's your turn.</h3>
-          <p>Notifications for review requests, failing checks, requested changes, merges ready to go, deploys, and checks failing after a merge.</p>
+          <h3>Notifications.</h3>
+          <p>For review requests, failing checks, requested changes, pull requests ready to merge, deploys, and checks that fail after a merge.</p>
           <div class="art" aria-label="Example notifications">
             <div class="banner"><img src="assets/icon.png" alt=""><div><b>Checks failing</b><span>web#484 · rspec, rubocop</span><small>GitBell · now</small></div></div>
             <div class="banner second"><img src="assets/icon.png" alt=""><div><b>Review requested</b><span>web#482 · Add dark mode to the settings page</span><small>GitBell · 3m ago</small></div></div>
@@ -219,13 +219,13 @@
 
         <article class="tile">
           <h3>Stacks stay together.</h3>
-          <p>Pull requests built on each other's branches show as one stack, merging bottom first. <b>Approve held CircleCI jobs</b> without leaving the list.</p>
+          <p>Pull requests built on each other's branches are shown together, in merge order. You can also <b>approve held CircleCI jobs</b> from the list.</p>
           <div class="art"><img class="crop" src="assets/crop-stack.png" width="900" height="350" loading="lazy" alt="A stack of two pull requests, the second waiting on the approve_staging CircleCI job."></div>
         </article>
 
         <article class="tile pad">
-          <h3>Every step, timed.</h3>
-          <p>A pull request's timeline, from opening to deploy, shows how long each step took. The slow one stands out.</p>
+          <h3>Timelines.</h3>
+          <p>Each pull request's history, from opening to deploy, with how long each step took.</p>
           <div class="art">
             <ol class="steps-time" aria-label="Example timeline">
               <li><span>Opened</span><i style="width:4%"></i><time>0m</time></li>
@@ -244,14 +244,14 @@
   <section id="mac" class="dark">
     <div class="wide">
       <div class="intro">
-        <h2>Made for the Mac.</h2>
-        <p>Written in Swift and SwiftUI and laid out like Mail: a sidebar of pages and groups with counts, search at the top, and <b>Liquid Glass on macOS 26</b>. Light and dark, like everything else on your Mac.</p>
+        <h2>A native Mac app.</h2>
+        <p>Written in Swift and SwiftUI and laid out like Mail: a sidebar of pages and groups with counts, and search at the top. It supports light and dark mode, and <b>Liquid Glass on macOS 26</b>.</p>
       </div>
       <div class="dark-shot"><img src="assets/yours-dark.png" width="2384" height="1664" loading="lazy" alt="GitBell in dark mode showing Your pull requests, grouped by stage from Drafts to Shipped."></div>
       <ul class="points">
-        <li><h3>In the menu bar, if you like.</h3><p>An optional icon opens the window or a compact popover.</p></li>
-        <li><h3>Only what's yours.</h3><p>Pick which organisations show, whether your personal repositories do, and the people and teams whose activity counts.</p></li>
-        <li><h3>Keys, if you want them.</h3><p>Every action is in the menus, with a shortcut beside it.</p></li>
+        <li><h3>Menu bar</h3><p>An optional menu bar icon opens the window or a compact popover.</p></li>
+        <li><h3>Filters</h3><p>Choose which organisations to include, whether to show personal repositories, and whose activity counts.</p></li>
+        <li><h3>Keyboard shortcuts</h3><p>Every action is in the menus, with its shortcut.</p></li>
       </ul>
     </div>
   </section>
@@ -259,12 +259,12 @@
   <section id="install" class="alt">
     <div class="wide">
       <div class="intro">
-        <h2>Up and running in a minute.</h2>
+        <h2>Install.</h2>
       </div>
       <ol class="install">
-        <li><h3>Download.</h3><p>Drag GitBell to Applications. It keeps itself up to date with Sparkle.</p><a class="pill" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">Download for Mac</a></li>
-        <li><h3>Open it.</h3><p>GitBell isn't notarised yet, so macOS blocks it the first time. In System Settings → Privacy &amp; Security, click Open Anyway, or run:</p><pre><code>xattr -dr com.apple.quarantine /Applications/GitBell.app</code></pre></li>
-        <li><h3>Sign in.</h3><p>GitBell uses your GitHub CLI login if you have one. Otherwise paste a <a href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&amp;description=GitBell">classic personal access token</a> with <code>notifications</code>, <code>repo</code> and <code>read:org</code>. It's kept in your Keychain. A CircleCI token is optional, for approving held jobs.</p></li>
+        <li><h3>Download</h3><p>Drag GitBell to Applications. It updates itself with Sparkle.</p><a class="pill" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">Download for Mac</a></li>
+        <li><h3>Open it</h3><p>GitBell isn't notarised yet, so macOS blocks it the first time. In System Settings → Privacy &amp; Security, click Open Anyway, or run:</p><pre><code>xattr -dr com.apple.quarantine /Applications/GitBell.app</code></pre></li>
+        <li><h3>Sign in</h3><p>GitBell uses your GitHub CLI login if you have one. Otherwise paste a <a href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org&amp;description=GitBell">classic personal access token</a> with <code>notifications</code>, <code>repo</code> and <code>read:org</code>. It's kept in your Keychain. A CircleCI token is optional, for approving held jobs.</p></li>
       </ol>
     </div>
   </section>
@@ -272,13 +272,13 @@
   <section class="light">
     <div class="wide">
       <div class="intro">
-        <h2>Private by design.</h2>
-        <p>GitBell talks to GitHub straight from your Mac. Your token never leaves it.</p>
+        <h2>Privacy.</h2>
+        <p>There's no GitBell server. The app talks to GitHub directly from your Mac.</p>
       </div>
       <ul class="points">
-        <li><h3>In your Keychain.</h3><p>Your GitHub and CircleCI tokens are stored by macOS, not by GitBell.</p></li>
-        <li><h3>No names, ever.</h3><p>Release builds send anonymous usage counts and crash reports. Turn them off in Settings → General → Privacy.</p></li>
-        <li><h3>Open source.</h3><p>MIT licensed. Build it yourself with Xcode and XcodeGen; builds from source send nothing.</p></li>
+        <li><h3>Keychain</h3><p>Your GitHub and CircleCI tokens are kept in the macOS Keychain.</p></li>
+        <li><h3>Usage data</h3><p>Release builds send anonymous usage counts and crash reports, without your token or any names. You can turn this off in Settings → General → Privacy.</p></li>
+        <li><h3>Open source</h3><p>MIT licensed. You can build it yourself with Xcode and XcodeGen; builds from source send no data.</p></li>
       </ul>
     </div>
   </section>
@@ -286,8 +286,8 @@
   <section class="close alt">
     <div class="wrap">
       <img src="assets/icon.png" alt="" width="80" height="80">
-      <h2>It's your turn.</h2>
-      <p>Free. For macOS 14 and later.</p>
+      <h2>Download GitBell</h2>
+      <p>Free, for macOS 14 and later.</p>
       <div class="ctas">
         <a class="pill" data-download href="https://github.com/tiagobabo/gitbell/releases/latest">Download for Mac</a>
         <a class="more" href="https://github.com/tiagobabo/gitbell/releases">Release notes</a>
