@@ -7,7 +7,7 @@
 <meta name="description" content="GitBell is a native Mac app that turns GitHub activity into what to do next: everything waiting on you in one list, and each of your pull requests followed from draft to deployed.">
 <meta property="og:title" content="GitBell: what's waiting on you on GitHub">
 <meta property="og:description" content="Everything waiting on you in one list, with the reason, and each of your pull requests followed from draft to deployed. Free for macOS 14 and later.">
-<meta property="og:image" content="https://tiagobabo.github.io/gitbell/assets/your-turn-light.png">
+<meta property="og:image" content="https://tiagobabo.github.io/gitbell/assets/your-turn.png">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tiagobabo.github.io/gitbell/">
 <link rel="canonical" href="https://tiagobabo.github.io/gitbell/">
@@ -144,7 +144,6 @@
   .bay-foot button { font: 700 13.5px/1 var(--type); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: transparent; border: 1px solid #8a8e85; border-radius: 3px; padding: 9px 12px; cursor: pointer; }
   .bay-foot button:hover { border-color: #fff; }
   .bay-foot button:disabled { opacity: .45; cursor: default; }
-  .key { display: inline-grid; place-items: center; min-width: 1.8em; height: 1.8em; padding: 0 .4em; border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 .92em/1 var(--type); vertical-align: middle; }
   .demo { margin: 10px 2px 0; font: 400 13px/1.4 var(--type); color: var(--ink-2); }
 
   @media (max-width: 640px) {
@@ -156,6 +155,7 @@
   }
 
   /* App */
+  .app-shot { max-width: 1180px; margin: 0 auto; }
   .mount { background: var(--rail); padding: clamp(8px, 1.2vw, 14px); border-radius: 8px; box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6); }
   .mount img { border-radius: 4px; }
   .label { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 14px 0 0; font: 400 14px/1.4 var(--type); color: var(--ink-2); }
@@ -198,9 +198,11 @@
   @media (max-width: 560px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
   /* Timeline strip */
-  .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 4vw, 64px); align-items: start; margin-top: clamp(48px, 6vw, 80px); }
+  .wide { margin: clamp(40px, 5vw, 64px) auto 0; max-width: 1180px; }
+  .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px clamp(32px, 4vw, 64px); align-items: center; margin-top: clamp(48px, 6vw, 80px); }
   .two h3 { font-size: clamp(26px, 2.4vw, 32px); line-height: 1.2; }
-  .two p { margin: 10px 0 18px; color: var(--ink-2); font-size: 17px; }
+  .two p { margin: 10px 0 0; color: var(--ink-2); font-size: 17px; max-width: 46ch; }
+  .two .demo { margin-top: 10px; font-size: 13px; }
   .tl { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--paper); border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px var(--rail); margin: 5px; }
   .tl div { padding: 10px 10px 12px; border-left: 1px solid rgba(28,29,26,.28); font-family: var(--type); min-width: 0; }
   .tl div:first-child { border-left: 0; }
@@ -209,15 +211,6 @@
   .tl .long { background: var(--s-review); }
   @media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 480px) { .tl { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tl div:nth-child(4) { border-left: 0; } .tl div:nth-child(n+4) { border-top: 1px solid rgba(28,29,26,.28); } }
-
-  /* Keys card */
-  .card { background: var(--paper); border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px var(--rail); padding: clamp(18px, 2.4vw, 28px) clamp(18px, 2.6vw, 32px); margin: 5px; }
-  .keys { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(28px, 4vw, 64px); }
-  .keys li { display: flex; align-items: center; gap: 16px; padding: 11px 0; border-bottom: 1px dashed rgba(28,29,26,.4); font-size: 18px; }
-  .keys li:nth-last-child(-n+2) { border-bottom: 0; }
-  .keys .k { display: flex; gap: 5px; min-width: 5.4em; }
-  .keys .key { background: var(--rail); color: #fff; font-size: 15px; }
-  @media (max-width: 700px) { .keys { grid-template-columns: minmax(0, 1fr); } .keys li:nth-last-child(2) { border-bottom: 1px dashed rgba(28,29,26,.4); } }
 
   /* Install strips */
   .install { list-style: none; margin: 0; display: grid; gap: 6px; background: var(--rail); padding: 10px; border-radius: 6px; }
@@ -325,7 +318,7 @@
             </li>
           </ol>
           <div class="bay-foot">
-            <span>Click a strip, or <span class="key">J</span> <span class="key">K</span> then <span class="key">E</span>, to hide it until it changes.</span>
+            <span>Click a strip to hide it until it changes, as you would in the app.</span>
             <button type="button" data-restore disabled>Bring back <span data-hidden>0</span></button>
           </div>
         </div>
@@ -334,8 +327,8 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="mount"><img src="assets/your-turn-light.png" width="2480" height="1560" alt="GitBell's Your turn page: groups for Review, Fix, Failed after merge and On hold, each pull request showing its checks, reviewers and how long it has waited."></div>
+  <div class="wrap app-shot">
+    <div class="mount"><img src="assets/your-turn.png" width="2160" height="1440" alt="GitBell's Your turn page: groups for Review, Fix, Failed after merge and On hold, each pull request showing its checks, reviewers and how long it has waited."></div>
     <p class="label"><b>Your turn, in the app.</b><span>The Dock icon counts what's waiting.</span><span>Demo data.</span></p>
   </div>
 
@@ -375,10 +368,17 @@
       </div>
       <p class="demo">Example board. In the app these are the stages of Your pull requests.</p>
 
+      <figure class="wide">
+        <div class="mount"><img src="assets/your-pull-requests.png" width="2160" height="1440" loading="lazy" alt="GitBell's Your pull requests page: pull requests grouped by stage, with a stack of two and the checks and reviewers each is waiting on."></div>
+        <figcaption class="label"><b>Your pull requests, by stage, in the app.</b><span>Demo data.</span></figcaption>
+      </figure>
+
       <div class="two">
         <div>
-          <h3>Press <span class="key" style="font-size:.8em;background:var(--rail);color:#fff">T</span> for the timeline</h3>
-          <p>A pull request's history from opening to deploy, with how long each step took. The slow step stands out.</p>
+          <h3>Every step, timed</h3>
+          <p>Open a pull request's timeline to see its history from opening to deploy, with how long each step took. The slow step stands out.</p>
+        </div>
+        <div>
           <div class="tl" aria-label="Example timeline">
             <div><span>Opened</span><b>0M</b></div>
             <div class="long"><span>Review</span><b>3H 12M</b></div>
@@ -388,31 +388,6 @@
           </div>
           <p class="demo">Example timings.</p>
         </div>
-        <figure style="margin:0">
-          <div class="mount"><img src="assets/your-pull-requests-light.png" width="2480" height="1560" loading="lazy" alt="GitBell's Your pull requests page: pull requests grouped by stage, with a stack of two and the checks and reviewers each is waiting on."></div>
-          <figcaption class="label"><b>Your pull requests, by stage, in the app.</b><span>Demo data.</span></figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <section aria-labelledby="keys-h">
-    <div class="wrap">
-      <div class="head">
-        <h2 id="keys-h">Everything has a key</h2>
-        <p>Laid out like Mail: a sidebar of pages and groups with counts, search at the top, and a menu item for every key. Liquid Glass on macOS 26. An optional <b>menu bar</b> icon opens the window or a compact popover.</p>
-      </div>
-      <div class="card">
-        <ul class="keys">
-          <li><span class="k"><span class="key">J</span><span class="key">K</span></span>Move down and up</li>
-          <li><span class="k"><span class="key">O</span></span>Open on GitHub</li>
-          <li><span class="k"><span class="key">E</span></span>Hide until it changes</li>
-          <li><span class="k"><span class="key">T</span></span>Show the timeline</li>
-          <li><span class="k"><span class="key">C</span></span>Copy the link</li>
-          <li><span class="k"><span class="key">M</span></span>Mark as read</li>
-          <li><span class="k"><span class="key">⌘</span><span class="key">F</span></span>Search everything</li>
-          <li><span class="k"><span class="key">⌘</span><span class="key">R</span></span>Refresh</li>
-        </ul>
       </div>
     </div>
   </section>
@@ -430,7 +405,7 @@
       </ol>
 
       <ul class="facts">
-        <li><h3>Native</h3><p>Swift and SwiftUI. Behaves like the rest of your Mac.</p></li>
+        <li><h3>Native</h3><p>Swift and SwiftUI, laid out like Mail, with an optional menu bar icon and keyboard shortcuts if you want them.</p></li>
         <li><h3>Private</h3><p>Talks to GitHub from your Mac. Release builds send anonymous usage counts and crash reports, never your token or any names. Turn it off in Settings → General → Privacy.</p></li>
         <li><h3>Open source</h3><p>MIT licensed. Build it yourself with Xcode and XcodeGen; builds from source send nothing.</p></li>
       </ul>
@@ -473,7 +448,7 @@
     })
     .catch(() => {});
 
-  // The hero bay works like the app: J and K move, E or a click hides a strip until it changes.
+  // The hero bay works like the app: a click, or E on a focused strip, hides it until it changes.
   const bay = document.querySelector("[data-bay]");
   const count = document.querySelector("[data-count]");
   const hiddenCount = document.querySelector("[data-hidden]");
