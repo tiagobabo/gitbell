@@ -1,0 +1,489 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T12:00:00Z",
+  "title": "Design System: GitBell",
+  "extensions": {
+    "colorMeta": {
+      "sign": {
+        "role": "primary",
+        "displayName": "Enamel Black",
+        "canonical": "oklch(18.2% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "sign-ink": {
+        "role": "primary",
+        "displayName": "Sign White",
+        "canonical": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "edge": {
+        "role": "secondary",
+        "displayName": "Platform Yellow",
+        "canonical": "oklch(86.2% 0.175 91)",
+        "tonalRamp": [
+          "#160700",
+          "#372000",
+          "#5c3c00",
+          "#835a00",
+          "#a67c00",
+          "#c3a130",
+          "#e2c779",
+          "#ffeeb7"
+        ]
+      },
+      "line-review": {
+        "role": "tertiary",
+        "displayName": "Review Orange",
+        "canonical": "oklch(57.2% 0.176 40)",
+        "tonalRamp": [
+          "#220000",
+          "#4b0700",
+          "#781d00",
+          "#a83400",
+          "#cf592c",
+          "#ea8663",
+          "#ffb296",
+          "#ffdfca"
+        ]
+      },
+      "line-rereview": {
+        "role": "tertiary",
+        "displayName": "Re-review Yellow",
+        "canonical": "oklch(86.2% 0.175 91)",
+        "tonalRamp": [
+          "#160700",
+          "#372000",
+          "#5c3c00",
+          "#835a00",
+          "#a67c00",
+          "#c3a130",
+          "#e2c779",
+          "#ffeeb7"
+        ]
+      },
+      "line-fix": {
+        "role": "tertiary",
+        "displayName": "Fix Red",
+        "canonical": "oklch(56.8% 0.208 29)",
+        "tonalRamp": [
+          "#250000",
+          "#510000",
+          "#810002",
+          "#b51612",
+          "#dd4539",
+          "#f77a6b",
+          "#ffaa9c",
+          "#ffd9ce"
+        ]
+      },
+      "line-after": {
+        "role": "tertiary",
+        "displayName": "Failed-after-merge Brown",
+        "canonical": "oklch(55.4% 0.094 64)",
+        "tonalRamp": [
+          "#160700",
+          "#371e04",
+          "#5c3915",
+          "#835628",
+          "#a77749",
+          "#c59c77",
+          "#e3c2a5",
+          "#ffead4"
+        ]
+      },
+      "line-hold": {
+        "role": "tertiary",
+        "displayName": "On-hold Purple",
+        "canonical": "oklch(56.8% 0.214 332)",
+        "tonalRamp": [
+          "#1e001b",
+          "#44003f",
+          "#6e0c67",
+          "#9b2291",
+          "#c24ab5",
+          "#de7cd1",
+          "#f9aaed",
+          "#ffd9ff"
+        ]
+      },
+      "line-reply": {
+        "role": "tertiary",
+        "displayName": "Reply Blue",
+        "canonical": "oklch(39.6% 0.183 262)",
+        "tonalRamp": [
+          "#00062a",
+          "#042058",
+          "#143c89",
+          "#275abe",
+          "#477de5",
+          "#75a4fb",
+          "#a3caff",
+          "#d3f0ff"
+        ]
+      },
+      "line-merge": {
+        "role": "tertiary",
+        "displayName": "Merge Green",
+        "canonical": "oklch(53.6% 0.148 150)",
+        "tonalRamp": [
+          "#001100",
+          "#00300a",
+          "#00511e",
+          "#017533",
+          "#399854",
+          "#6fb97f",
+          "#a1daab",
+          "#d2fbd9"
+        ]
+      },
+      "line-mergeable": {
+        "role": "tertiary",
+        "displayName": "Mergeable Lime",
+        "canonical": "oklch(72.4% 0.176 137)",
+        "tonalRamp": [
+          "#001100",
+          "#042f00",
+          "#175000",
+          "#2b7400",
+          "#4e9728",
+          "#7cb863",
+          "#aad997",
+          "#d8fbca"
+        ]
+      },
+      "sign-dim": {
+        "role": "neutral",
+        "displayName": "Signal Grey",
+        "canonical": "oklch(78.6% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "sign-rule": {
+        "role": "neutral",
+        "displayName": "Sign Rule",
+        "canonical": "oklch(27.6% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "wall": {
+        "role": "neutral",
+        "displayName": "Glaze White",
+        "canonical": "oklch(98.5% 0.003 106)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeee"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Wall Ink",
+        "canonical": "oklch(18.2% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Poster Grey",
+        "canonical": "oklch(40.8% 0.007 107)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#42423f",
+          "#61615e",
+          "#83837e",
+          "#a5a5a2",
+          "#c9c9c6",
+          "#eeeeec"
+        ]
+      },
+      "code-tint": {
+        "role": "neutral",
+        "displayName": "Grout Tint",
+        "canonical": "oklch(92.6% 0.008 107)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#42423f",
+          "#62615d",
+          "#83837e",
+          "#a5a5a1",
+          "#c9c9c6",
+          "#efefec"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero \"Your turn\" and the closing line only."
+      },
+      "headline": {
+        "displayName": "Sign Headline",
+        "purpose": "One instruction per sign band."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Legend entries, stations, notes, steps, exit plate text."
+      },
+      "row-title": {
+        "displayName": "Row Title",
+        "purpose": "Departure-row titles and waiting times."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Intro paragraph under each sign."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Wall copy, tabular numerals."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav, line-selector chips, train tags."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Commands and token scopes in install steps."
+      }
+    },
+    "shadows": [
+      {
+        "name": "mounted-screen",
+        "value": "0 1px 2px rgba(0,0,0,.12), 0 24px 60px -20px rgba(0,0,0,.28)",
+        "purpose": "App screenshots mounted on the wall; the only cast shadow."
+      },
+      {
+        "name": "chip-outline",
+        "value": "inset 0 0 0 1.5px #3a3a3a",
+        "purpose": "Line-selector chip border at rest; #8a8a8a on hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-sign",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Exponential ease-out for the row flip and plate/chip state changes."
+      },
+      {
+        "name": "row-flip",
+        "value": "0.5s, translateY(-10px) + clip-path top-down reveal, 40ms stagger",
+        "purpose": "A departure row changing; the only motion. Off under reduced motion."
+      },
+      {
+        "name": "state-change",
+        "value": "0.2s",
+        "purpose": "Background and outline changes on plates and chips."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "keys-legend",
+        "value": "760px"
+      },
+      {
+        "name": "hero-linemap",
+        "value": "860px"
+      },
+      {
+        "name": "split-notes",
+        "value": "900px"
+      },
+      {
+        "name": "board-wrap",
+        "value": "600px"
+      },
+      {
+        "name": "nav-compact",
+        "value": "520px"
+      }
+    ],
+    "ground": {
+      "raster": "docs/assets/tile-wall.webp",
+      "size": "240px 120px",
+      "fallback": "#fafaf8",
+      "purpose": "White 3x6 subway tiles in running bond with soft grout; the page ground under all wall content."
+    }
+  },
+  "components": [
+    {
+      "name": "Exit Plate",
+      "kind": "button",
+      "refersTo": "exit-plate",
+      "description": "Primary download action on the sign: white plate, yellow on hover.",
+      "html": "<div class=\"ds-band\"><a class=\"ds-plate\" href=\"#\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg>Download for Mac</a></div>",
+      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-plate{display:inline-flex;align-items:center;gap:14px;background:#fff;color:#121212;padding:16px 22px 16px 18px;border-radius:6px;font:800 21px/1.2 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.01em;text-decoration:none;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-plate svg{width:30px;height:30px;flex:none}.ds-plate:hover{background:#fccc0a}.ds-plate:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+    },
+    {
+      "name": "Exit Plate on Wall",
+      "kind": "button",
+      "refersTo": "exit-plate-on-wall",
+      "description": "The same plate on the tile wall: enamel black, white text.",
+      "html": "<a class=\"ds-plate-wall\" href=\"#\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg>Download for Mac</a>",
+      "css": ".ds-plate-wall{display:inline-flex;align-items:center;gap:14px;background:#121212;color:#fff;padding:16px 22px 16px 18px;border-radius:6px;font:800 21px/1.2 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.01em;text-decoration:none;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-plate-wall svg{width:30px;height:30px}.ds-plate-wall:hover{background:#333}.ds-plate-wall:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+    },
+    {
+      "name": "Line Bullets",
+      "kind": "custom",
+      "refersTo": "line-bullet",
+      "description": "One circle, one letter, one colour per action.",
+      "html": "<div class=\"ds-band\"><span class=\"ds-row\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span><span class=\"ds-bullet dark\" style=\"--c:#fccc0a\">P</span><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span><span class=\"ds-bullet\" style=\"--c:#996633\">X</span><span class=\"ds-bullet\" style=\"--c:#b933ad\">H</span><span class=\"ds-bullet\" style=\"--c:#0039a6\">C</span><span class=\"ds-bullet\" style=\"--c:#00843a\">M</span><span class=\"ds-bullet dark\" style=\"--c:#6cbe45\">G</span></span></div>",
+      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-row{display:flex;gap:6px;font-size:22px}"
+    },
+    {
+      "name": "Line Selector",
+      "kind": "chip",
+      "refersTo": "line-selector",
+      "description": "Pill chips on the sign that filter the departure board to one line.",
+      "html": "<div class=\"ds-band\"><div class=\"ds-lines\"><button class=\"ds-chip\" aria-pressed=\"true\" style=\"padding-left:16px;min-height:37.5px\">All <b>10</b></button><button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span>Review <b>2</b></button><button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span>Fix <b>3</b></button><button class=\"ds-chip\" disabled><span class=\"ds-bullet dark\" style=\"--c:#fccc0a\">P</span>Re-review <b>0</b></button></div></div>",
+      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-lines{display:flex;flex-wrap:wrap;gap:8px}.ds-chip{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border:0;border-radius:999px;background:transparent;color:#fff;font:700 16px/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;cursor:pointer;box-shadow:inset 0 0 0 1.5px #3a3a3a;transition:box-shadow .2s cubic-bezier(.16,1,.3,1),background-color .2s cubic-bezier(.16,1,.3,1)}.ds-chip .ds-bullet{font-size:15px}.ds-chip b{color:#b9b9b9}.ds-chip:hover{box-shadow:inset 0 0 0 1.5px #8a8a8a}.ds-chip[aria-pressed=\"true\"]{background:#fff;color:#121212;box-shadow:none}.ds-chip[aria-pressed=\"true\"] b{color:#4a4a46}.ds-chip:disabled{opacity:.45;cursor:default;box-shadow:inset 0 0 0 1.5px #2a2a2a}.ds-chip:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+    },
+    {
+      "name": "Departure Row",
+      "kind": "card",
+      "refersTo": "",
+      "description": "A board row: bullet, title over reason, waiting time right-aligned; flips in on change.",
+      "html": "<div class=\"ds-band\"><ol class=\"ds-board\"><li class=\"ds-in\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span><span><span class=\"ds-t\">Add dark mode to the settings page</span><span class=\"ds-why\">web#482 · alice is waiting on <b>your review</b></span></span><time>3m<small>waiting</small></time></li><li class=\"ds-in\" style=\"animation-delay:40ms\"><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span><span><span class=\"ds-t\">Upgrade to Rails 8.1</span><span class=\"ds-why\">web#484 · <b>rubocop</b> failing</span></span><time>30m<small>waiting</small></time></li></ol></div>",
+      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-board{margin:0;padding:0;list-style:none;border-top:2px solid #fff;font-variant-numeric:tabular-nums}.ds-board li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 18px;padding:11px 4px;border-bottom:1px solid #2f2f2f}.ds-board .ds-bullet{font-size:19px}.ds-t{display:block;font-weight:700;font-size:20px;line-height:1.25}.ds-why{display:block;color:#b9b9b9;font-size:16px;margin-top:3px}.ds-why b{color:#fff}.ds-board time{font-weight:700;font-size:20px;text-align:right;min-width:3.2em}.ds-board time small{display:block;font-weight:400;font-size:13px;color:#b9b9b9}.ds-in{animation:ds-flip .5s cubic-bezier(.16,1,.3,1) both}@keyframes ds-flip{from{opacity:0;transform:translateY(-10px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(0 0 0 0)}}@media (prefers-reduced-motion:reduce){.ds-in{animation:none}}"
+    },
+    {
+      "name": "Key Plate",
+      "kind": "custom",
+      "refersTo": "key-plate",
+      "description": "Flat black keycap for shortcuts, inline or paired.",
+      "html": "<ul class=\"ds-keys\"><li><span class=\"ds-pair\"><span class=\"ds-key\">J</span><span class=\"ds-key\">K</span></span>Move down and up</li><li><span class=\"ds-pair\"><span class=\"ds-key\">⌘</span><span class=\"ds-key\">F</span></span>Search everything</li></ul>",
+      "css": ".ds-keys{margin:0;padding:0;list-style:none;font:400 19px/1.5 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;color:#121212;background:#fafaf8}.ds-keys li{display:flex;align-items:center;gap:18px;padding:14px 0;border-top:1px solid #121212}.ds-pair{display:flex;gap:6px;min-width:5.4em}.ds-key{display:inline-grid;place-items:center;min-width:1.9em;height:1.9em;padding:0 .45em;border-radius:5px;background:#121212;color:#fff;font-weight:800;font-size:18px;line-height:1}"
+    },
+    {
+      "name": "Line Map",
+      "kind": "custom",
+      "refersTo": "train-tag",
+      "description": "Stations in fixed order on a blue line; the current stop fills yellow.",
+      "html": "<ol class=\"ds-map\"><li><span class=\"ds-stop\"></span><h3>In review</h3><p>Waiting on reviewers</p></li><li><span class=\"ds-stop\"></span><h3>Ready to merge</h3><p>Approved and green</p></li><li class=\"here\"><span class=\"ds-stop\"></span><h3>Shipping</h3><p>Merged, deploying</p><span class=\"ds-train\">api#1204 deploying</span></li><li><span class=\"ds-stop\"></span><h3>Shipped</h3><p>Live</p></li></ol>",
+      "css": ".ds-map{position:relative;margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;color:#121212;background:#fafaf8}.ds-map::before{content:\"\";position:absolute;left:12.5%;right:12.5%;top:15px;height:10px;background:#0039a6;border-radius:5px}.ds-map li{position:relative;text-align:center;padding:0 6px}.ds-stop{display:block;width:40px;height:40px;margin:0 auto 14px;border-radius:50%;background:#fff;border:6px solid #0039a6;position:relative;box-sizing:border-box}.ds-map li.here .ds-stop{background:#fccc0a}.ds-map h3{margin:0;font-size:19px;font-weight:800;line-height:1.3}.ds-map p{margin:6px 0 0;font-size:15px;color:#4a4a46}.ds-train{display:inline-block;margin-top:10px;background:#121212;color:#fff;font-weight:700;font-size:14px;padding:6px 10px;border-radius:4px;white-space:nowrap}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "",
+      "description": "Enamel band nav with transit direction arrows.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-brand\" href=\"#\">GitBell</a><ul><li><a href=\"#\">Features <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg></a></li><li><a href=\"#\">Install <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg></a></li><li><a href=\"#\">Source <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M3 13h17.5l-5.6-5.6 4.2-4.2L31.9 16 19.1 28.8l-4.2-4.2 5.6-5.6H3z\" fill=\"currentColor\"/></svg></a></li></ul></nav>",
+      "css": ".ds-nav{position:relative;background:#121212;color:#fff;display:flex;align-items:center;gap:24px;padding:20px 24px 14px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-nav::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-brand{color:#fff;text-decoration:none;font-weight:800;font-size:22px;letter-spacing:-0.01em}.ds-nav ul{margin:0 0 0 auto;padding:0;list-style:none;display:flex;gap:28px;font-weight:700;font-size:16px}.ds-nav ul a{display:inline-flex;align-items:center;gap:7px;color:#b9b9b9;text-decoration:none}.ds-nav ul a:hover{color:#fff}.ds-nav ul a:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}.ds-nav svg{width:13px;height:13px}"
+    },
+    {
+      "name": "Platform Edge",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Yellow strip with a dot texture between a sign and the wall.",
+      "html": "<div class=\"ds-sign\">Every reason has a line</div><div class=\"ds-edge\"></div>",
+      "css": ".ds-sign{position:relative;background:#121212;color:#fff;font:800 40px/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.025em;padding:30px 24px 22px}.ds-sign::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-edge{height:26px;background-color:#fccc0a;background-image:radial-gradient(circle at 50% 50%,rgba(0,0,0,.14) 0 3px,transparent 3.5px);background-size:13px 13px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Station Sign",
+    "overview": "A sign tells you where to go next; GitBell tells you what to do next. The system is a station's signage: a white glazed subway-tile wall as the ground, black enamel sign bands running edge to edge at full strength, white Aileron set tight and bold on the black, and colour carried only by the transit devices that carry it in a real station: round line bullets, the line map's line, and the yellow platform edge. Text itself stays black and white.\n\nEvery band carries one instruction (\"Every reason has a line\", \"Everything has a key\"), the way a sign gives one direction. Information is set as a departure board: a bullet, a title, a reason, and a waiting time in a fixed tabular field at the right. Under each band the wall reads like the poster rail beside a platform: ruled lists, a legend, a line map, flat black key plates. Density is moderate; the wall breathes, the signs are packed and decisive.\n\nMotion belongs to the sign, not the scroll. A departure row changes like a sign updating: a short vertical flip with exponential ease-out, once per change. Nothing animates on scroll.",
+    "keyCharacteristics": [
+      "Black enamel bands with a white hairline 7px below their top edge, full bleed.",
+      "White subway-tile wall ground (raster `docs/assets/tile-wall.webp`, 240 x 120 CSS px per repeat).",
+      "One self-hosted neo-grotesque, Aileron, at 400 / 700 / 800; display set at 800 with negative tracking.",
+      "One colour per action, worn only by a round bullet with a single letter.",
+      "Yellow platform-edge strip with a dot texture closes a sign and meets the wall.",
+      "Tabular numerals everywhere; waiting time is always right-aligned."
+    ],
+    "rules": [
+      {
+        "name": "The Line Colour Rule",
+        "body": "A line colour appears only in a line device: a bullet, the line-map line, or a stop ring. Never on text, never as a panel fill, never as a gradient.",
+        "section": "colors"
+      },
+      {
+        "name": "The Letter-on-Light Rule",
+        "body": "Bullets on Re-review Yellow and Mergeable Lime carry Wall Ink letters; every other bullet carries white.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Highlight Rule",
+        "body": "Platform Yellow is the only interaction and attention colour: focus, hover on the exit plate, selection, \"here\". Do not introduce a second accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Numerals are tabular on every surface (`font-variant-numeric: tabular-nums` on body). Waiting times sit right-aligned in a fixed minimum width.",
+        "section": "typography"
+      },
+      {
+        "name": "The Three Weights Rule",
+        "body": "Aileron ships at 400, 700 and 800 only. Emphasis inside sentences is 700 in the brighter ink of the surface (white on the sign, Wall Ink on the wall), never colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The Enamel Rule",
+        "body": "Signs, plates and keys are flat: no shadows, no gradients, no glow. A sign is a painted panel.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** open every section with a full-bleed black band carrying the white hairline 7px from its top and one instruction.",
+      "**Do** give every action its bullet, letter and line colour, and use them identically everywhere.",
+      "**Do** put waiting time on every listed item, right-aligned, in tabular numerals.",
+      "**Do** draw arrows as solid transit arrows in SVG, pointing in the direction of travel.",
+      "**Do** keep wall content as ruled lists: 2px Wall Ink above a group, 1px between items.",
+      "**Do** keep motion to the row flip; respect `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** use a line colour on text, panels, backgrounds or gradients.",
+      "**Don't** add a second accent; Platform Yellow is the only highlight.",
+      "**Don't** put shadows, gradients or glow on signs, plates or keys; only mounted screenshots cast a shadow.",
+      "**Don't** set the dark glow hero over a screenshot, or a bento grid of feature cards.",
+      "**Don't** animate on scroll.",
+      "**Don't** add Aileron weights beyond 400, 700 and 800, or a second display face."
+    ]
+  }
+}
