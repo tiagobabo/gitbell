@@ -1,288 +1,261 @@
 ---
 name: GitBell
-description: What's waiting on you on GitHub, signed like a station.
+description: What's waiting on you on GitHub, held as flight progress strips in a bay.
 colors:
-  sign: "#121212"
-  sign-ink: "#ffffff"
-  sign-dim: "#b9b9b9"
-  sign-rule: "#2b2b2b"
-  wall: "#fafaf8"
-  ink: "#121212"
-  ink-2: "#4a4a46"
-  code-tint: "#e7e7e1"
-  edge: "#fccc0a"
-  line-review: "#c9470a"
-  line-rereview: "#fccc0a"
-  line-fix: "#d62a22"
-  line-after: "#996633"
-  line-hold: "#b933ad"
-  line-reply: "#0039a6"
-  line-merge: "#00843a"
-  line-mergeable: "#6cbe45"
+  console: "#d6d9d1"
+  rail: "#2b2e2a"
+  rail-slot: "#3a3e39"
+  rail-hover: "#3a3d37"
+  rail-label: "#cfd2c8"
+  rail-edge: "#6c7068"
+  ink: "#1c1d1a"
+  ink-2: "#464943"
+  paper: "#f5f1e6"
+  pencil: "#c0362c"
+  stock-review: "#f0e1b3"
+  stock-rereview: "#f5f1e6"
+  stock-fix: "#f2c7bf"
+  stock-after: "#f1cf9f"
+  stock-hold: "#dcd2ee"
+  stock-reply: "#cbdff1"
+  stock-merge: "#cae5c4"
+  stock-mergeable: "#e1edcf"
+  stock-shipped: "#e7e5dc"
+  stack-edge: "#8f948a"
 typography:
   display:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(56px, 8.4vw, 96px)"
-    fontWeight: 800
-    lineHeight: 0.95
-    letterSpacing: "-0.03em"
-  headline:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(30px, 4.8vw, 60px)"
-    fontWeight: 800
-    lineHeight: 1
-    letterSpacing: "-0.025em"
-  title:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "22px"
-    fontWeight: 800
-    lineHeight: 1.3
-    letterSpacing: "-0.01em"
-  row-title:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(18px, 1.6vw, 21px)"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "clamp(60px, 7.4vw, 96px)"
     fontWeight: 700
-    lineHeight: 1.25
-    fontFeature: "tnum"
-  lede:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(19px, 1.6vw, 22px)"
-    fontWeight: 400
-    lineHeight: 1.45
+    lineHeight: 0.92
+    letterSpacing: "-0.02em"
+  headline:
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "clamp(38px, 4.6vw, 60px)"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.015em"
+  title:
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "26px"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "-0.01em"
   body:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
     fontSize: "18px"
     fontWeight: 400
     lineHeight: 1.5
-    fontFeature: "tnum"
-  label:
-    fontFamily: "Aileron, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "16px"
+  strip-title:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "17px"
+    fontWeight: 600
+    lineHeight: 1.3
+  strip-field:
+    fontFamily: "Courier Prime, Courier New, monospace"
+    fontSize: "19px"
     fontWeight: 700
-    lineHeight: 1
-  code:
-    fontFamily: "ui-monospace, SF Mono, Menlo, monospace"
+    lineHeight: 1.15
+    letterSpacing: "0.02em"
+  strip-note:
+    fontFamily: "Courier Prime, Courier New, monospace"
     fontSize: "14px"
-    fontWeight: 500
-    lineHeight: 1.5
+    fontWeight: 400
+    lineHeight: 1.35
+  label:
+    fontFamily: "Courier Prime, Courier New, monospace"
+    fontSize: "13px"
+    fontWeight: 700
+    lineHeight: 1.15
+    letterSpacing: "0.06em"
 rounded:
-  plate-sm: "4px"
-  key: "5px"
-  plate: "6px"
-  screen: "12px"
-  pill: "999px"
-  bullet: "50%"
+  strip: "2px"
+  control: "3px"
+  bay: "6px"
+  mount: "8px"
 spacing:
-  xs: "6px"
-  sm: "14px"
-  md: "18px"
-  lg: "32px"
+  strip-gap: "5px"
+  bay-pad: "10px"
+  field: "8px 12px"
   gutter: "clamp(16px, 4vw, 56px)"
-  section: "clamp(72px, 9vw, 128px)"
-  max: "1320px"
+  section: "clamp(80px, 10vw, 140px)"
 components:
-  exit-plate:
-    backgroundColor: "{colors.sign-ink}"
+  button-primary:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.control}"
+    padding: "15px 22px 15px 18px"
+  button-primary-hover:
+    backgroundColor: "{colors.rail-hover}"
+  button-on-rail:
+    backgroundColor: "{colors.stock-review}"
     textColor: "{colors.ink}"
-    typography: "{typography.title}"
-    rounded: "{rounded.plate}"
-    padding: "16px 22px 16px 18px"
-  exit-plate-hover:
-    backgroundColor: "{colors.edge}"
-  exit-plate-on-wall:
-    backgroundColor: "{colors.sign}"
-    textColor: "{colors.sign-ink}"
-    rounded: "{rounded.plate}"
-    padding: "16px 22px 16px 18px"
-  line-bullet:
-    backgroundColor: "{colors.line-review}"
-    textColor: "{colors.sign-ink}"
-    rounded: "{rounded.bullet}"
-    size: "1.75em"
-  line-bullet-dark:
-    backgroundColor: "{colors.line-mergeable}"
+    rounded: "{rounded.control}"
+    padding: "15px 22px 15px 18px"
+  button-rail-ghost:
+    textColor: "{colors.paper}"
+    rounded: "{rounded.control}"
+    padding: "9px 12px"
+  strip:
+    backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.bullet}"
-    size: "1.75em"
-  line-selector:
-    backgroundColor: "transparent"
-    textColor: "{colors.sign-ink}"
-    typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    padding: "6px 14px 6px 6px"
-  line-selector-pressed:
-    backgroundColor: "{colors.sign-ink}"
+    rounded: "{rounded.strip}"
+    height: "66px"
+  bay:
+    backgroundColor: "{colors.rail}"
+    rounded: "{rounded.bay}"
+    padding: "12px 12px 14px"
+  key:
+    backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
-  key-plate:
-    backgroundColor: "{colors.sign}"
-    textColor: "{colors.sign-ink}"
-    rounded: "{rounded.key}"
-    height: "1.9em"
-    padding: "0 .45em"
-  train-tag:
-    backgroundColor: "{colors.sign}"
-    textColor: "{colors.sign-ink}"
-    rounded: "{rounded.plate-sm}"
-    padding: "6px 10px"
-  code-block:
-    backgroundColor: "{colors.sign}"
-    textColor: "{colors.sign-ink}"
-    typography: "{typography.code}"
-    rounded: "{rounded.plate}"
-    padding: "14px 16px"
+    rounded: "{rounded.control}"
+    height: "1.8em"
+  key-on-paper:
+    backgroundColor: "{colors.rail}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.control}"
+    height: "1.8em"
+  nav:
+    backgroundColor: "{colors.rail}"
+    textColor: "{colors.paper}"
+    height: "56px"
 ---
 
 # Design System: GitBell
 
 ## Overview
 
-**Creative North Star: "The Station Sign"**
+**Creative North Star: "The Strip Bay"**
 
-A sign tells you where to go next; GitBell tells you what to do next. The system is a station's signage: a white glazed subway-tile wall as the ground, black enamel sign bands running edge to edge at full strength, white Aileron set tight and bold on the black, and colour carried only by the transit devices that carry it in a real station: round line bullets, the line map's line, and the yellow platform edge. Text itself stays black and white.
+Each pull request is a flight progress strip, and control passes to whoever holds it. The system is an air traffic control console: a grey-green enamel ground, near-black rails and holders that frame every collection, and paper strips in pastel stock slotted into them, one stock per action. A strip is split by hairline rules into typed fields: an action code tab, a callsign, the title over its reason, and the waiting time. Everything typed on a strip is Courier Prime; the console's own voice is Barlow Semi Condensed for headings and Barlow for running text.
 
-Every band carries one instruction ("Every reason has a line", "Everything has a key"), the way a sign gives one direction. Information is set as a departure board: a bullet, a title, a reason, and a waiting time in a fixed tabular field at the right. Under each band the wall reads like the poster rail beside a platform: ruled lists, a legend, a line map, flat black key plates. Density is moderate; the wall breathes, the signs are packed and decisive.
+The controller's hand appears only as red grease pencil: a ring drawn round the failing check, a tick on the strip that can go. Those marks are SVG strokes drawn by hand, never icons or badges. Density is a working console: strips pack tight in their holders (5px apart), while the console ground between bays is generous.
 
-Motion belongs to the sign, not the scroll. A departure row changes like a sign updating: a short vertical flip with exponential ease-out, once per change. Nothing animates on scroll.
+Motion is the strip leaving the bay. A handled strip slides out sideways with exponential ease-out; a hovered strip nudges 4px toward the controller. Nothing animates on scroll. The page rejects the dark glow hero with a bento grid.
 
 **Key Characteristics:**
-- Black enamel bands with a white hairline 7px below their top edge, full bleed.
-- White subway-tile wall ground (raster `docs/assets/tile-wall.webp`, 240 x 120 CSS px per repeat).
-- One self-hosted neo-grotesque, Aileron, at 400 / 700 / 800; display set at 800 with negative tracking.
-- One colour per action, worn only by a round bullet with a single letter.
-- Yellow platform-edge strip with a dot texture closes a sign and meets the wall.
-- Tabular numerals everywhere; waiting time is always right-aligned.
+- Grey-green console ground; every collection sits in a near-black rail holder with rounded 6px corners.
+- Paper strips, one pastel stock per action, divided into typed fields by 1px hairlines.
+- Courier Prime for everything on a strip; Barlow Semi Condensed 700 headings; Barlow 400/600 body.
+- Red grease-pencil marks drawn as hand-made SVG strokes, used sparingly as annotation.
+- One motion: the horizontal strip slide, exponential ease-out, off under reduced motion.
 
 ## Colors
 
-Black and white do all the reading; a fixed set of transit line colours does all the signalling.
+A muted, paper-and-enamel palette: two structural greys (console and rail), warm paper, eight pastel strip stocks that carry action meaning, and one red reserved for the grease pencil.
 
 ### Primary
-- **Enamel Black** (`sign`): the sign bands, nav, close band, footer, key plates, train tags and code blocks. Owned edge to edge, never tinted or gradiented.
-- **Sign White** (`sign-ink`): headings and primary text on the sign, the white hairline, the exit plate face and the pressed line selector.
+- **Rail Black** (`rail`): strip holders, bays, the nav rail, the board, the closing band and the footer. Every group of strips sits on it.
+- **Console Enamel** (`console`): the page ground between bays. Also `theme-color`.
 
 ### Secondary
-- **Platform Yellow** (`edge`): the platform-edge strip, the exit plate hover, the "you are here" stop on the line map, focus rings, text selection and the skip link. It is the system's one highlight colour.
+- **Strip Stock** (`stock-*`): one pastel paper per action, always on the whole strip, never as an accent. Review buff (`stock-review`), re-review plain (`stock-rereview`, equal to paper), fix pink (`stock-fix`), failed-after-merge orange (`stock-after`), on hold lilac (`stock-hold`), reply blue (`stock-reply`), merge green (`stock-merge`), mergeable pale green (`stock-mergeable`). Shipped strips on the board use a spent grey stock (`stock-shipped`).
 
-### Tertiary: the line colours
-Each action owns one colour and one letter. These colours appear only inside line devices.
-- **Review Orange** (`line-review`), letter R.
-- **Re-review Yellow** (`line-rereview`), letter P. Same value as Platform Yellow; it carries black text.
-- **Fix Red** (`line-fix`), letter F.
-- **Failed-after-merge Brown** (`line-after`), letter X.
-- **On-hold Purple** (`line-hold`), letter H.
-- **Reply Blue** (`line-reply`), letter C. Also the line on the pull-request line map.
-- **Merge Green** (`line-merge`), letter M.
-- **Mergeable Lime** (`line-mergeable`), letter G. Carries black text.
+### Tertiary
+- **Grease Pencil** (`pencil`): only in hand-drawn SVG marks (ring, tick). Never text, never fills, never UI state.
 
 ### Neutral
-- **Signal Grey** (`sign-dim`): secondary text on the sign (reasons, counts, captions, inactive nav), 9.6:1 on Enamel Black.
-- **Sign Rule** (`sign-rule`): 1px dividers within the sign (hero top, footer top, departure rows).
-- **Glaze White** (`wall`): the tile-wall ground colour under the raster.
-- **Wall Ink** (`ink`): primary text and rules on the wall, and the numbered step discs.
-- **Poster Grey** (`ink-2`): secondary text on the wall, 8.3:1 on Glaze White.
-- **Grout Tint** (`code-tint`): background of inline code on the wall only.
+- **Console Ink** (`ink`): all text on console and paper; the primary button; focus rings on light surfaces; text selection.
+- **Typed Grey** (`ink-2`): secondary copy, ledes, strip sub-fields (6.4:1 on console, 6.0:1 or better on every stock).
+- **Strip Paper** (`paper`): plain strip stock, cards, keycaps on the rail, text on the rail.
+- **Rail Slot** (`rail-slot`): a stage column inside the board, one step up from the rail.
+- **Rail Hover** (`rail-hover`): primary button hover.
+- **Rail Label** (`rail-label`): muted mono text on the rail (nav links, bay head and foot, close meta).
+- **Rail Edge** (`rail-edge`): the outline of the ghost control on the rail.
+- **Stack Edge** (`stack-edge`): the edge of the strip behind a stacked strip.
+- Hairlines inside strips are ink at 28% (`rgba(28,29,26,.28)`); the code tab and number tab are ink at 8% over the stock; strip outlines are an inset 1px of black at 18%.
 
 ### Named Rules
-**The Line Colour Rule.** A line colour appears only in a line device: a bullet, the line-map line, or a stop ring. Never on text, never as a panel fill, never as a gradient.
+**The Stock Is the Action Rule.** A strip's paper colour names its action, identically everywhere (hero bay, legend, board, install steps). Never use a stock for anything that is not a strip, a strip field, or a step that adopts a strip's meaning.
 
-**The Letter-on-Light Rule.** Bullets on Re-review Yellow and Mergeable Lime carry Wall Ink letters; every other bullet carries white.
-
-**The One Highlight Rule.** Platform Yellow is the only interaction and attention colour: focus, hover on the exit plate, selection, "here". Do not introduce a second accent.
+**The Pencil Rule.** Red appears only as grease pencil drawn over paper. If it isn't a hand-drawn mark, it isn't red.
 
 ## Typography
 
-**Display Font:** Aileron (with Helvetica Neue, Helvetica, Arial)
-**Body Font:** Aileron
-**Label/Mono Font:** ui-monospace / SF Mono for code only
+**Display Font:** Barlow Semi Condensed (with Arial Narrow, sans-serif)
+**Body Font:** Barlow (with Helvetica Neue, Arial, sans-serif)
+**Label/Mono Font:** Courier Prime (with Courier New, monospace)
 
-**Character:** One neo-grotesque doing the job of a signage alphabet: heavy and tightly tracked on the sign, plain and roomy on the wall.
+**Character:** A condensed console face for the board's printed labels, a plain humanist sans for the manual, and a typewriter for everything the controller typed onto a strip.
 
 ### Hierarchy
-- **Display** (800, clamp 56-96px, 0.95): the hero "Your turn" and the closing line only.
-- **Headline** (800, clamp 30-60px, 1): one instruction per sign band.
-- **Title** (800, 19-24px, 1.3, -0.01em): legend entries, line-map stations, service notes, install steps, exit plate text (21px).
-- **Row title** (700, clamp 18-21px, 1.25): departure-row titles and waiting times; single line with ellipsis above 600px.
-- **Lede** (400, clamp 19-23px, 1.35-1.45): the intro under each sign, max 62ch on the wall, 34ch on the hero.
-- **Body** (400, 18px, 1.5; 15-17px in lists): wall copy, max 72ch.
-- **Label** (700, 14-16px, 1): nav, line-selector chips, train tags, captions (400, 13-15px).
+- **Display** (700, clamp(60px, 7.4vw, 96px), 0.92): the hero "Your turn." and the closing line only.
+- **Headline** (700, clamp(38px, 4.6vw, 60px), 1): one per section head, beside its lede in a 5/7 split.
+- **Title** (700, 22-32px, 1.2): install step names, facts, sub-heads.
+- **Body** (400, 18px, 1.5): running copy; ledes at clamp(18px, 1.5vw, 20px) in Typed Grey, capped at 58ch; emphasis is Barlow 600 in Console Ink.
+- **Strip Title** (Barlow 600, 17px, 1.3): the PR title on a strip, single line with ellipsis on wide screens.
+- **Strip Field** (Courier Prime 700, 19px): callsign and waiting time.
+- **Strip Note** (Courier Prime 400, 13-14px): reason line, author, captions, meta, footer.
+- **Label** (Courier Prime 700, 11.5-14px, 0.05-0.08em, uppercase): action code tabs, nav links, bay heads, stage names, timeline field names.
 
 ### Named Rules
-**The Tabular Rule.** Numerals are tabular on every surface (`font-variant-numeric: tabular-nums` on body). Waiting times sit right-aligned in a fixed minimum width.
+**The Typed Strip Rule.** Anything written on a strip, a key, a timeline or a rail label is Courier Prime. The one exception is the strip title, which stays in Barlow 600 for reading.
 
-**The Three Weights Rule.** Aileron ships at 400, 700 and 800 only. Emphasis inside sentences is 700 in the brighter ink of the surface (white on the sign, Wall Ink on the wall), never colour.
+**The Uppercase Is Printed Rule.** Uppercase with tracking belongs to printed console labels (code tabs, stage names, nav, bay heads). Headings and prose stay sentence case.
 
 ## Layout
 
-A single centred column, `min(1320px, 100% - 2 x gutter)` with a fluid gutter (16-56px). Sign bands run full bleed; their content sits in the column. Sections start `clamp(72px, 9vw, 128px)` apart, each with a band sign followed by wall content beneath at `clamp(28px, 3.5vw, 44px)`.
+A centred wrap of `min(1320px, 100% - 2 * gutter)` with a fluid gutter. Sections open with clamp(80px, 10vw, 140px) of console above them. The hero is a 4.4/7.6 grid (copy left, live bay right) that stacks under 980px; section heads are a 5/7 grid (headline left, lede right, bottom-aligned) that stacks under 860px.
 
-The hero is a two-column grid (instruction left, exit plate right) that collapses to one column at 860px with the exit plate moving under the board. Wall content uses ruled lists rather than cards: two-column legend and keys (one column under 760px), three-column notes, steps and facts (two then one column), a 5:7 split for timeline and screenshot (stacked under 900px). The line map runs six stations horizontally and turns vertical at 860px, its line moving to the left edge.
-
-The app screenshot rises from behind the platform edge: it overlaps the strip by 14px, with the strip drawn above it.
+Collections are always bays: a rail holder with 10-12px padding and strips 5-6px apart. The legend is two strip columns (one under 800px); the stage board is six columns, three under 1000px, two under 560px. Strips use fixed field columns (code 6.6em, callsign 8.4em, flexible title, time 4.6em); under 640px the callsign field drops and titles wrap.
 
 ## Elevation & Depth
 
-The system is flat. Depth is the physical order of a station: the sign band, the yellow edge strip in front of it, and the wall behind. The only cast shadow is under the app screenshot, mounted on the wall like a lit poster; everything else is flat colour and rules.
+Depth is physical, not ambient: paper sits in holders. Strips carry no cast shadow, only a 1px inset outline. The rail is the frame; paper inside a frame (timeline, keys card) gets a 5px rail ring drawn as a spread shadow, so it reads as slotted. Only the bay and the screenshot mount cast a soft shadow onto the console, with a 1px light lip on top as if set into the enamel.
 
 ### Shadow Vocabulary
-- **Mounted screen** (`box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 24px 60px -20px rgba(0,0,0,.28)`): app screenshots on the wall only.
-- **Chip outline** (`box-shadow: inset 0 0 0 1.5px #3a3a3a`, `#8a8a8a` on hover): the line-selector chip border, drawn inset so it never shifts layout.
+- **Strip outline** (`box-shadow: inset 0 0 0 1px rgba(0,0,0,.18)`): every strip and mini strip.
+- **Holder ring** (`box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px #2b2e2a`): a single paper panel slotted in a rail (timeline, keys card).
+- **Bay set-in** (`box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 18px 40px -24px rgba(0,0,0,.55)`): the hero bay.
+- **Mount set-in** (`box-shadow: 0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6)`): screenshot mounts.
+- **Stacked strip** (`box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), -4px 4px 0 -1px #8f948a`): a second strip of paper behind one in a stack. It represents a physical strip and appears only on stacks.
 
 ### Named Rules
-**The Enamel Rule.** Signs, plates and keys are flat: no shadows, no gradients, no glow. A sign is a painted panel.
+**The Paper Doesn't Float Rule.** Strips never cast shadows and never lift on hover. Depth comes from the holder, not from elevation.
 
 ## Shapes
 
-Rectangles with small, consistent corners, and circles for bullets and stops. Sign bands are square and full bleed. Plates and code blocks take 6px, key plates 5px, train tags 4px, screenshots 12px (the app window's own corner; flat top where one rises from the edge). Line-selector chips are full pills. Bullets, stops and step numbers are perfect circles. Rules are the structure of the wall: 2px Wall Ink above a group, 1px between items.
+Nearly square. Strips and paper fields 2px, controls and keycaps 3px, bays and holders 6px, screenshot mounts 8px (with the image at 4px inside). Fields are divided by straight 1px hairlines; key lists use 1px dashed rules at 40% ink. The only curves are the grease-pencil strokes, round-capped at 2.4px and drawn loosely by hand.
 
 ## Components
 
-### Line Bullet (signature)
-The system's unit of meaning: one circle, one letter, one action.
-- **Shape:** circle, 1.75em, sized by font-size (15px in chips, 19px on the board, 22px in the legend).
-- **Colour:** the action's line colour; letter 800 white, or Wall Ink on yellow and lime.
-- **Use:** always paired with its action; letters are fixed (R, P, F, X, H, C, M, G).
+### Buttons
+- **Shape:** squared (3px).
+- **Primary:** Console Ink with paper text, Barlow Semi Condensed 700 at 20px, a solid SVG download arrow at 22px leading. 15px 22px 15px 18px.
+- **Hover / Focus:** background eases to Rail Hover over 0.2s with exponential ease-out; 3px ink outline offset 3px on light ground.
+- **On the rail:** review-buff stock with ink text, lightening to `#fff3cf` on hover.
+- **Rail ghost:** transparent, uppercase Courier Prime 700 at 13.5px, 1px Rail Edge outline turning white on hover; 45% opacity when disabled.
 
-### Departure Board
-- Rows on the sign: bullet, title over reason, waiting time at the right with "waiting" beneath in Signal Grey.
-- 2px white rule on top, 1px Sign Rule between rows, 11px vertical padding.
-- **Motion:** a changed row flips in once: 0.5s `cubic-bezier(.16,1,.3,1)`, from 10px above with a top-down clip reveal, staggered 40ms per row. Off under reduced motion.
+### Strip (signature)
+- A paper strip in its action stock, 66px minimum, 2px corners, inset outline, split into typed fields by 1px hairlines.
+- Fields: uppercase code tab on an 8% ink tint; callsign in Courier Prime 700 over the author; Barlow 600 title over a Courier reason line; waiting time right-aligned in Courier 700 over an uppercase unit.
+- Interactive strips in a bay nudge right 4px on hover and slide out (`translateX(110%)`, fade) over 0.45s with exponential ease-out when handled. Variants reuse the same stock and field grammar: legend strips (code plus description), install strips (number tab plus step), mini strips on the board.
 
-### Line Selector (chips)
-- **Style:** transparent pill on the sign with an inset 1.5px outline, bullet inside, count in Signal Grey.
-- **State:** pressed is a white pill with Wall Ink text and no outline; hover brightens the outline; disabled at 45% opacity. Transitions 0.2s with the same ease-out.
+### Bay / Holder
+- Rail Black, 6px corners, 10-12px padding, strips 5px apart. A bay head and foot in Rail Label Courier carry the count and controls.
 
-### Exit Plate (primary button)
-- **Shape:** 6px corners, 30px arrow glyph drawn as SVG, 800 weight at 21px.
-- **On the sign:** white plate, Wall Ink text; hover turns the plate Platform Yellow.
-- **On the wall:** Enamel Black plate, white text; hover `#333`.
-- **Focus:** 3px Platform Yellow outline, 3px offset (global).
+### Grease Pencil Mark
+- Absolutely positioned SVG, `pencil` stroke at 2.4px, round caps and joins, non-scaling stroke, no fill, `aria-hidden`. Two marks exist: a loose ring round a failing check name, and a tick near the waiting time of a mergeable strip.
 
-### Key Plate
-Flat Enamel Black keycap, white 800 letter, 5px corners, min 1.9em square; set inline in copy or paired in key lists.
-
-### Line Map
-Six stations in fixed order on a 10px Reply Blue line with 5px rounded ends. Stops are 40px white discs with a 6px blue ring; the current stop fills Platform Yellow. A black train tag names the pull request at the stop.
+### Keycap
+- Inline grid, 1.8em square minimum, 3px corners, Courier Prime 700. Paper on the rail; rail with paper text on paper.
 
 ### Navigation
-On the enamel band: app icon and "GitBell" (800, 22px) left; links right in Signal Grey 700 16px, each with a transit-style direction arrow (down for in-page, right for outbound), white on hover. Features hides under 520px.
-
-### Platform Edge
-A 26px Platform Yellow strip with a 13px grid of dark dots (14% black), between a sign and the wall.
+- The console's top rail: Rail Black, 56px, brand in Barlow Semi Condensed 700 at 22px with the app icon; links in uppercase Courier Prime 700 at 14px, Rail Label turning white and underlined on hover. Features drops under 520px.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** open every section with a full-bleed black band carrying the white hairline 7px from its top and one instruction.
-- **Do** give every action its bullet, letter and line colour, and use them identically everywhere.
-- **Do** put waiting time on every listed item, right-aligned, in tabular numerals.
-- **Do** draw arrows as solid transit arrows in SVG, pointing in the direction of travel.
-- **Do** keep wall content as ruled lists: 2px Wall Ink above a group, 1px between items.
-- **Do** keep motion to the row flip; respect `prefers-reduced-motion`.
+- **Do** put every collection of items in a rail holder, as strips 5-6px apart.
+- **Do** give every action its own stock and use it identically on every surface.
+- **Do** type everything on a strip in Courier Prime, with fields split by 1px hairlines at 28% ink.
+- **Do** keep red to hand-drawn grease-pencil SVG marks, sparingly, one mark per strip at most.
+- **Do** keep motion to the horizontal strip slide with `cubic-bezier(.16,1,.3,1)`, and turn it off under `prefers-reduced-motion`.
+- **Do** mount app screenshots in a rail frame (8px corners, 4px on the image) with the mount set-in shadow.
 
 ### Don't:
-- **Don't** use a line colour on text, panels, backgrounds or gradients.
-- **Don't** add a second accent; Platform Yellow is the only highlight.
-- **Don't** put shadows, gradients or glow on signs, plates or keys; only mounted screenshots cast a shadow.
-- **Don't** set the dark glow hero over a screenshot, or a bento grid of feature cards.
+- **Don't** use a strip stock as a panel fill, an accent, or a text colour.
+- **Don't** use red for text, UI state, or error badges; it is the controller's pencil.
+- **Don't** cast shadows from strips or lift them on hover; depth belongs to holders.
 - **Don't** animate on scroll.
-- **Don't** add Aileron weights beyond 400, 700 and 800, or a second display face.
+- **Don't** set a dark glow hero over a screenshot, or a bento grid of feature cards.

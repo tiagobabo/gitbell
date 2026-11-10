@@ -18,7 +18,6 @@
 <link rel="preload" href="assets/fonts/barlow-semi-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/courier-prime-700.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  @font-face { font-family: "Barlow Semi Condensed"; src: url("assets/fonts/barlow-semi-condensed-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
   @font-face { font-family: "Barlow Semi Condensed"; src: url("assets/fonts/barlow-semi-condensed-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
   @font-face { font-family: "Barlow"; src: url("assets/fonts/barlow-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
   @font-face { font-family: "Barlow"; src: url("assets/fonts/barlow-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
@@ -29,7 +28,7 @@
     --console: #d6d9d1;     /* the board's enamel */
     --rail: #2b2e2a;        /* strip holders and rails */
     --ink: #1c1d1a;
-    --ink-2: #464943;       /* 7.0:1 on the console */
+    --ink-2: #464943;       /* 6.4:1 on the console */
     --paper: #f5f1e6;       /* plain strip stock */
     --pencil: #c0362c;      /* grease pencil */
 
@@ -58,6 +57,7 @@
   img { display: block; max-width: 100%; height: auto; }
   a { color: inherit; text-underline-offset: .18em; text-decoration-thickness: 1.5px; }
   :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .nav :focus-visible, .bay :focus-visible, .close :focus-visible, footer :focus-visible { outline-color: var(--s-review); }
   .wrap { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; }
   .skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--paper); padding: 8px 14px; font-weight: 600; z-index: 20; }
   .skip:focus { left: 8px; }
@@ -141,7 +141,7 @@
   .tick { right: 5.4em; top: 8px; width: 24px; height: 24px; }
 
   .bay-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 12px 6px 0; color: #d9dcd2; font: 400 13.5px/1.6 var(--type); }
-  .bay-foot button { font: 700 13.5px/1 var(--type); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: transparent; border: 1px solid #6c7068; border-radius: 3px; padding: 9px 12px; cursor: pointer; }
+  .bay-foot button { font: 700 13.5px/1 var(--type); text-transform: uppercase; letter-spacing: .06em; color: #fff; background: transparent; border: 1px solid #8a8e85; border-radius: 3px; padding: 9px 12px; cursor: pointer; }
   .bay-foot button:hover { border-color: #fff; }
   .bay-foot button:disabled { opacity: .45; cursor: default; }
   .key { display: inline-grid; place-items: center; min-width: 1.8em; height: 1.8em; padding: 0 .4em; border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 .92em/1 var(--type); vertical-align: middle; }

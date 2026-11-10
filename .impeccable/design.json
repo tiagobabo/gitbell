@@ -4,486 +4,571 @@
   "title": "Design System: GitBell",
   "extensions": {
     "colorMeta": {
-      "sign": {
+      "console": {
         "role": "primary",
-        "displayName": "Enamel Black",
-        "canonical": "oklch(18.2% 0.000 90)",
+        "displayName": "Console Enamel",
+        "canonical": "#d6d9d1",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#0b0b0a",
+          "#242523",
+          "#41433e",
+          "#60625c",
+          "#81837d",
+          "#a4a6a1",
+          "#c8cac6",
+          "#eeefec"
         ]
       },
-      "sign-ink": {
+      "rail": {
         "role": "primary",
-        "displayName": "Sign White",
-        "canonical": "oklch(100.0% 0.000 90)",
+        "displayName": "Rail Black",
+        "canonical": "#2b2e2a",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#090c09",
+          "#232622",
+          "#40433f",
+          "#5f625e",
+          "#80837f",
+          "#a3a6a1",
+          "#c7cac5",
+          "#ecf0ea"
         ]
       },
-      "edge": {
-        "role": "secondary",
-        "displayName": "Platform Yellow",
-        "canonical": "oklch(86.2% 0.175 91)",
-        "tonalRamp": [
-          "#160700",
-          "#372000",
-          "#5c3c00",
-          "#835a00",
-          "#a67c00",
-          "#c3a130",
-          "#e2c779",
-          "#ffeeb7"
-        ]
-      },
-      "line-review": {
-        "role": "tertiary",
-        "displayName": "Review Orange",
-        "canonical": "oklch(57.2% 0.176 40)",
-        "tonalRamp": [
-          "#220000",
-          "#4b0700",
-          "#781d00",
-          "#a83400",
-          "#cf592c",
-          "#ea8663",
-          "#ffb296",
-          "#ffdfca"
-        ]
-      },
-      "line-rereview": {
-        "role": "tertiary",
-        "displayName": "Re-review Yellow",
-        "canonical": "oklch(86.2% 0.175 91)",
-        "tonalRamp": [
-          "#160700",
-          "#372000",
-          "#5c3c00",
-          "#835a00",
-          "#a67c00",
-          "#c3a130",
-          "#e2c779",
-          "#ffeeb7"
-        ]
-      },
-      "line-fix": {
-        "role": "tertiary",
-        "displayName": "Fix Red",
-        "canonical": "oklch(56.8% 0.208 29)",
-        "tonalRamp": [
-          "#250000",
-          "#510000",
-          "#810002",
-          "#b51612",
-          "#dd4539",
-          "#f77a6b",
-          "#ffaa9c",
-          "#ffd9ce"
-        ]
-      },
-      "line-after": {
-        "role": "tertiary",
-        "displayName": "Failed-after-merge Brown",
-        "canonical": "oklch(55.4% 0.094 64)",
-        "tonalRamp": [
-          "#160700",
-          "#371e04",
-          "#5c3915",
-          "#835628",
-          "#a77749",
-          "#c59c77",
-          "#e3c2a5",
-          "#ffead4"
-        ]
-      },
-      "line-hold": {
-        "role": "tertiary",
-        "displayName": "On-hold Purple",
-        "canonical": "oklch(56.8% 0.214 332)",
-        "tonalRamp": [
-          "#1e001b",
-          "#44003f",
-          "#6e0c67",
-          "#9b2291",
-          "#c24ab5",
-          "#de7cd1",
-          "#f9aaed",
-          "#ffd9ff"
-        ]
-      },
-      "line-reply": {
-        "role": "tertiary",
-        "displayName": "Reply Blue",
-        "canonical": "oklch(39.6% 0.183 262)",
-        "tonalRamp": [
-          "#00062a",
-          "#042058",
-          "#143c89",
-          "#275abe",
-          "#477de5",
-          "#75a4fb",
-          "#a3caff",
-          "#d3f0ff"
-        ]
-      },
-      "line-merge": {
-        "role": "tertiary",
-        "displayName": "Merge Green",
-        "canonical": "oklch(53.6% 0.148 150)",
-        "tonalRamp": [
-          "#001100",
-          "#00300a",
-          "#00511e",
-          "#017533",
-          "#399854",
-          "#6fb97f",
-          "#a1daab",
-          "#d2fbd9"
-        ]
-      },
-      "line-mergeable": {
-        "role": "tertiary",
-        "displayName": "Mergeable Lime",
-        "canonical": "oklch(72.4% 0.176 137)",
-        "tonalRamp": [
-          "#001100",
-          "#042f00",
-          "#175000",
-          "#2b7400",
-          "#4e9728",
-          "#7cb863",
-          "#aad997",
-          "#d8fbca"
-        ]
-      },
-      "sign-dim": {
+      "rail-slot": {
         "role": "neutral",
-        "displayName": "Signal Grey",
-        "canonical": "oklch(78.6% 0.000 90)",
+        "displayName": "Rail Slot",
+        "canonical": "#3a3e39",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#0b0b0a",
+          "#242623",
+          "#40433f",
+          "#5f625e",
+          "#80847f",
+          "#a3a6a2",
+          "#c7cac7",
+          "#edefed"
         ]
       },
-      "sign-rule": {
+      "rail-hover": {
         "role": "neutral",
-        "displayName": "Sign Rule",
-        "canonical": "oklch(27.6% 0.000 90)",
+        "displayName": "Rail Hover",
+        "canonical": "#3a3d37",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#0b0b0a",
+          "#242623",
+          "#41433f",
+          "#5f625d",
+          "#80837d",
+          "#a3a6a1",
+          "#c8cac6",
+          "#eeefed"
         ]
       },
-      "wall": {
+      "rail-label": {
         "role": "neutral",
-        "displayName": "Glaze White",
-        "canonical": "oklch(98.5% 0.003 106)",
+        "displayName": "Rail Label",
+        "canonical": "#cfd2c8",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252524",
-          "#424241",
-          "#616160",
-          "#828281",
-          "#a5a5a4",
-          "#c9c9c8",
-          "#eeeeee"
+          "#0b0b0a",
+          "#242622",
+          "#41433d",
+          "#60625b",
+          "#81847b",
+          "#a4a69f",
+          "#c8cac5",
+          "#eeefec"
+        ]
+      },
+      "rail-edge": {
+        "role": "neutral",
+        "displayName": "Rail Edge",
+        "canonical": "#6c7068",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242622",
+          "#40433e",
+          "#5f635c",
+          "#80847c",
+          "#a3a6a0",
+          "#c8cac6",
+          "#eeefec"
         ]
       },
       "ink": {
         "role": "neutral",
-        "displayName": "Wall Ink",
-        "canonical": "oklch(18.2% 0.000 90)",
+        "displayName": "Console Ink",
+        "canonical": "#1c1d1a",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#0b0c09",
+          "#242522",
+          "#41423f",
+          "#60625e",
+          "#82837f",
+          "#a4a6a2",
+          "#c8cac6",
+          "#eeefeb"
         ]
       },
       "ink-2": {
         "role": "neutral",
-        "displayName": "Poster Grey",
-        "canonical": "oklch(40.8% 0.007 107)",
+        "displayName": "Typed Grey",
+        "canonical": "#464943",
         "tonalRamp": [
           "#0b0b0a",
-          "#252523",
-          "#42423f",
-          "#61615e",
-          "#83837e",
-          "#a5a5a2",
-          "#c9c9c6",
-          "#eeeeec"
+          "#242623",
+          "#41433f",
+          "#5f625d",
+          "#80837e",
+          "#a3a6a1",
+          "#c8cac6",
+          "#eeefed"
         ]
       },
-      "code-tint": {
+      "paper": {
         "role": "neutral",
-        "displayName": "Grout Tint",
-        "canonical": "oklch(92.6% 0.008 107)",
+        "displayName": "Strip Paper",
+        "canonical": "#f5f1e6",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262521",
+          "#44423c",
+          "#646159",
+          "#858279",
+          "#a7a59e",
+          "#cbc9c4",
+          "#efeeeb"
+        ]
+      },
+      "pencil": {
+        "role": "tertiary",
+        "displayName": "Grease Pencil",
+        "canonical": "#c0362c",
+        "tonalRamp": [
+          "#1b0302",
+          "#460f0a",
+          "#751f18",
+          "#a93027",
+          "#d05548",
+          "#e78679",
+          "#fcb5aa",
+          "#ffe3dc"
+        ]
+      },
+      "stock-review": {
+        "role": "secondary",
+        "displayName": "Review Buff",
+        "canonical": "#f0e1b3",
+        "tonalRamp": [
+          "#0e0b04",
+          "#2a2514",
+          "#4a4127",
+          "#6c603c",
+          "#8e825c",
+          "#aea587",
+          "#d0c9b4",
+          "#f2eee2"
+        ]
+      },
+      "stock-rereview": {
+        "role": "secondary",
+        "displayName": "Re-review Plain",
+        "canonical": "#f5f1e6",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262521",
+          "#44423c",
+          "#646159",
+          "#858279",
+          "#a7a59e",
+          "#cbc9c4",
+          "#efeeeb"
+        ]
+      },
+      "stock-fix": {
+        "role": "secondary",
+        "displayName": "Fix Pink",
+        "canonical": "#f2c7bf",
+        "tonalRamp": [
+          "#100908",
+          "#30211e",
+          "#533b37",
+          "#795852",
+          "#9c7972",
+          "#ba9d98",
+          "#d9c4c0",
+          "#f8ebe9"
+        ]
+      },
+      "stock-after": {
+        "role": "secondary",
+        "displayName": "Failed-after-merge Orange",
+        "canonical": "#f1cf9f",
+        "tonalRamp": [
+          "#100a03",
+          "#2f2311",
+          "#513e22",
+          "#775c35",
+          "#997d55",
+          "#b8a182",
+          "#d7c7b0",
+          "#f6ede0"
+        ]
+      },
+      "stock-hold": {
+        "role": "secondary",
+        "displayName": "On-hold Lilac",
+        "canonical": "#dcd2ee",
+        "tonalRamp": [
+          "#0c0a0f",
+          "#27232d",
+          "#443f4e",
+          "#655d72",
+          "#867e95",
+          "#a8a1b4",
+          "#cbc6d4",
+          "#f0edf5"
+        ]
+      },
+      "stock-reply": {
+        "role": "secondary",
+        "displayName": "Reply Blue",
+        "canonical": "#cbdff1",
+        "tonalRamp": [
+          "#080c0f",
+          "#1f262c",
+          "#38434d",
+          "#546371",
+          "#748593",
+          "#9aa7b3",
+          "#c1cad3",
+          "#eaeff4"
+        ]
+      },
+      "stock-merge": {
+        "role": "secondary",
+        "displayName": "Merge Green",
+        "canonical": "#cae5c4",
+        "tonalRamp": [
+          "#080d07",
+          "#1f281c",
+          "#384734",
+          "#53684e",
+          "#748a6f",
+          "#99ab96",
+          "#c1cdbe",
+          "#eaf1e8"
+        ]
+      },
+      "stock-mergeable": {
+        "role": "secondary",
+        "displayName": "Mergeable Pale Green",
+        "canonical": "#e1edcf",
+        "tonalRamp": [
+          "#0a0c07",
+          "#23271c",
+          "#3e4534",
+          "#5c654e",
+          "#7d876e",
+          "#a1a895",
+          "#c6ccbe",
+          "#edf0e8"
+        ]
+      },
+      "stock-shipped": {
+        "role": "secondary",
+        "displayName": "Spent Stock",
+        "canonical": "#e7e5dc",
         "tonalRamp": [
           "#0b0b0a",
-          "#252523",
-          "#42423f",
-          "#62615d",
-          "#83837e",
-          "#a5a5a1",
-          "#c9c9c6",
-          "#efefec"
+          "#262522",
+          "#43423d",
+          "#63615a",
+          "#84827b",
+          "#a6a59f",
+          "#cac9c5",
+          "#efeeec"
+        ]
+      },
+      "stack-edge": {
+        "role": "neutral",
+        "displayName": "Stack Edge",
+        "canonical": "#8f948a",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242622",
+          "#40433d",
+          "#5f635b",
+          "#80847b",
+          "#a3a69f",
+          "#c7cac5",
+          "#edefec"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Hero \"Your turn\" and the closing line only."
+        "purpose": "Hero \"Your turn.\" and the closing line only."
       },
       "headline": {
-        "displayName": "Sign Headline",
-        "purpose": "One instruction per sign band."
+        "displayName": "Section Headline",
+        "purpose": "One per section head, beside its lede."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Legend entries, stations, notes, steps, exit plate text."
-      },
-      "row-title": {
-        "displayName": "Row Title",
-        "purpose": "Departure-row titles and waiting times."
-      },
-      "lede": {
-        "displayName": "Lede",
-        "purpose": "Intro paragraph under each sign."
+        "purpose": "Install steps, facts, sub-heads."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Wall copy, tabular numerals."
+        "purpose": "Running copy and ledes."
+      },
+      "strip-title": {
+        "displayName": "Strip Title",
+        "purpose": "PR title on a strip."
+      },
+      "strip-field": {
+        "displayName": "Strip Field",
+        "purpose": "Callsign and waiting time."
+      },
+      "strip-note": {
+        "displayName": "Strip Note",
+        "purpose": "Reason line, author, captions, meta, footer."
       },
       "label": {
-        "displayName": "Label",
-        "purpose": "Nav, line-selector chips, train tags."
-      },
-      "code": {
-        "displayName": "Code",
-        "purpose": "Commands and token scopes in install steps."
+        "displayName": "Printed Label",
+        "purpose": "Uppercase code tabs, nav, bay heads, stage names, timeline fields."
       }
     },
     "shadows": [
       {
-        "name": "mounted-screen",
-        "value": "0 1px 2px rgba(0,0,0,.12), 0 24px 60px -20px rgba(0,0,0,.28)",
-        "purpose": "App screenshots mounted on the wall; the only cast shadow."
+        "name": "strip-outline",
+        "value": "inset 0 0 0 1px rgba(0,0,0,.18)",
+        "purpose": "Every strip and mini strip."
       },
       {
-        "name": "chip-outline",
-        "value": "inset 0 0 0 1.5px #3a3a3a",
-        "purpose": "Line-selector chip border at rest; #8a8a8a on hover."
+        "name": "holder-ring",
+        "value": "inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px #2b2e2a",
+        "purpose": "A single paper panel slotted in a rail (timeline, keys card)."
+      },
+      {
+        "name": "bay-set-in",
+        "value": "0 1px 0 rgba(255,255,255,.5), 0 18px 40px -24px rgba(0,0,0,.55)",
+        "purpose": "The hero bay set into the console."
+      },
+      {
+        "name": "mount-set-in",
+        "value": "0 1px 0 rgba(255,255,255,.5), 0 30px 60px -36px rgba(0,0,0,.6)",
+        "purpose": "Screenshot mounts."
+      },
+      {
+        "name": "stacked-strip",
+        "value": "inset 0 0 0 1px rgba(0,0,0,.18), -4px 4px 0 -1px #8f948a",
+        "purpose": "The strip behind a strip in a stack; stacks only."
       }
     ],
     "motion": [
       {
-        "name": "ease-sign",
+        "name": "ease-strip",
         "value": "cubic-bezier(.16,1,.3,1)",
-        "purpose": "Exponential ease-out for the row flip and plate/chip state changes."
+        "purpose": "Exponential ease-out for every transition."
       },
       {
-        "name": "row-flip",
-        "value": "0.5s, translateY(-10px) + clip-path top-down reveal, 40ms stagger",
-        "purpose": "A departure row changing; the only motion. Off under reduced motion."
+        "name": "strip-slide-out",
+        "value": "0.45s, translateX(110%) + opacity 0",
+        "purpose": "A handled strip leaving the bay; the signature motion."
+      },
+      {
+        "name": "strip-nudge",
+        "value": "0.45s, translateX(4px) on hover",
+        "purpose": "An interactive strip acknowledging the pointer."
       },
       {
         "name": "state-change",
-        "value": "0.2s",
-        "purpose": "Background and outline changes on plates and chips."
+        "value": "0.2s background-color",
+        "purpose": "Button hover."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transitions none, no hover nudge",
+        "purpose": "prefers-reduced-motion: reduce."
       }
     ],
     "breakpoints": [
       {
-        "name": "keys-legend",
-        "value": "760px"
+        "name": "hero-stack",
+        "value": "980px"
       },
       {
-        "name": "hero-linemap",
+        "name": "board-3col",
+        "value": "1000px"
+      },
+      {
+        "name": "head-stack",
         "value": "860px"
       },
       {
-        "name": "split-notes",
-        "value": "900px"
+        "name": "legend-1col",
+        "value": "800px"
       },
       {
-        "name": "board-wrap",
-        "value": "600px"
+        "name": "install-stack",
+        "value": "760px"
+      },
+      {
+        "name": "keys-1col",
+        "value": "700px"
+      },
+      {
+        "name": "strip-compact",
+        "value": "640px"
+      },
+      {
+        "name": "board-2col",
+        "value": "560px"
       },
       {
         "name": "nav-compact",
         "value": "520px"
+      },
+      {
+        "name": "timeline-wrap",
+        "value": "480px"
       }
     ],
-    "ground": {
-      "raster": "docs/assets/tile-wall.webp",
-      "size": "240px 120px",
-      "fallback": "#fafaf8",
-      "purpose": "White 3x6 subway tiles in running bond with soft grout; the page ground under all wall content."
+    "fonts": {
+      "selfHosted": "docs/assets/fonts/",
+      "faces": [
+        "Barlow Semi Condensed 700",
+        "Barlow 400/600",
+        "Courier Prime 400/700"
+      ]
     }
   },
   "components": [
     {
-      "name": "Exit Plate",
+      "name": "Download Button",
       "kind": "button",
-      "refersTo": "exit-plate",
-      "description": "Primary download action on the sign: white plate, yellow on hover.",
-      "html": "<div class=\"ds-band\"><a class=\"ds-plate\" href=\"#\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg>Download for Mac</a></div>",
-      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-plate{display:inline-flex;align-items:center;gap:14px;background:#fff;color:#121212;padding:16px 22px 16px 18px;border-radius:6px;font:800 21px/1.2 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.01em;text-decoration:none;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-plate svg{width:30px;height:30px;flex:none}.ds-plate:hover{background:#fccc0a}.ds-plate:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+      "refersTo": "button-primary",
+      "description": "Primary download action on the console: ink with paper text and a solid SVG arrow.",
+      "html": "<a class=\"ds-btn\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10 2h4v11.2l4.1-4.1 2.8 2.8L12 20.8l-8.9-8.9 2.8-2.8 4.1 4.1z\" fill=\"currentColor\"/></svg>Download for Mac</a>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 22px 15px 18px;background:#1c1d1a;color:#f5f1e6;border-radius:3px;font:700 20px/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif;text-decoration:none;letter-spacing:.01em;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-btn svg{width:22px;height:22px;flex:none}.ds-btn:hover{background:#3a3d37}.ds-btn:focus-visible{outline:3px solid #1c1d1a;outline-offset:3px}"
     },
     {
-      "name": "Exit Plate on Wall",
+      "name": "Download Button on Rail",
       "kind": "button",
-      "refersTo": "exit-plate-on-wall",
-      "description": "The same plate on the tile wall: enamel black, white text.",
-      "html": "<a class=\"ds-plate-wall\" href=\"#\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg>Download for Mac</a>",
-      "css": ".ds-plate-wall{display:inline-flex;align-items:center;gap:14px;background:#121212;color:#fff;padding:16px 22px 16px 18px;border-radius:6px;font:800 21px/1.2 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.01em;text-decoration:none;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-plate-wall svg{width:30px;height:30px}.ds-plate-wall:hover{background:#333}.ds-plate-wall:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+      "refersTo": "button-on-rail",
+      "description": "The same button on the rail band, in review-buff stock.",
+      "html": "<div class=\"ds-railband\"><a class=\"ds-btn-rail\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10 2h4v11.2l4.1-4.1 2.8 2.8L12 20.8l-8.9-8.9 2.8-2.8 4.1 4.1z\" fill=\"currentColor\"/></svg>Download GitBell</a></div>",
+      "css": ".ds-railband{background:#2b2e2a;padding:28px}.ds-btn-rail{display:inline-flex;align-items:center;gap:12px;padding:15px 22px 15px 18px;background:#f0e1b3;color:#1c1d1a;border-radius:3px;font:700 20px/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif;text-decoration:none;transition:background-color .2s cubic-bezier(.16,1,.3,1)}.ds-btn-rail svg{width:22px;height:22px}.ds-btn-rail:hover{background:#fff3cf}.ds-btn-rail:focus-visible{outline:3px solid #f5f1e6;outline-offset:3px}"
     },
     {
-      "name": "Line Bullets",
+      "name": "Rail Ghost Button",
+      "kind": "button",
+      "refersTo": "button-rail-ghost",
+      "description": "Secondary control on a rail, such as Bring back in the bay foot.",
+      "html": "<div class=\"ds-railband\"><button class=\"ds-ghost\" type=\"button\">Bring back 2</button> <button class=\"ds-ghost\" type=\"button\" disabled>Bring back 0</button></div>",
+      "css": ".ds-railband{background:#2b2e2a;padding:20px}.ds-ghost{font:700 13.5px/1 \"Courier Prime\", \"Courier New\", monospace;text-transform:uppercase;letter-spacing:.06em;color:#fff;background:transparent;border:1px solid #6c7068;border-radius:3px;padding:9px 12px;cursor:pointer}.ds-ghost:hover{border-color:#fff}.ds-ghost:focus-visible{outline:3px solid #f5f1e6;outline-offset:3px}.ds-ghost:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Strip Bay",
       "kind": "custom",
-      "refersTo": "line-bullet",
-      "description": "One circle, one letter, one colour per action.",
-      "html": "<div class=\"ds-band\"><span class=\"ds-row\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span><span class=\"ds-bullet dark\" style=\"--c:#fccc0a\">P</span><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span><span class=\"ds-bullet\" style=\"--c:#996633\">X</span><span class=\"ds-bullet\" style=\"--c:#b933ad\">H</span><span class=\"ds-bullet\" style=\"--c:#0039a6\">C</span><span class=\"ds-bullet\" style=\"--c:#00843a\">M</span><span class=\"ds-bullet dark\" style=\"--c:#6cbe45\">G</span></span></div>",
-      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-row{display:flex;gap:6px;font-size:22px}"
+      "refersTo": "strip",
+      "description": "Flight strips in a rail holder: stock per action, typed fields, grease-pencil marks, slide-out on handle.",
+      "html": "<ol class=\"ds-strips\"><li class=\"ds-strip\" tabindex=\"0\" style=\"--stock:#f0e1b3\"><span class=\"ds-code\">Review</span><span class=\"ds-call\"><b>WEB 482</b><span>alice</span></span><span class=\"ds-what\"><span class=\"ds-title\">Add dark mode to the settings page</span><span class=\"ds-why\">Waiting on your review</span></span><span class=\"ds-time\"><b>3M</b><span>waiting</span></span></li><li class=\"ds-strip\" tabindex=\"0\" style=\"--stock:#f2c7bf\"><span class=\"ds-code\">Fix</span><span class=\"ds-call\"><b>WEB 484</b><span>you</span></span><span class=\"ds-what\"><span class=\"ds-title\">Upgrade to Rails 8.1</span><span class=\"ds-why\"><span class=\"ds-pencil\">rspec (3/8)<svg class=\"ds-mark ds-ring\" viewBox=\"0 0 100 30\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><path d=\"M8 6 C30 0, 78 0, 94 8 C102 14, 92 26, 60 28 C30 30, 2 26, 4 14 C5 9, 12 5, 22 4\"/></svg></span> failing</span></span><span class=\"ds-time\"><b>30M</b><span>waiting</span></span></li><li class=\"ds-strip\" tabindex=\"0\" style=\"--stock:#cae5c4\"><span class=\"ds-code\">Merge</span><span class=\"ds-call\"><b>API 1203</b><span>you</span></span><span class=\"ds-what\"><span class=\"ds-title\">Return 404 for unknown webhook ids</span><span class=\"ds-why\">Approved and green</span></span><span class=\"ds-time\"><b>2H</b><span>waiting</span></span><svg class=\"ds-mark ds-tick\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 13 C6 15, 8 18, 9 20 C12 13, 16 8, 22 3\"/></svg></li></ol>",
+      "css": ".ds-strips{list-style:none;margin:0;padding:12px;display:grid;gap:5px;background:#2b2e2a;border-radius:6px}.ds-strip{--stock:#f5f1e6;position:relative;display:grid;grid-template-columns:6.6em minmax(0,8.4em) minmax(0,1fr) 4.6em;min-height:66px;background:var(--stock);border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);color:#1c1d1a;cursor:pointer;transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .45s cubic-bezier(.16,1,.3,1);font-family:\"Barlow\", \"Helvetica Neue\", Arial, sans-serif}.ds-strip>*{padding:8px 12px;border-left:1px solid rgba(28,29,26,.28);min-width:0}.ds-strip>:first-child{border-left:0}.ds-strip>.ds-mark{padding:0;border:0}.ds-code{display:flex;align-items:center;background:rgba(28,29,26,.08);font:700 12.5px/1.15 \"Courier Prime\", \"Courier New\", monospace;text-transform:uppercase;letter-spacing:.05em}.ds-call{display:flex;flex-direction:column;justify-content:center;font-family:\"Courier Prime\", \"Courier New\", monospace}.ds-call b{font-size:19px;letter-spacing:.02em;white-space:nowrap}.ds-call span{font-size:13px;color:#464943}.ds-what{display:flex;flex-direction:column;justify-content:center}.ds-title{font:600 17px/1.3 \"Barlow\", \"Helvetica Neue\", Arial, sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-why{font:400 14px/1.35 \"Courier Prime\", \"Courier New\", monospace;margin-top:2px;padding:3px 0;white-space:nowrap;overflow:visible}.ds-time{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;font-family:\"Courier Prime\", \"Courier New\", monospace}.ds-time b{font-size:19px}.ds-time span{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:#464943}.ds-strip:hover{transform:translateX(4px)}.ds-strip:focus-visible{outline:3px solid #f5f1e6;outline-offset:2px}.ds-mark{position:absolute;pointer-events:none;overflow:visible}.ds-mark path{fill:none;stroke:#c0362c;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.ds-pencil{position:relative;display:inline-block;padding:0 2px;margin-left:7px}.ds-ring{left:-7px;top:-4px;width:calc(100% + 14px);height:calc(100% + 8px)}.ds-tick{right:5.4em;top:8px;width:24px;height:24px}@media (prefers-reduced-motion:reduce){.ds-strip{transition:none}.ds-strip:hover{transform:none}}"
     },
     {
-      "name": "Line Selector",
+      "name": "Stock Legend",
       "kind": "chip",
-      "refersTo": "line-selector",
-      "description": "Pill chips on the sign that filter the departure board to one line.",
-      "html": "<div class=\"ds-band\"><div class=\"ds-lines\"><button class=\"ds-chip\" aria-pressed=\"true\" style=\"padding-left:16px;min-height:37.5px\">All <b>10</b></button><button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span>Review <b>2</b></button><button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span>Fix <b>3</b></button><button class=\"ds-chip\" disabled><span class=\"ds-bullet dark\" style=\"--c:#fccc0a\">P</span>Re-review <b>0</b></button></div></div>",
-      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-lines{display:flex;flex-wrap:wrap;gap:8px}.ds-chip{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border:0;border-radius:999px;background:transparent;color:#fff;font:700 16px/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;cursor:pointer;box-shadow:inset 0 0 0 1.5px #3a3a3a;transition:box-shadow .2s cubic-bezier(.16,1,.3,1),background-color .2s cubic-bezier(.16,1,.3,1)}.ds-chip .ds-bullet{font-size:15px}.ds-chip b{color:#b9b9b9}.ds-chip:hover{box-shadow:inset 0 0 0 1.5px #8a8a8a}.ds-chip[aria-pressed=\"true\"]{background:#fff;color:#121212;box-shadow:none}.ds-chip[aria-pressed=\"true\"] b{color:#4a4a46}.ds-chip:disabled{opacity:.45;cursor:default;box-shadow:inset 0 0 0 1.5px #2a2a2a}.ds-chip:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}"
+      "refersTo": "strip",
+      "description": "One strip per stock: code tab and what the action means.",
+      "html": "<ul class=\"ds-legend\"><li style=\"--stock:#f0e1b3\"><span>Review</span><p>Someone is waiting on your review.</p></li><li style=\"--stock:#f5f1e6\"><span>Re-review</span><p>Pushed to since you reviewed.</p></li><li style=\"--stock:#f2c7bf\"><span>Fix</span><p>Failing checks or requested changes.</p></li><li style=\"--stock:#f1cf9f\"><span>Failed after merge</span><p>Merged, then checks failed.</p></li><li style=\"--stock:#dcd2ee\"><span>On hold</span><p>Jobs waiting for approval.</p></li><li style=\"--stock:#cbdff1\"><span>Reply</span><p>Mentions and comments.</p></li><li style=\"--stock:#cae5c4\"><span>Merge</span><p>Approved and green.</p></li><li style=\"--stock:#e1edcf\"><span>Mergeable</span><p>Approved, optional checks pending.</p></li></ul>",
+      "css": ".ds-legend{list-style:none;margin:0;padding:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:#2b2e2a;border-radius:6px}.ds-legend li{display:grid;grid-template-columns:9em minmax(0,1fr);background:var(--stock);border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);color:#1c1d1a}.ds-legend span{display:flex;align-items:center;padding:12px;background:rgba(28,29,26,.08);font:700 13px/1.15 \"Courier Prime\", \"Courier New\", monospace;text-transform:uppercase;letter-spacing:.05em}.ds-legend p{margin:0;padding:12px 14px;border-left:1px solid rgba(28,29,26,.28);font:400 16px/1.4 \"Barlow\", \"Helvetica Neue\", Arial, sans-serif}"
     },
     {
-      "name": "Departure Row",
+      "name": "Stage Board",
       "kind": "card",
       "refersTo": "",
-      "description": "A board row: bullet, title over reason, waiting time right-aligned; flips in on change.",
-      "html": "<div class=\"ds-band\"><ol class=\"ds-board\"><li class=\"ds-in\"><span class=\"ds-bullet\" style=\"--c:#c9470a\">R</span><span><span class=\"ds-t\">Add dark mode to the settings page</span><span class=\"ds-why\">web#482 · alice is waiting on <b>your review</b></span></span><time>3m<small>waiting</small></time></li><li class=\"ds-in\" style=\"animation-delay:40ms\"><span class=\"ds-bullet\" style=\"--c:#d62a22\">F</span><span><span class=\"ds-t\">Upgrade to Rails 8.1</span><span class=\"ds-why\">web#484 · <b>rubocop</b> failing</span></span><time>30m<small>waiting</small></time></li></ol></div>",
-      "css": ".ds-band{background:#121212;color:#fff;position:relative;padding:30px 24px 22px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-band::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-bullet{display:inline-grid;place-items:center;width:1.75em;height:1.75em;border-radius:50%;background:var(--c,#121212);color:#fff;font:800 1em/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;flex:none}.ds-bullet.dark{color:#121212}.ds-board{margin:0;padding:0;list-style:none;border-top:2px solid #fff;font-variant-numeric:tabular-nums}.ds-board li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 18px;padding:11px 4px;border-bottom:1px solid #2f2f2f}.ds-board .ds-bullet{font-size:19px}.ds-t{display:block;font-weight:700;font-size:20px;line-height:1.25}.ds-why{display:block;color:#b9b9b9;font-size:16px;margin-top:3px}.ds-why b{color:#fff}.ds-board time{font-weight:700;font-size:20px;text-align:right;min-width:3.2em}.ds-board time small{display:block;font-weight:400;font-size:13px;color:#b9b9b9}.ds-in{animation:ds-flip .5s cubic-bezier(.16,1,.3,1) both}@keyframes ds-flip{from{opacity:0;transform:translateY(-10px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(0 0 0 0)}}@media (prefers-reduced-motion:reduce){.ds-in{animation:none}}"
+      "description": "Stage columns in a rail, mini strips in the stage's stock; a stack shows the strip behind.",
+      "html": "<div class=\"ds-board\"><div class=\"ds-stage\"><h3>In review <span>2</span></h3><ol><li class=\"ds-mini\" style=\"background:#f0e1b3\"><b>WEB 480</b><span>Paginate the audit log</span><small>CI 6/9 · 19m</small></li><li class=\"ds-mini ds-stack\" style=\"background:#f0e1b3\"><b>API 1203</b><span>Return 404 for unknown webhook ids</span><small>stack of 2</small></li></ol></div><div class=\"ds-stage\"><h3>Shipped <span>1</span></h3><ol><li class=\"ds-mini\" style=\"background:#e7e5dc\"><b>WEB 476</b><span>Faster search index</span><small>live 2h ago</small></li></ol></div></div>",
+      "css": ".ds-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#2b2e2a;padding:10px;border-radius:6px}.ds-stage{background:#3a3e39;border-radius:3px;padding:10px 8px 12px}.ds-stage h3{font:700 13px/1.3 \"Courier Prime\", \"Courier New\", monospace;text-transform:uppercase;letter-spacing:.07em;color:#fff;margin:2px 4px 10px;display:flex;justify-content:space-between}.ds-stage h3 span{color:#c3c7bd}.ds-stage ol{list-style:none;margin:0;padding:0;display:grid;gap:5px}.ds-mini{border-radius:2px;padding:9px 10px 10px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);color:#1c1d1a}.ds-mini b{display:block;font:700 13.5px/1.3 \"Courier Prime\", \"Courier New\", monospace}.ds-mini span{display:block;font:600 14px/1.3 \"Barlow\", \"Helvetica Neue\", Arial, sans-serif;margin-top:3px}.ds-mini small{display:block;font:400 12.5px/1.35 \"Courier Prime\", \"Courier New\", monospace;color:#464943;margin-top:4px}.ds-stack{box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),-4px 4px 0 -1px #8f948a}"
     },
     {
-      "name": "Key Plate",
+      "name": "Timeline Strip",
       "kind": "custom",
-      "refersTo": "key-plate",
-      "description": "Flat black keycap for shortcuts, inline or paired.",
-      "html": "<ul class=\"ds-keys\"><li><span class=\"ds-pair\"><span class=\"ds-key\">J</span><span class=\"ds-key\">K</span></span>Move down and up</li><li><span class=\"ds-pair\"><span class=\"ds-key\">⌘</span><span class=\"ds-key\">F</span></span>Search everything</li></ul>",
-      "css": ".ds-keys{margin:0;padding:0;list-style:none;font:400 19px/1.5 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;color:#121212;background:#fafaf8}.ds-keys li{display:flex;align-items:center;gap:18px;padding:14px 0;border-top:1px solid #121212}.ds-pair{display:flex;gap:6px;min-width:5.4em}.ds-key{display:inline-grid;place-items:center;min-width:1.9em;height:1.9em;padding:0 .45em;border-radius:5px;background:#121212;color:#fff;font-weight:800;font-size:18px;line-height:1}"
+      "refersTo": "",
+      "description": "One paper strip slotted in a rail ring, typed fields per step; the slow step takes review stock.",
+      "html": "<div class=\"ds-tl\"><div><span>Opened</span><b>0M</b></div><div class=\"ds-long\"><span>Review</span><b>3H 12M</b></div><div><span>Checks</span><b>18M</b></div><div><span>Merged</span><b>2M</b></div><div><span>Deployed</span><b>9M</b></div></div>",
+      "css": ".ds-tl{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#f5f1e6;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 0 0 5px #2b2e2a;margin:5px;color:#1c1d1a}.ds-tl div{padding:10px 10px 12px;border-left:1px solid rgba(28,29,26,.28);font-family:\"Courier Prime\", \"Courier New\", monospace}.ds-tl div:first-child{border-left:0}.ds-tl span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:#464943}.ds-tl b{display:block;font-size:18px;margin-top:4px;white-space:nowrap}.ds-long{background:#f0e1b3}"
     },
     {
-      "name": "Line Map",
+      "name": "Keycaps",
       "kind": "custom",
-      "refersTo": "train-tag",
-      "description": "Stations in fixed order on a blue line; the current stop fills yellow.",
-      "html": "<ol class=\"ds-map\"><li><span class=\"ds-stop\"></span><h3>In review</h3><p>Waiting on reviewers</p></li><li><span class=\"ds-stop\"></span><h3>Ready to merge</h3><p>Approved and green</p></li><li class=\"here\"><span class=\"ds-stop\"></span><h3>Shipping</h3><p>Merged, deploying</p><span class=\"ds-train\">api#1204 deploying</span></li><li><span class=\"ds-stop\"></span><h3>Shipped</h3><p>Live</p></li></ol>",
-      "css": ".ds-map{position:relative;margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;color:#121212;background:#fafaf8}.ds-map::before{content:\"\";position:absolute;left:12.5%;right:12.5%;top:15px;height:10px;background:#0039a6;border-radius:5px}.ds-map li{position:relative;text-align:center;padding:0 6px}.ds-stop{display:block;width:40px;height:40px;margin:0 auto 14px;border-radius:50%;background:#fff;border:6px solid #0039a6;position:relative;box-sizing:border-box}.ds-map li.here .ds-stop{background:#fccc0a}.ds-map h3{margin:0;font-size:19px;font-weight:800;line-height:1.3}.ds-map p{margin:6px 0 0;font-size:15px;color:#4a4a46}.ds-train{display:inline-block;margin-top:10px;background:#121212;color:#fff;font-weight:700;font-size:14px;padding:6px 10px;border-radius:4px;white-space:nowrap}"
+      "refersTo": "key-on-paper",
+      "description": "Shortcut keys: rail caps on paper, paper caps on the rail.",
+      "html": "<div class=\"ds-card\"><ul class=\"ds-keys\"><li><span class=\"ds-k\"><span class=\"ds-key\">J</span><span class=\"ds-key\">K</span></span>Move down and up</li><li><span class=\"ds-k\"><span class=\"ds-key\">E</span></span>Hide until it changes</li></ul></div><p class=\"ds-foot\">Click a strip, or <span class=\"ds-key ds-key-paper\">J</span> <span class=\"ds-key ds-key-paper\">K</span> then <span class=\"ds-key ds-key-paper\">E</span></p>",
+      "css": ".ds-card{background:#f5f1e6;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 0 0 5px #2b2e2a;padding:18px 24px;margin:5px;color:#1c1d1a}.ds-keys{list-style:none;margin:0;padding:0;font:400 18px/1.5 \"Barlow\", \"Helvetica Neue\", Arial, sans-serif}.ds-keys li{display:flex;align-items:center;gap:16px;padding:11px 0;border-bottom:1px dashed rgba(28,29,26,.4)}.ds-keys li:last-child{border-bottom:0}.ds-k{display:flex;gap:5px;min-width:5.4em}.ds-key{display:inline-grid;place-items:center;min-width:1.8em;height:1.8em;padding:0 .4em;border-radius:3px;background:#2b2e2a;color:#fff;font:700 15px/1 \"Courier Prime\", \"Courier New\", monospace;vertical-align:middle}.ds-foot{margin:14px 0 0;padding:12px;background:#2b2e2a;color:#d9dcd2;font:400 13.5px/1.6 \"Courier Prime\", \"Courier New\", monospace}.ds-key-paper{background:#f5f1e6;color:#1c1d1a;font-size:.92em}"
     },
     {
       "name": "Navigation",
       "kind": "nav",
-      "refersTo": "",
-      "description": "Enamel band nav with transit direction arrows.",
-      "html": "<nav class=\"ds-nav\"><a class=\"ds-brand\" href=\"#\">GitBell</a><ul><li><a href=\"#\">Features <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg></a></li><li><a href=\"#\">Install <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M13 3h6v14.5l5.6-5.6 4.2 4.2L16 28.9 3.2 16.1l4.2-4.2 5.6 5.6z\" fill=\"currentColor\"/></svg></a></li><li><a href=\"#\">Source <svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M3 13h17.5l-5.6-5.6 4.2-4.2L31.9 16 19.1 28.8l-4.2-4.2 5.6-5.6H3z\" fill=\"currentColor\"/></svg></a></li></ul></nav>",
-      "css": ".ds-nav{position:relative;background:#121212;color:#fff;display:flex;align-items:center;gap:24px;padding:20px 24px 14px;font-family:\"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif}.ds-nav::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-brand{color:#fff;text-decoration:none;font-weight:800;font-size:22px;letter-spacing:-0.01em}.ds-nav ul{margin:0 0 0 auto;padding:0;list-style:none;display:flex;gap:28px;font-weight:700;font-size:16px}.ds-nav ul a{display:inline-flex;align-items:center;gap:7px;color:#b9b9b9;text-decoration:none}.ds-nav ul a:hover{color:#fff}.ds-nav ul a:focus-visible{outline:3px solid #fccc0a;outline-offset:3px}.ds-nav svg{width:13px;height:13px}"
-    },
-    {
-      "name": "Platform Edge",
-      "kind": "custom",
-      "refersTo": "",
-      "description": "Yellow strip with a dot texture between a sign and the wall.",
-      "html": "<div class=\"ds-sign\">Every reason has a line</div><div class=\"ds-edge\"></div>",
-      "css": ".ds-sign{position:relative;background:#121212;color:#fff;font:800 40px/1 \"Aileron\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;letter-spacing:-0.025em;padding:30px 24px 22px}.ds-sign::before{content:\"\";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.9)}.ds-edge{height:26px;background-color:#fccc0a;background-image:radial-gradient(circle at 50% 50%,rgba(0,0,0,.14) 0 3px,transparent 3.5px);background-size:13px 13px}"
+      "refersTo": "nav",
+      "description": "The console's top rail: condensed brand, uppercase typed links.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-brand\" href=\"#\">GitBell</a><ul><li><a href=\"#\">Features</a></li><li><a href=\"#\">Install</a></li><li><a href=\"#\">Source</a></li></ul></nav>",
+      "css": ".ds-nav{background:#2b2e2a;color:#f5f1e6;display:flex;align-items:center;gap:24px;height:56px;padding:0 24px}.ds-brand{color:#f5f1e6;text-decoration:none;font:700 22px/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif}.ds-nav ul{margin:0 0 0 auto;padding:0;list-style:none;display:flex;gap:28px;font:700 14px/1 \"Courier Prime\", \"Courier New\", monospace;text-transform:uppercase;letter-spacing:.06em}.ds-nav ul a{color:#cfd2c8;text-decoration:none;text-underline-offset:.18em;text-decoration-thickness:1.5px}.ds-nav ul a:hover{color:#fff;text-decoration:underline}.ds-nav ul a:focus-visible{outline:3px solid #f5f1e6;outline-offset:3px}"
     }
   ],
   "narrative": {
-    "northStar": "The Station Sign",
-    "overview": "A sign tells you where to go next; GitBell tells you what to do next. The system is a station's signage: a white glazed subway-tile wall as the ground, black enamel sign bands running edge to edge at full strength, white Aileron set tight and bold on the black, and colour carried only by the transit devices that carry it in a real station: round line bullets, the line map's line, and the yellow platform edge. Text itself stays black and white.\n\nEvery band carries one instruction (\"Every reason has a line\", \"Everything has a key\"), the way a sign gives one direction. Information is set as a departure board: a bullet, a title, a reason, and a waiting time in a fixed tabular field at the right. Under each band the wall reads like the poster rail beside a platform: ruled lists, a legend, a line map, flat black key plates. Density is moderate; the wall breathes, the signs are packed and decisive.\n\nMotion belongs to the sign, not the scroll. A departure row changes like a sign updating: a short vertical flip with exponential ease-out, once per change. Nothing animates on scroll.",
+    "northStar": "The Strip Bay",
+    "overview": "**Creative North Star: \"The Strip Bay\"**\n\nEach pull request is a flight progress strip, and control passes to whoever holds it. The system is an air traffic control console: a grey-green enamel ground, near-black rails and holders that frame every collection, and paper strips in pastel stock slotted into them, one stock per action. A strip is split by hairline rules into typed fields: an action code tab, a callsign, the title over its reason, and the waiting time. Everything typed on a strip is Courier Prime; the console's own voice is Barlow Semi Condensed for headings and Barlow for running text.\n\nThe controller's hand appears only as red grease pencil: a ring drawn round the failing check, a tick on the strip that can go. Those marks are SVG strokes drawn by hand, never icons or badges. Density is a working console: strips pack tight in their holders (5px apart), while the console ground between bays is generous.\n\nMotion is the strip leaving the bay. A handled strip slides out sideways with exponential ease-out; a hovered strip nudges 4px toward the controller. Nothing animates on scroll. The page rejects the dark glow hero with a bento grid.",
     "keyCharacteristics": [
-      "Black enamel bands with a white hairline 7px below their top edge, full bleed.",
-      "White subway-tile wall ground (raster `docs/assets/tile-wall.webp`, 240 x 120 CSS px per repeat).",
-      "One self-hosted neo-grotesque, Aileron, at 400 / 700 / 800; display set at 800 with negative tracking.",
-      "One colour per action, worn only by a round bullet with a single letter.",
-      "Yellow platform-edge strip with a dot texture closes a sign and meets the wall.",
-      "Tabular numerals everywhere; waiting time is always right-aligned."
+      "Grey-green console ground; every collection sits in a near-black rail holder with rounded 6px corners.",
+      "Paper strips, one pastel stock per action, divided into typed fields by 1px hairlines.",
+      "Courier Prime for everything on a strip; Barlow Semi Condensed 700 headings; Barlow 400/600 body.",
+      "Red grease-pencil marks drawn as hand-made SVG strokes, used sparingly as annotation.",
+      "One motion: the horizontal strip slide, exponential ease-out, off under reduced motion."
     ],
     "rules": [
       {
-        "name": "The Line Colour Rule",
-        "body": "A line colour appears only in a line device: a bullet, the line-map line, or a stop ring. Never on text, never as a panel fill, never as a gradient.",
+        "name": "The Stock Is the Action Rule",
+        "body": "A strip's paper colour names its action, identically everywhere (hero bay, legend, board, install steps). Never use a stock for anything that is not a strip, a strip field, or a step that adopts a strip's meaning.",
         "section": "colors"
       },
       {
-        "name": "The Letter-on-Light Rule",
-        "body": "Bullets on Re-review Yellow and Mergeable Lime carry Wall Ink letters; every other bullet carries white.",
+        "name": "The Pencil Rule",
+        "body": "Red appears only as grease pencil drawn over paper. If it isn't a hand-drawn mark, it isn't red.",
         "section": "colors"
       },
       {
-        "name": "The One Highlight Rule",
-        "body": "Platform Yellow is the only interaction and attention colour: focus, hover on the exit plate, selection, \"here\". Do not introduce a second accent.",
-        "section": "colors"
-      },
-      {
-        "name": "The Tabular Rule",
-        "body": "Numerals are tabular on every surface (`font-variant-numeric: tabular-nums` on body). Waiting times sit right-aligned in a fixed minimum width.",
+        "name": "The Typed Strip Rule",
+        "body": "Anything written on a strip, a key, a timeline or a rail label is Courier Prime. The one exception is the strip title, which stays in Barlow 600 for reading.",
         "section": "typography"
       },
       {
-        "name": "The Three Weights Rule",
-        "body": "Aileron ships at 400, 700 and 800 only. Emphasis inside sentences is 700 in the brighter ink of the surface (white on the sign, Wall Ink on the wall), never colour.",
+        "name": "The Uppercase Is Printed Rule",
+        "body": "Uppercase with tracking belongs to printed console labels (code tabs, stage names, nav, bay heads). Headings and prose stay sentence case.",
         "section": "typography"
       },
       {
-        "name": "The Enamel Rule",
-        "body": "Signs, plates and keys are flat: no shadows, no gradients, no glow. A sign is a painted panel.",
+        "name": "The Paper Doesn't Float Rule",
+        "body": "Strips never cast shadows and never lift on hover. Depth comes from the holder, not from elevation.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** open every section with a full-bleed black band carrying the white hairline 7px from its top and one instruction.",
-      "**Do** give every action its bullet, letter and line colour, and use them identically everywhere.",
-      "**Do** put waiting time on every listed item, right-aligned, in tabular numerals.",
-      "**Do** draw arrows as solid transit arrows in SVG, pointing in the direction of travel.",
-      "**Do** keep wall content as ruled lists: 2px Wall Ink above a group, 1px between items.",
-      "**Do** keep motion to the row flip; respect `prefers-reduced-motion`."
+      "**Do** put every collection of items in a rail holder, as strips 5-6px apart.",
+      "**Do** give every action its own stock and use it identically on every surface.",
+      "**Do** type everything on a strip in Courier Prime, with fields split by 1px hairlines at 28% ink.",
+      "**Do** keep red to hand-drawn grease-pencil SVG marks, sparingly, one mark per strip at most.",
+      "**Do** keep motion to the horizontal strip slide with `cubic-bezier(.16,1,.3,1)`, and turn it off under `prefers-reduced-motion`.",
+      "**Do** mount app screenshots in a rail frame (8px corners, 4px on the image) with the mount set-in shadow."
     ],
     "donts": [
-      "**Don't** use a line colour on text, panels, backgrounds or gradients.",
-      "**Don't** add a second accent; Platform Yellow is the only highlight.",
-      "**Don't** put shadows, gradients or glow on signs, plates or keys; only mounted screenshots cast a shadow.",
-      "**Don't** set the dark glow hero over a screenshot, or a bento grid of feature cards.",
+      "**Don't** use a strip stock as a panel fill, an accent, or a text colour.",
+      "**Don't** use red for text, UI state, or error badges; it is the controller's pencil.",
+      "**Don't** cast shadows from strips or lift them on hover; depth belongs to holders.",
       "**Don't** animate on scroll.",
-      "**Don't** add Aileron weights beyond 400, 700 and 800, or a second display face."
+      "**Don't** set a dark glow hero over a screenshot, or a bento grid of feature cards."
     ]
   }
 }
