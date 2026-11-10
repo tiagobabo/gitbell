@@ -1,6 +1,6 @@
 # GitBell
 
-GitHub notifications and pull requests in a native Mac app.
+GitHub notifications and pull requests in a native Mac app. **[tiagobabo.github.io/gitbell](https://tiagobabo.github.io/gitbell)**
 
 ![GitBell](docs/gitbell.png)
 
