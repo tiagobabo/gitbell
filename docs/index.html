@@ -103,19 +103,49 @@
   .tile .crop { width: 100%; }
   .tile.full .crop { max-width: 795px; }
   .tile:not(.full) .crop { max-width: 500px; }
+  .tiles .tile .art.phone { display: none; }
   @media (max-width: 760px) {
     .tiles { grid-template-columns: minmax(0, 1fr); }
     .tile.full { grid-column: auto; }
-    .tile { padding-inline: 24px; }
-    /* Scaling the crops down to a phone's width makes their text unreadable. Keep them near their
-       native size instead and let them run off the tile's right edge, as if the window continued. */
-    .tile:not(.pad) .art { margin-right: -24px; }
-    .tile:not(.pad) .art { justify-content: flex-start; }
-    .tile:not(.pad) .crop { border-radius: 14px 0 0 0; flex: none; }
-    .tile .crop.fix { width: max(100%, 560px); max-width: none; }
-    .tile .crop.stages { width: max(100%, 500px); max-width: none; }
-    .tile .crop.stack { width: max(100%, 450px); max-width: none; }
+    .tile { padding: 32px 24px 0; }
+    .tile .art { padding-top: 24px; }
+    /* The screenshot crops are too wide to read at phone width, so phones get the same rows drawn in HTML. */
+    .tiles .tile .art.desk { display: none; }
+    .tiles .tile .art.phone { display: block; padding-bottom: 24px; }
   }
+
+  /* GitBell's rows, drawn in HTML so they wrap on a phone */
+  .mock { text-align: left; font-size: 13px; line-height: 1.35; letter-spacing: -0.01em; color: #6e6e73; }
+  .mock svg { width: 14px; height: 14px; flex: none; fill: currentColor; }
+  .mock-head { display: flex; align-items: center; gap: 6px; margin: 0 0 8px 2px; white-space: nowrap; overflow: hidden; }
+  .mock-head b { color: var(--text); font-size: 14px; font-weight: 600; }
+  .mock-head span { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #aeaeb2; }
+  .rows { list-style: none; margin: 0; padding: 0; background: #fff; border-radius: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 6px 24px rgba(0,0,0,.06); }
+  .rows li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 12px; }
+  .rows li + li { border-top: 1px solid #ececf0; }
+  .rows .pr { width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: #e7f6ea; color: #1a7f37; }
+  .rows b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+  .rows small { display: block; font-size: 12px; color: #86868b; }
+  .rows time { font-size: 11px; color: #aeaeb2; }
+  .st { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; margin: 6px 0 0; font-size: 12px; }
+  .st > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .st svg { width: 12px; height: 12px; }
+  .st .red::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #ff3b30; }
+  .st .ok svg { color: #34c759; }
+  .st .warn { color: #e8710a; }
+  .chip { padding: 1px 8px; border-radius: 99px; background: #f2f2f4; color: #3c3c43; }
+  .chip.bad { background: #fdeceb; color: #c9302c; }
+  .chip.held { background: #eeecfc; color: #5e4fd6; }
+  .stack-head { color: #1fa595; }
+  .stack-head b { color: inherit; }
+  .stack-head span { color: #7fd0c5; }
+  .rows.stack li { grid-template-columns: 10px 28px minmax(0, 1fr); position: relative; }
+  .rows.stack li::before { content: ""; width: 10px; height: 10px; margin-top: 9px; border-radius: 50%; background: #2fb8a6; }
+  .rows.stack li:first-child::after { content: ""; position: absolute; left: 16px; top: 30px; bottom: -22px; width: 2px; background: #a8e2da; }
+  .stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stages div { background: #fff; border-radius: 14px; padding: 10px 14px 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 6px 24px rgba(0,0,0,.06); }
+  .stages span { display: flex; align-items: center; gap: 6px; }
+  .stages strong { display: block; margin-top: 2px; font-size: 26px; line-height: 1.2; font-weight: 600; color: var(--text); }
 
   /* A notification banner, drawn as macOS draws one */
   .banner { display: flex; gap: 12px; align-items: center; max-width: 380px; margin: 0 auto; padding: 12px 14px; border-radius: 18px; background: rgba(246,246,246,.94); box-shadow: 0 0 0 .5px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.14); text-align: left; }
@@ -178,6 +208,14 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-pr" viewBox="0 0 16 16"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm3.78-9.72a.751.751 0 0 0-.018-1.042.751.751 0 0 0-1.042-.018L6.75 9.19 5.28 7.72a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042l2 2a.75.75 0 0 0 1.06 0Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M2.343 13.657A8 8 0 1 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .326 1.275.749.749 0 0 0 .734-.215L8 9.06l1.97 1.97a.749.749 0 0 0 1.275-.326.749.749 0 0 0-.215-.734L9.06 8l1.97-1.97a.749.749 0 0 0-.326-1.275.749.749 0 0 0-.734.215L8 6.94Z"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm9.78-2.22-5.5 5.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734l5.5-5.5a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/></symbol>
+  <symbol id="i-merge" viewBox="0 0 16 16"><path d="M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z"/></symbol>
+</svg>
 <a class="skip" href="#main">Skip to content</a>
 
 <nav class="nav" aria-label="GitBell">
@@ -220,13 +258,31 @@
         <article class="tile full">
           <h3>See which check broke.</h3>
           <p>Each row names the failing checks, requested changes and missing reviewers, so you can see what to fix before opening it.</p>
-          <div class="art"><img class="crop fix" src="assets/crop-fix.png" width="1590" height="505" loading="lazy" alt="The Fix group: Upgrade to Rails 8.1 with rspec (3/8) and rubocop failing, and Cache search results with changes requested by bob."></div>
+          <div class="art phone" role="img" aria-label="The Fix group: Cache search results with changes requested, Upgrade to Rails 8.1 with rspec and rubocop failing, and Move checkout to the new payments API with system specs failing.">
+            <div class="mock">
+              <div class="mock-head"><svg style="color:#ff3b30"><use href="#i-x"/></svg><b>Fix</b> 3 <span>Failing checks, conflicts and requested changes</span></div>
+              <ul class="rows">
+                <li><svg class="pr"><use href="#i-pr"/></svg><div><b>Cache search results for an hour</b><small>web#479</small><div class="st"><span class="red">Changes requested</span><span class="ok"><svg><use href="#i-ok"/></svg>12/12</span><span class="chip">bob</span><span class="chip">carol</span></div></div><time>11m</time></li>
+                <li><svg class="pr"><use href="#i-pr"/></svg><div><b>Upgrade to Rails 8.1</b><small>web#484</small><div class="st"><span class="red">Checks failing</span><span class="chip bad"><svg><use href="#i-x"/></svg>rspec (3/8)</span><span class="chip bad"><svg><use href="#i-x"/></svg>rubocop</span><span class="warn">No reviewers requested</span></div></div><time>30m</time></li>
+                <li><svg class="pr"><use href="#i-pr"/></svg><div><b>Move checkout to the new payments API</b><small>web#486 · erin</small><div class="st"><span class="red">Checks failing</span><span class="chip bad"><svg><use href="#i-x"/></svg>system specs</span></div></div><time>1h</time></li>
+              </ul>
+            </div>
+          </div>
+          <div class="art desk"><img class="crop" src="assets/crop-fix.png" width="1590" height="505" loading="lazy" alt="The Fix group: Upgrade to Rails 8.1 with rspec (3/8) and rubocop failing, and Cache search results with changes requested by bob."></div>
         </article>
 
         <article class="tile">
           <h3>Your pull requests, by stage.</h3>
           <p>From draft to deployed, with what each one is waiting on and for how long.</p>
-          <div class="art"><img class="crop stages" src="assets/crop-stages.png" width="1000" height="170" loading="lazy" alt="Stage counts: Drafts 1, In review 4, Fix 2, Merge 2."></div>
+          <div class="art phone" role="img" aria-label="Stage counts: Drafts 1, In review 4, Fix 2, Merge 2.">
+            <div class="mock stages">
+              <div><span><svg><use href="#i-skip"/></svg>Drafts</span><strong>1</strong></div>
+              <div><span><svg style="color:#1fa595"><use href="#i-clock"/></svg>In review</span><strong>4</strong></div>
+              <div><span><svg style="color:#ff3b30"><use href="#i-x"/></svg>Fix</span><strong>2</strong></div>
+              <div><span><svg style="color:#34c759"><use href="#i-merge"/></svg>Merge</span><strong>2</strong></div>
+            </div>
+          </div>
+          <div class="art desk"><img class="crop" src="assets/crop-stages.png" width="1000" height="170" loading="lazy" alt="Stage counts: Drafts 1, In review 4, Fix 2, Merge 2."></div>
         </article>
 
         <article class="tile pad">
@@ -241,7 +297,16 @@
         <article class="tile">
           <h3>Stacks stay together.</h3>
           <p>Pull requests built on each other's branches are shown together, in merge order. You can also <b>approve held CircleCI jobs</b> from the list.</p>
-          <div class="art"><img class="crop stack" src="assets/crop-stack.png" width="900" height="350" loading="lazy" alt="A stack of two pull requests, the second waiting on the approve_staging CircleCI job."></div>
+          <div class="art phone" role="img" aria-label="A stack of two pull requests, the second waiting on the approve_staging CircleCI job.">
+            <div class="mock">
+              <div class="mock-head stack-head"><b>Stack of 2</b><span>· merging bottom first into main</span></div>
+              <ul class="rows stack">
+                <li><svg class="pr"><use href="#i-pr"/></svg><div><b>Return 404 for unknown webhook ids</b><small>api#1203</small><div class="st"><span class="warn">No review for 3d</span><span class="ok"><svg><use href="#i-ok"/></svg>12/12</span><span class="chip">carol</span></div></div></li>
+                <li><svg class="pr"><use href="#i-pr"/></svg><div><b>Move invoices to the new PDF service</b><small>api#1207</small><div class="st"><span>Awaiting approval</span><span class="chip held">approve_staging</span></div></div></li>
+              </ul>
+            </div>
+          </div>
+          <div class="art desk"><img class="crop" src="assets/crop-stack.png" width="900" height="350" loading="lazy" alt="A stack of two pull requests, the second waiting on the approve_staging CircleCI job."></div>
         </article>
 
         <article class="tile pad">
