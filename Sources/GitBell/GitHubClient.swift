@@ -471,7 +471,9 @@ actor GitHubClient {
     nonisolated static func circleCIWorkflow(_ url: URL) -> String? {
         guard url.host()?.hasSuffix("circleci.com") == true else { return nil }
         let parts = url.pathComponents
-        guard let index = parts.lastIndex(where: { $0 == "workflow-run" || $0 == "workflows" }), index + 1 < parts.count else { return nil }
+        // CircleCI has linked to …/workflow-run/<id>, …/workflows/<id> and now app.circleci.com/workflow/<id>.
+        guard let index = parts.lastIndex(where: { ["workflow-run", "workflows", "workflow"].contains($0) }),
+              index + 1 < parts.count else { return nil }
         return parts[index + 1]
     }
 
