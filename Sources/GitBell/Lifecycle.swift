@@ -58,7 +58,7 @@ extension PullRequest {
             default: return .upcoming
             }
         case .deploy:
-            guard merged else { return .upcoming }
+            guard merged, baseIsDefault != false else { return .upcoming }
             switch status {
             case .deploying: return .active(.pending, "Deploying")
             case .runningAfterMerge: return .active(.pending, "Checks running after merge")
@@ -182,6 +182,8 @@ enum PipelineStage: String, CaseIterable, Identifiable {
     // Where a pull request of yours stands. Nil once it's been live for a day, when it's no longer news.
     static func of(_ pr: PullRequest, now: Date = .now) -> PipelineStage? {
         if let mergedAt = pr.mergedAt {
+            // Merged into another branch, it goes out with that branch's pull request, so it isn't shipping yet.
+            if pr.baseIsDefault == false { return nil }
             switch pr.status {
             case .deploying, .runningAfterMerge, .failingAfterMerge, .cancelledAfterMerge: return .shipping
             default: return now.timeIntervalSince(mergedAt) < 86_400 ? .shipped : nil

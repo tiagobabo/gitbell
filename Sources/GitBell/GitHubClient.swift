@@ -719,7 +719,7 @@ actor GitHubClient {
       id number title url isDraft updatedAt reviewDecision mergeable mergeStateStatus isInMergeQueue headRefOid
       baseRefName headRefName
       author { login avatarUrl }
-      repository { nameWithOwner }
+      repository { nameWithOwner defaultBranchRef { name } }
       commits(last: 1) { nodes { commit { committedDate statusCheckRollup { ...rollup } } } }
     }
     """ + rollupFragment
@@ -806,7 +806,11 @@ actor GitHubClient {
             struct Review: Decodable { let state: String; let submittedAt: Date?; let author: Author? }
 
             struct Author: Decodable { let login: String; let avatarUrl: URL? }
-            struct Repository: Decodable { let nameWithOwner: String }
+            struct Repository: Decodable {
+                struct Ref: Decodable { let name: String }
+                let nameWithOwner: String
+                let defaultBranchRef: Ref?
+            }
             struct Commits: Decodable { let nodes: [CommitNode] }
             struct CommitNode: Decodable { let commit: Commit }
             struct Commit: Decodable { let url: URL?; let committedDate: Date?; let statusCheckRollup: Rollup?; let authors: Authors? }
@@ -862,6 +866,7 @@ actor GitHubClient {
                 )
                 pr.mergedAt = mergedAt
                 pr.baseRef = baseRefName
+                if let base = baseRefName, let main = repository.defaultBranchRef?.name { pr.baseIsDefault = base == main }
                 pr.headRef = headRefName
                 pr.mergeCommitURL = mergedAt == nil ? nil : mergeCommit?.url
                 pr.reviewers = reviewers(author: author?.login)

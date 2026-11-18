@@ -21,6 +21,9 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     // The branch it merges into, and its own: a pull request based on another's branch is stacked on it.
     var baseRef: String?
     var headRef: String?
+    // Whether the base is the repository's default branch. A pull request merged into another branch doesn't ship
+    // by itself: it goes out with that branch. Nil when not known.
+    var baseIsDefault: Bool?
     var mergeCommitURL: URL?
     // A newer merge to the same branch deployed, and its commit carries this one's changes.
     var shippedLater = false
@@ -183,6 +186,8 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
 extension PullRequest {
     // How a merged pull request's merge commit is doing: its checks, and its deploys where there are any.
     private var mergedStatus: PullStatus {
+        // Merged into another pull request's branch: its checks there are that branch's, and nothing deploys yet.
+        if baseIsDefault == false { return .merged }
         guard let checks, checks.total > 0 else { return shippedLater ? .deployedLater : .merged }
         let own: PullStatus
         if checks.failing.contains(where: { !$0.cancelled }) { own = .failingAfterMerge }
