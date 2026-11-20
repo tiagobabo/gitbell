@@ -129,7 +129,7 @@ extension YourPullsView {
     }
 }
 
-// A stack's pull requests, bottom first, joined by a line down the left: the order they merge in.
+// A stack's pull requests in the order they merge (its base on top), joined by a line down the left.
 private struct StackCard: View {
     let stack: PullStack
     let members: [PullRequest]
@@ -142,7 +142,7 @@ private struct StackCard: View {
                 Text("\(stack.label(among: store.stackCount)) of \(stack.members.count)")
                     .fontWeight(.semibold)
                 if let base = stack.members.first?.baseRef {
-                    Text("· merging bottom first into \(base)").foregroundStyle(.secondary)
+                    Text("· merges top to bottom into \(base)").foregroundStyle(.secondary)
                 }
             }
             .font(.system(size: 11))

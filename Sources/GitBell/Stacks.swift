@@ -71,7 +71,7 @@ struct StackTag: View {
         .padding(.vertical, 1)
         .background(Palette.mint.opacity(0.12), in: Capsule())
         .fixedSize()
-        .tooltip("\(label), merging bottom first:\n" + stack.members.enumerated().map { index, member in
+        .tooltip("\(label), merging in this order:\n" + stack.members.enumerated().map { index, member in
             "\(index + 1). #\(member.number) \(member.title): \(member.status.label)\(member.id == pr.id ? " (this one)" : "")"
         }.joined(separator: "\n"))
     }
