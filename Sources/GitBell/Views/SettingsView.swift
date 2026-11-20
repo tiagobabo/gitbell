@@ -164,15 +164,11 @@ struct SettingsView: View {
                     case .cli:
                         LabeledContent("Token", value: "From the CircleCI CLI")
                     case .keychain:
-                        LabeledContent("Token") {
-                            HStack {
-                                Text("Saved in your Keychain").foregroundStyle(.secondary)
-                                Button("Remove") {
-                                    TokenStore.deleteToken(account: TokenStore.circleCIAccount)
-                                    store.circleCISource = TokenStore.circleCISource()
-                                    circleCIStatus = nil
-                                }
-                            }
+                        LabeledContent("Token", value: "Saved in your Keychain")
+                        Button("Remove Token", role: .destructive) {
+                            TokenStore.deleteToken(account: TokenStore.circleCIAccount)
+                            store.circleCISource = TokenStore.circleCISource()
+                            circleCIStatus = nil
                         }
                     case nil:
                         HStack {
