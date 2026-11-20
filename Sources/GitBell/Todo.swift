@@ -66,7 +66,7 @@ extension TodoItem.Kind {
         case .afterMerge: "Merged, then a deploy or checks failed. A later merge may carry it out"
         case .onHold: "CircleCI jobs waiting for someone to approve them"
         case .reply: "Mentions, assignments and comments on your threads"
-        case .merge: "Approved and green"
+        case .merge: "Green, nothing blocking"
         case .mergeable: "Approved, with optional checks still running or failing"
         case .waiting: "Your pull requests waiting on reviewers or CI"
         }

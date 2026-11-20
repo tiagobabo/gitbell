@@ -151,7 +151,7 @@ enum PipelineStage: String, CaseIterable, Identifiable {
         case .drafts: "Not ready for review yet"
         case .inReview: "Waiting on reviewers or CI"
         case .fix: "Failing checks, conflicts and requested changes"
-        case .ready: "Approved and green, yours to merge"
+        case .ready: "Green and nothing blocking, yours to merge"
         case .shipping: "Merged, on their way to production"
         case .shipped: "Live in the last day, then they leave the list"
         }
