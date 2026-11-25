@@ -427,7 +427,8 @@ actor GitHubClient {
     }
 
     // Merges whose own checks failed or were cancelled, looked up against anyone's later commits to the same
-    // branch: one that deployed carries the change out too, and one deploying might.
+    // branch: one that deployed carries the change out too, and one deploying might. Where nothing deploys,
+    // a later commit that passed the checks this one failed has moved past it.
     func laterMerges(_ merged: [PullRequest]) async throws -> [PullRequest] {
         let wanted = merged.enumerated().filter { _, pr in
             [.failingAfterMerge, .cancelledAfterMerge].contains(pr.status) && pr.baseRef != nil && pr.mergedAt != nil
@@ -457,6 +458,13 @@ actor GitHubClient {
         for (index, pr) in wanted {
             let own = pr.mergeCommitURL?.lastPathComponent
             let later = (nodes["p\(index)"]??.ref?.target?.history?.nodes ?? []).filter { $0.oid != own }
+            if pr.checks?.hasDeploys != true {
+                let failed = Set((pr.checks?.failing ?? []).map(\.name))
+                if !failed.isEmpty, later.contains(where: { failed.isSubset(of: $0.statusCheckRollup?.passedNames ?? []) }) {
+                    result[index].shippedLater = true
+                }
+                continue
+            }
             let checks = later.compactMap { $0.statusCheckRollup.map(GraphQLResponse.Node.checks) }.filter(\.hasDeploys)
             if checks.contains(where: { !$0.deploysRunning && !$0.failing.contains { PullRequest.Checks.isDeploy($0.name) } }) {
                 result[index].shippedLater = true
@@ -817,7 +825,14 @@ actor GitHubClient {
             struct Authors: Decodable { let nodes: [GitActor?] }
             struct GitActor: Decodable { let user: User? }
             struct User: Decodable { let login: String }
-            struct Rollup: Decodable { let state: String; let contexts: Contexts }
+            struct Rollup: Decodable {
+                let state: String
+                let contexts: Contexts
+                // The checks that passed, by the name the lists show.
+                var passedNames: Set<String> {
+                    Set((contexts.nodes ?? []).compactMap { $0 }.filter(\.passed).compactMap { $0.check?.name })
+                }
+            }
             struct Contexts: Decodable {
                 let totalCount: Int
                 let checkRunCountsByState: [StateCount]
@@ -846,6 +861,7 @@ actor GitHubClient {
                     return check
                 }
                 var isFailing: Bool { Node.failedStates.contains(conclusion ?? state ?? "") }
+                var passed: Bool { ["SUCCESS", "NEUTRAL", "SKIPPED"].contains(conclusion ?? state ?? "") }
                 var isRunning: Bool {
                     if let status { return status != "COMPLETED" }
                     return ["PENDING", "EXPECTED"].contains(state ?? "")

@@ -25,7 +25,8 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     // by itself: it goes out with that branch. Nil when not known.
     var baseIsDefault: Bool?
     var mergeCommitURL: URL?
-    // A newer merge to the same branch deployed, and its commit carries this one's changes.
+    // A newer merge to the same branch deployed, and its commit carries this one's changes. Where nothing deploys,
+    // a newer commit passed the checks this one's merge failed.
     var shippedLater = false
     // Who was asked to review and what they've done, for your own pull requests. Nil when not fetched.
     var reviewers: [Reviewer]?
@@ -197,7 +198,7 @@ extension PullRequest {
         else { own = checks.passed < checks.total ? .runningAfterMerge : .passedAfterMerge }
         // Two merges close together can clash or cancel each other's pipeline; a later deploy still ships both.
         if shippedLater, [.failingAfterMerge, .cancelledAfterMerge, .deploying, .runningAfterMerge].contains(own) {
-            return .deployedLater
+            return checks.hasDeploys ? .deployedLater : .passedLater
         }
         return own
     }
@@ -206,7 +207,7 @@ extension PullRequest {
 enum PullStatus: Sendable {
     case notReady, inMergeQueue, mergeConflicts, checksFailing, changesRequested,
          awaitingCI, awaitingApproval, needsUpdate, mergeable, readyToMerge,
-         merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed, deployedLater
+         merged, failingAfterMerge, cancelledAfterMerge, runningAfterMerge, passedAfterMerge, deploying, deployed, deployedLater, passedLater
 
     enum Tone: Sendable { case neutral, pending, danger, success, merged, held }
 
@@ -229,6 +230,7 @@ enum PullStatus: Sendable {
         case .deploying: "Deploying"
         case .deployed: "Deployed"
         case .deployedLater: "Deployed with a later merge"
+        case .passedLater: "Passed with a later merge"
         case .readyToMerge: "Ready to merge"
         }
     }
@@ -238,7 +240,7 @@ enum PullStatus: Sendable {
         case .notReady, .cancelledAfterMerge: .neutral
         case .awaitingCI, .awaitingApproval, .runningAfterMerge, .deploying: .pending
         case .mergeConflicts, .checksFailing, .changesRequested, .needsUpdate, .failingAfterMerge: .danger
-        case .readyToMerge, .mergeable, .passedAfterMerge, .deployed, .deployedLater: .success
+        case .readyToMerge, .mergeable, .passedAfterMerge, .deployed, .deployedLater, .passedLater: .success
         case .inMergeQueue, .merged: .merged
         }
     }
